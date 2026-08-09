@@ -1,0 +1,15 @@
+.git
+.github
+docs
+v1
+**/node_modules
+**/vendor
+**/.next
+**/coverage
+**/playwright-report
+**/test-results
+**/.env
+**/.env.local
+**/*.log
+.idea
+.vscode

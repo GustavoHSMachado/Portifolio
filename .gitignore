@@ -1,1 +1,40 @@
-/phpmailer/phpmailer/
+# ==========================================================
+#  Portifolio — ignores da raiz
+#  Regras específicas de cada versão ficam em v1/ e v2/
+# ==========================================================
+
+# Segredos — nunca versionar
+.env
+.env.local
+.env.*.local
+
+# Dependências
+/v1/vendor/
+/v2/backend/vendor/
+/v2/frontend/node_modules/
+
+# Build
+/v2/frontend/.next/
+/v2/frontend/out/
+/v2/frontend/next-env.d.ts
+
+# Testes e cobertura
+/v2/backend/coverage.xml
+/v2/backend/coverage-html/
+/v2/backend/.phpunit.cache/
+/v2/frontend/coverage/
+/v2/frontend/playwright-report/
+/v2/frontend/test-results/
+
+# Logs e cache
+/v2/backend/storage/logs/*
+!/v2/backend/storage/logs/.gitkeep
+*.log
+.phpstan.cache/
+.php-cs-fixer.cache
+
+# Editor / SO
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

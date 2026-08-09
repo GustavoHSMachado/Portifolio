@@ -22,6 +22,8 @@ docker-compose.override.yml
 /v2/frontend/.next/
 /v2/frontend/out/
 /v2/frontend/next-env.d.ts
+# Cache incremental do tsc, gerado por `npm run typecheck`.
+/v2/frontend/tsconfig.tsbuildinfo
 
 # Testes e cobertura
 /v2/backend/coverage.xml

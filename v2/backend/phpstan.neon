@@ -1,0 +1,22 @@
+# Análise estática do backend.
+#
+#   composer run analyse
+#
+# Nível 8 é o declarado no CONTEXTO-DO-PROJETO: exige tipos em tudo e trata
+# null como erro em qualquer lugar que não o declare. É exigente de propósito —
+# a v1 quebrava em produção por variável indefinida e por retorno inesperado.
+
+parameters:
+    level: 8
+
+    paths:
+        - src
+        - database
+        - public
+        - tests
+
+    tmpDir: .phpstan.cache
+
+    # O migrador e o entrypoint rodam em CLI e usam funções de sistema de
+    # arquivos que retornam false em erro; o tratamento é explícito no código.
+    treatPhpDocTypesAsCertain: false

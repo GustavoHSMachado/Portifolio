@@ -1,0 +1,31 @@
+// Teste de mutação: altera o código de propósito e verifica se algum teste
+// reprova. Mede se a suíte tem poder de detecção, não só cobertura — cobrir
+// uma linha sem asserção que a proteja é cobertura que não protege nada.
+//
+//   composer run mutation
+//
+// É informativo no CI: reprovar merge por MSI trava o time por ruído.
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": [
+            "src"
+        ],
+        "excludes": [
+            // Sem regra de negócio: só encapsula PDO. Mutar aqui produz
+            // sobreviventes que não representam risco real.
+            "Database"
+        ]
+    },
+    "logs": {
+        "text": "storage/logs/infection.txt",
+        "summary": "storage/logs/infection-summary.txt"
+    },
+    "tmpDir": "storage/cache/infection",
+    "testFramework": "phpunit",
+    "minMsi": 70,
+    "minCoveredMsi": 70,
+    "mutators": {
+        "@default": true
+    }
+}

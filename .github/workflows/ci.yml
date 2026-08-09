@@ -1,0 +1,301 @@
+name: CI
+
+# Esteira de qualidade. Nada entra na main sem passar por aqui.
+# Os jobs rodam em paralelo e o gate final (quality-gate) exige todos verdes.
+
+on:
+  pull_request:
+    branches: [main, develop]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  PHP_VERSION: "8.3"
+  NODE_VERSION: "20"
+
+jobs:
+  # ------------------------------------------------------------------
+  # Commits
+  # ------------------------------------------------------------------
+  commitlint:
+    name: Padrão de commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - name: Validar mensagens de commit
+        run: |
+          npm install --no-save @commitlint/cli @commitlint/config-conventional
+          npx commitlint --from ${{ github.event.pull_request.base.sha || 'HEAD~1' }} --to HEAD --verbose
+
+  # ------------------------------------------------------------------
+  # Backend
+  # ------------------------------------------------------------------
+  backend:
+    name: Backend (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.3", "8.4"]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: portifolio_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: v2/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo_mysql, openssl, json
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Cache do Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ matrix.php }}-${{ hashFiles('v2/backend/composer.lock') }}
+
+      - run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Lint de sintaxe
+        run: find src public database tests -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Estilo de código (PHP-CS-Fixer)
+        run: composer run lint
+
+      - name: Análise estática (PHPStan nível 8)
+        run: composer run analyse
+
+      - name: Auditoria de dependências
+        run: composer audit --abandoned=report
+
+      - name: Migrações
+        run: php database/migrate.php
+        env:
+          DB_HOST: 127.0.0.1
+          DB_NAME: portifolio_test
+          DB_USER: root
+          DB_PASS: root
+          APP_KEY: ci-key-000000000000000000000000000000
+          JWT_SECRET: ci-jwt-secret-00000000000000000000000000
+
+      - name: Testes com cobertura
+        run: composer run test:coverage
+        env:
+          DB_HOST: 127.0.0.1
+          DB_NAME: portifolio_test
+          DB_USER: root
+          DB_PASS: root
+
+      - name: Enviar cobertura ao Codecov
+        if: matrix.php == '8.3'
+        uses: codecov/codecov-action@v4
+        with:
+          files: v2/backend/coverage.xml
+          flags: backend
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  # ------------------------------------------------------------------
+  # Frontend
+  # ------------------------------------------------------------------
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: v2/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: v2/frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Lint e formatação (Biome)
+        run: npm run lint
+
+      - name: Verificação de tipos
+        run: npm run typecheck
+
+      - name: Código e dependências mortas (Knip)
+        run: npm run knip
+
+      - name: Testes unitários com cobertura
+        run: npm run test:coverage
+
+      - name: Enviar cobertura ao Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          directory: v2/frontend/coverage
+          flags: frontend
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+      - name: Build
+        run: npm run build
+
+      - name: Orçamento de bundle
+        run: |
+          SIZE=$(du -sk .next/static | cut -f1)
+          echo "Bundle estático: ${SIZE}KB"
+          if [ "$SIZE" -gt 1024 ]; then
+            echo "::error::Bundle acima do orçamento de 1024KB (atual: ${SIZE}KB)"
+            exit 1
+          fi
+
+  # ------------------------------------------------------------------
+  # Testes de ponta a ponta
+  # ------------------------------------------------------------------
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: [frontend]
+    defaults:
+      run:
+        working-directory: v2/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: v2/frontend/package-lock.json
+
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium webkit firefox
+
+      - name: Rodar E2E
+        run: npm run test:e2e
+        env:
+          CI: true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: v2/frontend/playwright-report/
+          retention-days: 14
+
+  # ------------------------------------------------------------------
+  # Performance
+  # ------------------------------------------------------------------
+  performance:
+    name: Orçamento de performance
+    runs-on: ubuntu-latest
+    needs: [frontend]
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: v2/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: v2/frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+      - name: Lighthouse CI
+        run: |
+          npm install --no-save @lhci/cli
+          npx lhci autorun --config=lighthouserc.json
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+  # ------------------------------------------------------------------
+  # Segurança
+  # ------------------------------------------------------------------
+  security:
+    name: Revisão de segurança
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Varredura de segredos (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Revisão de dependências
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+      - name: CodeQL — inicializar
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: CodeQL — analisar
+        uses: github/codeql-action/analyze@v3
+
+  # ------------------------------------------------------------------
+  # Gate final
+  # ------------------------------------------------------------------
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [commitlint, backend, frontend, e2e, security]
+    if: always()
+
+    steps:
+      - name: Verificar resultado dos jobs
+        run: |
+          echo "commitlint: ${{ needs.commitlint.result }}"
+          echo "backend:    ${{ needs.backend.result }}"
+          echo "frontend:   ${{ needs.frontend.result }}"
+          echo "e2e:        ${{ needs.e2e.result }}"
+          echo "security:   ${{ needs.security.result }}"
+
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "::error::Quality gate reprovado. Corrija os jobs vermelhos antes do merge."
+            exit 1
+          fi
+
+          echo "Quality gate aprovado."

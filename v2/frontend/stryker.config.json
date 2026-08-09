@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/stryker-mutator/stryker-js/master/packages/api/schema/stryker-core.json",
+  "packageManager": "npm",
+  "testRunner": "vitest",
+  "reporters": ["html", "clear-text", "progress"],
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/lib/**/*.ts",
+    "src/hooks/**/*.ts",
+    "!src/**/*.test.{ts,tsx}",
+    "!src/lib/motion.ts"
+  ],
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": 55
+  },
+  "timeoutMS": 20000,
+  "comment": "motion.ts é excluído: são constantes de configuração, mutá-las não gera teste útil. Foco em lib/ e hooks/, onde mora a lógica."
+}

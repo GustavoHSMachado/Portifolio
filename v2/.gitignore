@@ -1,0 +1,35 @@
+# Dependências
+/backend/vendor/
+/frontend/node_modules/
+
+# Segredos
+.env
+.env.local
+.env.*.local
+
+# Build
+/frontend/.next/
+/frontend/out/
+/frontend/next-env.d.ts
+
+# Testes e cobertura
+/backend/coverage.xml
+/backend/coverage-html/
+/backend/.phpunit.cache/
+/frontend/coverage/
+/frontend/playwright-report/
+/frontend/test-results/
+/frontend/reports/
+
+# Logs e cache
+/backend/storage/logs/*
+!/backend/storage/logs/.gitkeep
+*.log
+.phpstan.cache/
+.php-cs-fixer.cache
+
+# Editor / SO
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

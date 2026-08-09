@@ -1,9 +1,9 @@
-import type { Metadata, Viewport } from "next";
-import { Open_Sans } from "next/font/google";
-import type { ReactNode } from "react";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AuthProvider } from "@/hooks/useAuth";
+import type { Metadata, Viewport } from "next";
+import { Open_Sans } from "next/font/google";
+import type { ReactNode } from "react";
 import "@/styles/globals.css";
 
 /**

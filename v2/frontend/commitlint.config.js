@@ -10,9 +10,9 @@ export default {
       2,
       "always",
       [
-        "fix",      // Correção
-        "feat",     // Nova função
-        "perf",     // Melhoria de performance
+        "fix", // Correção
+        "feat", // Nova função
+        "perf", // Melhoria de performance
         "refactor", // Melhoria interna sem mudar comportamento
         "docs",
         "test",

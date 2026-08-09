@@ -104,9 +104,8 @@
   color: var(--text-tertiary);
   text-decoration: none;
   border-radius: var(--radius-md);
-  transition:
-    color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+  transition: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast)
+    var(--ease-out);
 }
 
 .linkButton:hover {

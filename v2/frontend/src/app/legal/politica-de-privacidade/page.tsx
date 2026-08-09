@@ -1,6 +1,6 @@
+import { LEGAL_UPDATED_AT, LEGAL_VERSIONS } from "@/lib/legal";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LEGAL_UPDATED_AT, LEGAL_VERSIONS } from "@/lib/legal";
 import styles from "../layout.module.css";
 
 export const metadata: Metadata = {
@@ -26,8 +26,8 @@ export default function PoliticaDePrivacidadePage() {
 
       <h2>1. Quem somos</h2>
       <p>
-        Este site é um portfólio pessoal mantido por Gustavo Henrique Santos Machado, pessoa
-        física. Tratamos dados pessoais em conformidade com a Lei nº 13.709/2018 (LGPD).
+        Este site é um portfólio pessoal mantido por Gustavo Henrique Santos Machado, pessoa física.
+        Tratamos dados pessoais em conformidade com a Lei nº 13.709/2018 (LGPD).
       </p>
 
       <h2>2. Quais dados coletamos</h2>
@@ -73,15 +73,17 @@ export default function PoliticaDePrivacidadePage() {
       </div>
 
       <p>
-        <strong>Sobre a senha:</strong> ela nunca é armazenada como você a digitou. Guardamos
-        apenas um hash criptográfico irreversível (Argon2id). Nem nós conseguimos descobrir sua
-        senha — por isso a recuperação cria uma nova, em vez de reenviar a antiga.
+        <strong>Sobre a senha:</strong> ela nunca é armazenada como você a digitou. Guardamos apenas
+        um hash criptográfico irreversível (Argon2id). Nem nós conseguimos descobrir sua senha — por
+        isso a recuperação cria uma nova, em vez de reenviar a antiga.
       </p>
 
       <h3>2.2 Dados coletados automaticamente</h3>
       <div className={styles.tableWrap}>
         <table>
-          <caption className="sr-only">Dados coletados automaticamente e prazos de retenção</caption>
+          <caption className="sr-only">
+            Dados coletados automaticamente e prazos de retenção
+          </caption>
           <thead>
             <tr>
               <th scope="col">Dado</th>
@@ -112,8 +114,8 @@ export default function PoliticaDePrivacidadePage() {
       <h3>2.3 O que não coletamos</h3>
       <ul>
         <li>
-          Dados sensíveis: origem racial ou étnica, convicção religiosa, opinião política,
-          filiação sindical, saúde, vida sexual, dados genéticos ou biométricos.
+          Dados sensíveis: origem racial ou étnica, convicção religiosa, opinião política, filiação
+          sindical, saúde, vida sexual, dados genéticos ou biométricos.
         </li>
         <li>Dados de menores de 18 anos — o serviço não se destina a eles.</li>
         <li>Geolocalização precisa.</li>
@@ -122,20 +124,22 @@ export default function PoliticaDePrivacidadePage() {
 
       <h2>3. Cookies</h2>
       <p>
-        Usamos apenas cookies estritamente necessários. Não há cookies de análise, publicidade
-        ou rastreamento de terceiros — por isso não exibimos banner de consentimento.
+        Usamos apenas cookies estritamente necessários. Não há cookies de análise, publicidade ou
+        rastreamento de terceiros — por isso não exibimos banner de consentimento.
       </p>
       <p>
         O cookie <code>portifolio_refresh</code> mantém você conectado por até 30 dias. Ele é
-        HttpOnly (inacessível a JavaScript), Secure (só trafega em HTTPS) e SameSite=Strict (não
-        é enviado em requisições vindas de outros sites). Essas três características reduzem o
-        risco de roubo de sessão.
+        HttpOnly (inacessível a JavaScript), Secure (só trafega em HTTPS) e SameSite=Strict (não é
+        enviado em requisições vindas de outros sites). Essas três características reduzem o risco
+        de roubo de sessão.
       </p>
 
       <h2>4. Bases legais</h2>
       <div className={styles.tableWrap}>
         <table>
-          <caption className="sr-only">Finalidades de tratamento e respectivas bases legais</caption>
+          <caption className="sr-only">
+            Finalidades de tratamento e respectivas bases legais
+          </caption>
           <thead>
             <tr>
               <th scope="col">Finalidade</th>
@@ -167,21 +171,21 @@ export default function PoliticaDePrivacidadePage() {
         </table>
       </div>
       <p>
-        <strong>Sobre o legítimo interesse:</strong> registrar IP e tentativas de login serve
-        para impedir ataques de força bruta contra a sua conta. O benefício de segurança supera o
-        impacto do registro, que é mínimo, temporário e não usado para perfilamento.
+        <strong>Sobre o legítimo interesse:</strong> registrar IP e tentativas de login serve para
+        impedir ataques de força bruta contra a sua conta. O benefício de segurança supera o impacto
+        do registro, que é mínimo, temporário e não usado para perfilamento.
       </p>
 
       <h2>5. Com quem compartilhamos</h2>
       <p>
-        Não vendemos, alugamos nem cedemos seus dados. O compartilhamento se limita aos
-        operadores necessários para o serviço funcionar: provedor de hospedagem, provedor de
-        e-mail e, quando ativado, o serviço de monitoramento de erros — este último recebe apenas
-        dados técnicos da falha, sem dados pessoais.
+        Não vendemos, alugamos nem cedemos seus dados. O compartilhamento se limita aos operadores
+        necessários para o serviço funcionar: provedor de hospedagem, provedor de e-mail e, quando
+        ativado, o serviço de monitoramento de erros — este último recebe apenas dados técnicos da
+        falha, sem dados pessoais.
       </p>
       <p>
-        Podemos divulgar dados quando houver ordem judicial ou requisição de autoridade
-        competente, nos limites da lei.
+        Podemos divulgar dados quando houver ordem judicial ou requisição de autoridade competente,
+        nos limites da lei.
       </p>
 
       <h2>6. Por quanto tempo guardamos</h2>
@@ -193,8 +197,8 @@ export default function PoliticaDePrivacidadePage() {
         <li>Tokens de confirmação e redefinição: expiram em 60 e 30 minutos.</li>
       </ul>
       <p>
-        O registro de aceite é mantido após a exclusão porque é a prova de que houve
-        consentimento — apagá-lo eliminaria justamente a evidência que a lei exige.
+        O registro de aceite é mantido após a exclusão porque é a prova de que houve consentimento —
+        apagá-lo eliminaria justamente a evidência que a lei exige.
       </p>
 
       <h2>7. Seus direitos</h2>
@@ -210,8 +214,8 @@ export default function PoliticaDePrivacidadePage() {
         <li>oposição a tratamento baseado em legítimo interesse.</li>
       </ul>
       <p>
-        Respondemos em até 15 dias. Podemos pedir informações que confirmem sua identidade — é
-        uma proteção para que ninguém acesse seus dados se passando por você.
+        Respondemos em até 15 dias. Podemos pedir informações que confirmem sua identidade — é uma
+        proteção para que ninguém acesse seus dados se passando por você.
       </p>
       <p>
         Você também pode reclamar à Autoridade Nacional de Proteção de Dados:{" "}
@@ -233,9 +237,9 @@ export default function PoliticaDePrivacidadePage() {
         <li>Análise de segurança automatizada a cada alteração de código.</li>
       </ul>
       <p>
-        <strong>Sendo transparente:</strong> nenhuma medida elimina o risco por completo. Em caso
-        de incidente que possa gerar risco relevante a você, comunicaremos você e a ANPD,
-        conforme o art. 48 da LGPD.
+        <strong>Sendo transparente:</strong> nenhuma medida elimina o risco por completo. Em caso de
+        incidente que possa gerar risco relevante a você, comunicaremos você e a ANPD, conforme o
+        art. 48 da LGPD.
       </p>
 
       <h2>9. Alterações</h2>
@@ -247,8 +251,7 @@ export default function PoliticaDePrivacidadePage() {
       <h2>10. Contato</h2>
       <p>
         Para exercer seus direitos ou tirar dúvidas, entre em contato pelos canais indicados na
-        página inicial. Veja também os{" "}
-        <Link href="/legal/termos-de-uso">Termos de Uso</Link>.
+        página inicial. Veja também os <Link href="/legal/termos-de-uso">Termos de Uso</Link>.
       </p>
     </>
   );

@@ -1,9 +1,9 @@
 "use client";
 
+import { transition } from "@/lib/motion";
 import { AnimatePresence, motion } from "framer-motion";
 import { forwardRef, useId, useState } from "react";
 import type { ComponentPropsWithoutRef } from "react";
-import { transition } from "@/lib/motion";
 import styles from "./Input.module.css";
 
 interface InputProps extends Omit<ComponentPropsWithoutRef<"input">, "size"> {

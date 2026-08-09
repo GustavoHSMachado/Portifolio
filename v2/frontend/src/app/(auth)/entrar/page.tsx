@@ -1,15 +1,15 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import type { FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, api, setAccessToken } from "@/lib/api";
 import { fadeInUp, shake, staggerContainer } from "@/lib/motion";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import styles from "./page.module.css";
 
 interface LoginResponse {

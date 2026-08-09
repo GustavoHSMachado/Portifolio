@@ -1,15 +1,19 @@
 "use client";
 
+import { pressable, transition } from "@/lib/motion";
 import { motion } from "framer-motion";
 import { forwardRef } from "react";
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
-import { pressable, transition } from "@/lib/motion";
 import styles from "./Button.module.css";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
-interface ButtonProps extends Omit<ComponentPropsWithoutRef<"button">, "onAnimationStart" | "onDragStart" | "onDragEnd" | "onDrag"> {
+interface ButtonProps
+  extends Omit<
+    ComponentPropsWithoutRef<"button">,
+    "onAnimationStart" | "onDragStart" | "onDragEnd" | "onDrag"
+  > {
   variant?: Variant;
   size?: Size;
   /** Mostra spinner, desabilita o clique e preserva a largura do botão. */

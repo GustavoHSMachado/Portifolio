@@ -1,9 +1,9 @@
 "use client";
 
+import { pageTransition } from "@/lib/motion";
 import { AnimatePresence, motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import { pageTransition } from "@/lib/motion";
 
 /**
  * Continuidade entre rotas.

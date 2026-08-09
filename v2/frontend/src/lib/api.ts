@@ -160,12 +160,18 @@ async function refreshAccessToken(): Promise<string | null> {
   return refreshPromise;
 }
 
-export async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
+export async function request<T>(
+  path: string,
+  options: RequestOptions = {},
+): Promise<ApiSuccess<T>> {
   try {
     return await rawRequest<T>(path, options);
   } catch (error) {
     const shouldRetry =
-      error instanceof ApiError && error.status === 401 && !options.skipAuth && accessToken !== null;
+      error instanceof ApiError &&
+      error.status === 401 &&
+      !options.skipAuth &&
+      accessToken !== null;
 
     if (!shouldRetry) {
       throw error;
@@ -182,7 +188,8 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
 }
 
 export const api = {
-  get: <T>(path: string, options?: RequestOptions) => request<T>(path, { ...options, method: "GET" }),
+  get: <T>(path: string, options?: RequestOptions) =>
+    request<T>(path, { ...options, method: "GET" }),
   post: <T>(path: string, body?: unknown, options?: RequestOptions) =>
     request<T>(path, { ...options, method: "POST", body }),
   put: <T>(path: string, body?: unknown, options?: RequestOptions) =>

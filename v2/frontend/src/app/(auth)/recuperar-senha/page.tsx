@@ -1,13 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Link from "next/link";
-import { useState } from "react";
-import type { FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { ApiError, api } from "@/lib/api";
 import { fadeInUp, shake, staggerContainer } from "@/lib/motion";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import styles from "../entrar/page.module.css";
 
 /**
@@ -64,7 +64,14 @@ export default function RecuperarSenhaPage() {
       >
         <motion.div variants={fadeInUp} className={styles.header}>
           <div className={styles.successMark} aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <title>Enviado</title>
               <path d="M2 6h20v12H2z" />
               <path d="m22 6-10 7L2 6" />
@@ -79,8 +86,8 @@ export default function RecuperarSenhaPage() {
         </motion.div>
 
         <motion.p variants={fadeInUp} className={styles.note}>
-          Não recebeu? Confira a caixa de spam. Se ainda assim não chegar, pode ser que a conta
-          não exista com esse endereço.
+          Não recebeu? Confira a caixa de spam. Se ainda assim não chegar, pode ser que a conta não
+          exista com esse endereço.
         </motion.p>
 
         <motion.div variants={fadeInUp} className={styles.stack}>
@@ -122,7 +129,13 @@ export default function RecuperarSenhaPage() {
         </motion.div>
 
         {formError ? (
-          <motion.p className={styles.formError} variants={shake} initial="hidden" animate="visible" role="alert">
+          <motion.p
+            className={styles.formError}
+            variants={shake}
+            initial="hidden"
+            animate="visible"
+            role="alert"
+          >
             {formError}
           </motion.p>
         ) : null}

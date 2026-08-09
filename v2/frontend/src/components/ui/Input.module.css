@@ -18,10 +18,8 @@
   background-color: var(--surface-raised);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-md);
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast)
+    var(--ease-out), background-color var(--duration-fast) var(--ease-out);
 }
 
 .inputWrap:hover:not([data-error="true"]) {

@@ -1,16 +1,16 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
-import type { FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, api } from "@/lib/api";
 import { fadeInUp, shake, staggerContainer } from "@/lib/motion";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
+import type { FormEvent } from "react";
 import styles from "../entrar/page.module.css";
 
 /** Força da senha — heurística de feedback, não de validação. */
@@ -87,7 +87,13 @@ function RedefinirSenhaContent() {
     return (
       <div className={`${styles.wrapper} ${styles.centered}`}>
         <div className={styles.errorMark} aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+          >
             <title>Link inválido</title>
             <path d="M12 8v5M12 17h.01" />
             <circle cx="12" cy="12" r="9" />
@@ -169,7 +175,13 @@ function RedefinirSenhaContent() {
         </motion.div>
 
         {formError ? (
-          <motion.p className={styles.formError} variants={shake} initial="hidden" animate="visible" role="alert">
+          <motion.p
+            className={styles.formError}
+            variants={shake}
+            initial="hidden"
+            animate="visible"
+            role="alert"
+          >
             {formError}
           </motion.p>
         ) : null}

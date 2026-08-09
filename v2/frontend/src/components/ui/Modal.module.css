@@ -57,9 +57,8 @@
   border-radius: var(--radius-sm);
   cursor: pointer;
 
-  transition:
-    color var(--duration-fast) var(--ease-out),
-    background-color var(--duration-fast) var(--ease-out);
+  transition: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast)
+    var(--ease-out);
 }
 
 .close:hover {

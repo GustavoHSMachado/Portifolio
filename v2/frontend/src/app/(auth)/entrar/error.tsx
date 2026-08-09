@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { Button } from "@/components/ui/Button";
+import { useEffect } from "react";
 
 /**
  * Fronteira de erro da rota.

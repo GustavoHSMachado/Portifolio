@@ -1,15 +1,15 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Link from "next/link";
-import { useState } from "react";
-import type { FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Checkbox } from "@/components/ui/Checkbox";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError, api } from "@/lib/api";
 import { fadeInUp, shake, staggerContainer } from "@/lib/motion";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import styles from "../entrar/page.module.css";
 
 /**
@@ -108,8 +108,8 @@ export default function CriarContaPage() {
 
           <h1 className={styles.title}>Confira seu e-mail</h1>
           <p className={styles.subtitle}>
-            Enviamos um link de confirmação para <strong>{registered}</strong>. Ele expira em
-            60 minutos.
+            Enviamos um link de confirmação para <strong>{registered}</strong>. Ele expira em 60
+            minutos.
           </p>
         </motion.div>
 

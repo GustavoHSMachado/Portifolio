@@ -15,14 +15,14 @@
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
 
   /* Escala tipográfica em razão 1.25 (terça maior) */
-  --text-xs: 0.75rem;    /* 12px */
-  --text-sm: 0.875rem;   /* 14px */
-  --text-base: 1rem;     /* 16px */
-  --text-lg: 1.125rem;   /* 18px */
-  --text-xl: 1.375rem;   /* 22px */
-  --text-2xl: 1.75rem;   /* 28px */
-  --text-3xl: 2.25rem;   /* 36px */
-  --text-4xl: 3rem;      /* 48px */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.375rem; /* 22px */
+  --text-2xl: 1.75rem; /* 28px */
+  --text-3xl: 2.25rem; /* 36px */
+  --text-4xl: 3rem; /* 48px */
 
   --leading-tight: 1.15;
   --leading-snug: 1.35;

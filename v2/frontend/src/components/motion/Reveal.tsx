@@ -1,8 +1,8 @@
 "use client";
 
+import { fadeInUp, staggerContainer, staggerItem, viewportOnce } from "@/lib/motion";
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
-import { fadeInUp, staggerContainer, staggerItem, viewportOnce } from "@/lib/motion";
 
 /**
  * Revela conteúdo ao entrar na viewport.

@@ -1,6 +1,6 @@
+import { LEGAL_UPDATED_AT, LEGAL_VERSIONS } from "@/lib/legal";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LEGAL_UPDATED_AT, LEGAL_VERSIONS } from "@/lib/legal";
 import styles from "../layout.module.css";
 
 export const metadata: Metadata = {
@@ -26,28 +26,28 @@ export default function TermosDeUsoPage() {
       <h2>1. O que é este serviço</h2>
       <p>
         Este site é o portfólio pessoal de Gustavo Henrique Santos Machado. Além do conteúdo
-        público, oferece uma área autenticada onde você pode criar uma conta e gerenciar seus
-        dados. O serviço é gratuito e mantido por pessoa física, sem finalidade comercial.
+        público, oferece uma área autenticada onde você pode criar uma conta e gerenciar seus dados.
+        O serviço é gratuito e mantido por pessoa física, sem finalidade comercial.
       </p>
       <p>
         Ao criar uma conta, você declara ter lido e aceito estes Termos e a{" "}
-        <Link href="/legal/politica-de-privacidade">Política de Privacidade</Link>. Se não
-        concordar com algum ponto, não crie a conta.
+        <Link href="/legal/politica-de-privacidade">Política de Privacidade</Link>. Se não concordar
+        com algum ponto, não crie a conta.
       </p>
 
       <h2>2. Quem pode usar</h2>
       <p>
-        Você precisa ter <strong>18 anos ou mais</strong>. O serviço não se destina a menores e
-        não coletamos dados de crianças ou adolescentes de forma intencional. Você é responsável
-        por fornecer informações verdadeiras e mantê-las atualizadas.
+        Você precisa ter <strong>18 anos ou mais</strong>. O serviço não se destina a menores e não
+        coletamos dados de crianças ou adolescentes de forma intencional. Você é responsável por
+        fornecer informações verdadeiras e mantê-las atualizadas.
       </p>
 
       <h2>3. Sua conta</h2>
 
       <h3>3.1 Criação</h3>
       <p>
-        Para criar uma conta você fornece nome, e-mail, telefone e senha. É necessário confirmar
-        o e-mail — sem isso, a conta permanece inativa.
+        Para criar uma conta você fornece nome, e-mail, telefone e senha. É necessário confirmar o
+        e-mail — sem isso, a conta permanece inativa.
       </p>
 
       <h3>3.2 Segurança</h3>
@@ -61,20 +61,20 @@ export default function TermosDeUsoPage() {
         <li>não compartilhar suas credenciais.</li>
       </ul>
       <p>
-        Se suspeitar de acesso não autorizado, troque a senha imediatamente — isso encerra todas
-        as sessões ativas.
+        Se suspeitar de acesso não autorizado, troque a senha imediatamente — isso encerra todas as
+        sessões ativas.
       </p>
 
       <h3>3.3 Bloqueio automático</h3>
       <p>
-        Após 5 tentativas de login malsucedidas, a conta é bloqueada por 15 minutos. É uma
-        proteção contra ataques automatizados, não uma punição.
+        Após 5 tentativas de login malsucedidas, a conta é bloqueada por 15 minutos. É uma proteção
+        contra ataques automatizados, não uma punição.
       </p>
 
       <h3>3.4 Encerramento</h3>
       <p>
-        Você pode pedir a exclusão da conta a qualquer momento. Processamos em até 30 dias.
-        Podemos suspender contas que violem estes Termos, com aviso prévio sempre que possível.
+        Você pode pedir a exclusão da conta a qualquer momento. Processamos em até 30 dias. Podemos
+        suspender contas que violem estes Termos, com aviso prévio sempre que possível.
       </p>
 
       <h2>4. Uso aceitável</h2>
@@ -99,8 +99,8 @@ export default function TermosDeUsoPage() {
 
       <h2>5. Propriedade intelectual</h2>
       <p>
-        Textos, imagens, projetos e código-fonte pertencem a Gustavo Henrique Santos Machado,
-        salvo indicação em contrário. O template visual da versão 1 é o Namari, de{" "}
+        Textos, imagens, projetos e código-fonte pertencem a Gustavo Henrique Santos Machado, salvo
+        indicação em contrário. O template visual da versão 1 é o Namari, de{" "}
         <a href="https://www.shapingrain.com" target="_blank" rel="noopener noreferrer">
           ShapingRain
         </a>
@@ -115,8 +115,8 @@ export default function TermosDeUsoPage() {
       <p>
         O serviço é oferecido “como está”, sem garantia de disponibilidade ininterrupta. Sendo
         direto: isto é um portfólio pessoal, não um serviço com SLA. Em caso de descontinuação,
-        avisaremos com pelo menos 30 dias de antecedência e daremos oportunidade de exportar
-        seus dados.
+        avisaremos com pelo menos 30 dias de antecedência e daremos oportunidade de exportar seus
+        dados.
       </p>
 
       <h2>7. Limitação de responsabilidade</h2>
@@ -128,9 +128,9 @@ export default function TermosDeUsoPage() {
         <li>indisponibilidade temporária do serviço.</li>
       </ul>
       <p>
-        <strong>Ressalva:</strong> nada nestes Termos exclui responsabilidade por dolo, culpa
-        grave ou por direitos que a lei considera irrenunciáveis, especialmente os previstos no
-        Código de Defesa do Consumidor.
+        <strong>Ressalva:</strong> nada nestes Termos exclui responsabilidade por dolo, culpa grave
+        ou por direitos que a lei considera irrenunciáveis, especialmente os previstos no Código de
+        Defesa do Consumidor.
       </p>
 
       <h2>8. Alterações</h2>
@@ -142,9 +142,9 @@ export default function TermosDeUsoPage() {
 
       <h2>9. Lei aplicável</h2>
       <p>
-        Estes Termos são regidos pelas leis da República Federativa do Brasil, ressalvado o
-        direito do consumidor de demandar no foro de seu domicílio, nos termos do art. 101, I,
-        do Código de Defesa do Consumidor.
+        Estes Termos são regidos pelas leis da República Federativa do Brasil, ressalvado o direito
+        do consumidor de demandar no foro de seu domicílio, nos termos do art. 101, I, do Código de
+        Defesa do Consumidor.
       </p>
     </>
   );

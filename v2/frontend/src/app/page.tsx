@@ -1,7 +1,7 @@
-import type { Metadata } from "next";
-import Link from "next/link";
 import { Reveal, RevealItem, RevealList } from "@/components/motion/Reveal";
 import { about, currentAge, profile, siteNotes, skills, socialLinks } from "@/lib/content";
+import type { Metadata } from "next";
+import Link from "next/link";
 import styles from "./page.module.css";
 
 export const metadata: Metadata = {

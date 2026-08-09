@@ -53,6 +53,7 @@ export function SkeletonText({ lines = 3, className }: { lines?: number; classNa
     <span className={[styles.textBlock, className ?? ""].filter(Boolean).join(" ")}>
       {Array.from({ length: lines }, (_, i) => (
         <Skeleton
+          // biome-ignore lint/suspicious/noArrayIndexKey: lista decorativa de tamanho fixo, sem identidade própria e que nunca reordena — a posição é a única chave estável possível aqui.
           key={i}
           height="0.9em"
           width={i === lines - 1 ? "62%" : widths[i % widths.length]}
@@ -88,9 +89,10 @@ export function LoadingRegion({
   children: React.ReactNode;
 }) {
   return (
-    <div role="status" aria-live="polite" aria-busy="true">
+    // <output> já carrega role="status" e aria-live="polite" nativamente.
+    <output className={styles.loadingRegion} aria-busy="true">
       <span className={styles.srOnly}>{label}</span>
       {children}
-    </div>
+    </output>
   );
 }

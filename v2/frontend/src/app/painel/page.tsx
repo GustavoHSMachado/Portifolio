@@ -1,17 +1,17 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Link from "next/link";
-import { useState } from "react";
-import type { FormEvent } from "react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Modal } from "@/components/ui/Modal";
-import { Skeleton, SkeletonText } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth, useRequireAuth } from "@/hooks/useAuth";
 import { ApiError, api } from "@/lib/api";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { useState } from "react";
+import type { FormEvent } from "react";
 import styles from "./page.module.css";
 
 export default function PainelPage() {
@@ -88,7 +88,9 @@ export default function PainelPage() {
         setPasswordErrors(error.fieldErrors);
         return;
       }
-      setPasswordError(error instanceof ApiError ? error.message : "Não foi possível alterar a senha.");
+      setPasswordError(
+        error instanceof ApiError ? error.message : "Não foi possível alterar a senha.",
+      );
     } finally {
       setChangingPassword(false);
     }
@@ -96,8 +98,9 @@ export default function PainelPage() {
 
   if (loading || !user) {
     return (
-      <div className={styles.page} role="status" aria-live="polite">
-        <span className="sr-only">Carregando seu painel</span>
+      <div className={styles.page} aria-busy="true">
+        {/* <output> anuncia sozinho: role="status" e aria-live="polite" são implícitos. */}
+        <output className="sr-only">Carregando seu painel</output>
         <div className={styles.container}>
           <Skeleton height="2.5rem" width="45%" />
           <div style={{ marginTop: "var(--space-6)", display: "grid", gap: "var(--space-5)" }}>
@@ -136,9 +139,9 @@ export default function PainelPage() {
         </motion.header>
 
         {!user.emailVerified ? (
-          <motion.div className={styles.warning} variants={fadeInUp} role="status">
+          <motion.output className={styles.warning} variants={fadeInUp}>
             <strong>Confirme seu e-mail.</strong> Algumas ações ficam bloqueadas até a confirmação.
-          </motion.div>
+          </motion.output>
         ) : null}
 
         <motion.section className={styles.card} variants={fadeInUp}>
@@ -201,11 +204,7 @@ export default function PainelPage() {
         </motion.section>
       </motion.div>
 
-      <Modal
-        open={passwordOpen}
-        onClose={() => setPasswordOpen(false)}
-        title="Alterar senha"
-      >
+      <Modal open={passwordOpen} onClose={() => setPasswordOpen(false)} title="Alterar senha">
         <form id="password-form" className={styles.form} onSubmit={handlePassword} noValidate>
           <Input
             label="Senha atual"

@@ -17,7 +17,11 @@ export default defineConfig({
   expect: { timeout: 5_000 },
 
   reporter: process.env.CI
-    ? [["html", { open: "never" }], ["github"], ["json", { outputFile: "test-results/results.json" }]]
+    ? [
+        ["html", { open: "never" }],
+        ["github"],
+        ["json", { outputFile: "test-results/results.json" }],
+      ]
     : [["list"]],
 
   use: {
@@ -37,7 +41,9 @@ export default defineConfig({
     {
       // Verifica que a interface continua utilizável sem animação.
       name: "reduced-motion",
-      use: { ...devices["Desktop Chrome"], reducedMotion: "reduce" },
+      // reducedMotion é opção do contexto do navegador, não do runner — fora de
+      // contextOptions o TypeScript rejeita e a preferência não chega à página.
+      use: { ...devices["Desktop Chrome"], contextOptions: { reducedMotion: "reduce" } },
     },
   ],
 

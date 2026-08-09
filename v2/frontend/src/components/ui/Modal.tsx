@@ -1,9 +1,9 @@
 "use client";
 
+import { modalContent, overlay } from "@/lib/motion";
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useRef } from "react";
 import type { ReactNode } from "react";
-import { modalContent, overlay } from "@/lib/motion";
 import styles from "./Modal.module.css";
 
 interface ModalProps {
@@ -13,6 +13,9 @@ interface ModalProps {
   children: ReactNode;
   footer?: ReactNode;
 }
+
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
  * Diálogo modal.
@@ -28,6 +31,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLElement | null>(null);
 
+  // Trava o scroll e devolve o foco a quem abriu.
   useEffect(() => {
     if (!open) return;
 
@@ -45,6 +49,17 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
 
     dialogRef.current?.focus();
 
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.body.style.paddingRight = previousPadding;
+      triggerRef.current?.focus();
+    };
+  }, [open]);
+
+  // Escape fecha; Tab circula dentro do diálogo.
+  useEffect(() => {
+    if (!open) return;
+
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -54,14 +69,17 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
 
       if (event.key !== "Tab") return;
 
-      const focusables = dialogRef.current?.querySelectorAll<HTMLElement>(
-        'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])',
+      const focusables = Array.from(
+        dialogRef.current?.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR) ?? [],
       );
 
-      if (!focusables || focusables.length === 0) return;
-
+      // Um diálogo sem nada focável dentro deixa first e last indefinidos.
+      // Sem esta guarda o focus trap quebra em tempo de execução — era o que
+      // o TypeScript vinha apontando e ninguém tinha rodado para ver.
       const first = focusables[0];
-      const last = focusables[focusables.length - 1];
+      const last = focusables.at(-1);
+
+      if (!first || !last) return;
 
       if (event.shiftKey && document.activeElement === first) {
         event.preventDefault();
@@ -74,12 +92,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
 
     document.addEventListener("keydown", onKeyDown);
 
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.body.style.overflow = previousOverflow;
-      document.body.style.paddingRight = previousPadding;
-      triggerRef.current?.focus();
-    };
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
   return (
@@ -97,6 +110,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
             ref={dialogRef}
             className={styles.dialog}
             variants={modalContent}
+            // biome-ignore lint/a11y/useSemanticElements: o <dialog> nativo só abre por showModal() e fecha por close(), o que conflita com a animação de saída do AnimatePresence — o elemento sumiria antes de animar. role="dialog" com aria-modal, focus trap e Escape entrega o mesmo contrato de acessibilidade.
             role="dialog"
             aria-modal="true"
             aria-labelledby="modal-title"

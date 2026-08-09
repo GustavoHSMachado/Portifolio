@@ -1,13 +1,13 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ApiError, api } from "@/lib/api";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useRef, useState } from "react";
 import styles from "../entrar/page.module.css";
 
 type Status = "verifying" | "success" | "expired" | "error";
@@ -53,13 +53,14 @@ function ConfirmarEmailContent() {
 
   if (status === "verifying") {
     return (
-      <div className={`${styles.wrapper} ${styles.centered}`} role="status" aria-live="polite">
+      <div className={`${styles.wrapper} ${styles.centered}`} aria-busy="true">
         <Skeleton height={56} width={56} radius="var(--radius-full)" />
         <div style={{ marginTop: "var(--space-5)", display: "grid", gap: "var(--space-3)" }}>
           <Skeleton height="2rem" width="70%" />
           <Skeleton height="1rem" width="90%" delay={80} />
         </div>
-        <span className="sr-only">Confirmando seu e-mail</span>
+        {/* <output> já anuncia: role="status" e aria-live="polite" são implícitos. */}
+        <output className="sr-only">Confirmando seu e-mail</output>
       </div>
     );
   }
@@ -108,13 +109,15 @@ function ConfirmarEmailContent() {
         </div>
 
         <h1 className={styles.title}>
-          {isSuccess ? "E-mail confirmado" : status === "expired" ? "Link expirado" : "Não deu certo"}
+          {isSuccess
+            ? "E-mail confirmado"
+            : status === "expired"
+              ? "Link expirado"
+              : "Não deu certo"}
         </h1>
 
         <p className={styles.subtitle}>
-          {isSuccess
-            ? "Sua conta está ativa. Você já pode entrar."
-            : message}
+          {isSuccess ? "Sua conta está ativa. Você já pode entrar." : message}
         </p>
       </motion.div>
 

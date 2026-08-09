@@ -1,9 +1,9 @@
 "use client";
 
+import { toast as toastVariants } from "@/lib/motion";
 import { AnimatePresence, motion } from "framer-motion";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { toast as toastVariants } from "@/lib/motion";
 import styles from "./Toast.module.css";
 
 type ToastKind = "success" | "error" | "info";
@@ -58,7 +58,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={api}>
       {children}
 
-      <div className={styles.viewport} role="region" aria-label="Notificações">
+      <section className={styles.viewport} aria-label="Notificações">
         <AnimatePresence initial={false}>
           {items.map((item) => (
             <motion.div
@@ -84,7 +84,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             </motion.div>
           ))}
         </AnimatePresence>
-      </div>
+      </section>
     </ToastContext.Provider>
   );
 }

@@ -41,8 +41,7 @@ export const about = {
   title: "Sobre mim",
   paragraphs: [
     (age: number) =>
-      `Tenho ${age} anos e curso Sistemas de Informação, com foco em desenvolvimento. ` +
-      "Trabalho com Java e PHP, além de CSS e HTML, mas é no back-end que me sinto em casa.",
+      `Tenho ${age} anos e curso Sistemas de Informação, com foco em desenvolvimento. Trabalho com Java e PHP, além de CSS e HTML, mas é no back-end que me sinto em casa.`,
     () =>
       "Sou católico e gosto de tocar violão e gaita — o que não quer dizer que eu toque bem. " +
       "Gosto de nadar e de jogar, mesmo que meu físico não demonstre. " +

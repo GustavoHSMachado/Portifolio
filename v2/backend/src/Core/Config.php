@@ -33,7 +33,7 @@ final class Config
     private static function assertRequired(): void
     {
         $required = ['APP_KEY', 'JWT_SECRET', 'DB_NAME'];
-        $missing  = [];
+        $missing = [];
 
         foreach ($required as $key) {
             if (self::get($key) === null || self::get($key) === '') {

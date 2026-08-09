@@ -15,7 +15,7 @@ use App\Database\Connection;
  */
 final class LegalAcceptance
 {
-    public const DOC_TERMS   = 'terms';
+    public const DOC_TERMS = 'terms';
     public const DOC_PRIVACY = 'privacy';
 
     public function __construct(private readonly Connection $db)

@@ -22,7 +22,7 @@ final class RateLimiter
     public function hit(string $key, int $maxAttempts, int $windowSeconds): RateLimitResult
     {
         $hash = hash('sha256', $key);
-        $now  = new \DateTimeImmutable();
+        $now = new \DateTimeImmutable();
 
         $row = $this->db->first(
             'SELECT id, attempts, window_start FROM rate_limits WHERE bucket_key = ? LIMIT 1',
@@ -41,7 +41,7 @@ final class RateLimiter
         }
 
         $windowStart = new \DateTimeImmutable($row['window_start']);
-        $elapsed     = $now->getTimestamp() - $windowStart->getTimestamp();
+        $elapsed = $now->getTimestamp() - $windowStart->getTimestamp();
 
         if ($elapsed >= $windowSeconds) {
             $this->db->run(
@@ -52,7 +52,7 @@ final class RateLimiter
             return new RateLimitResult(true, $maxAttempts - 1, $windowSeconds);
         }
 
-        $attempts   = (int) $row['attempts'] + 1;
+        $attempts = (int) $row['attempts'] + 1;
         $retryAfter = $windowSeconds - $elapsed;
 
         if ($attempts > $maxAttempts) {

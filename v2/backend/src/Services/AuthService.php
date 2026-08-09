@@ -43,7 +43,7 @@ final class AuthService
     // ------------------------------------------------------------------
 
     /**
-     * @param  array{ip:string,userAgent:?string} $context usado no registro do aceite legal
+     * @param array{ip:string,userAgent:?string} $context usado no registro do aceite legal
      * @return array{user: array<string,mixed>}
      */
     public function register(
@@ -154,6 +154,7 @@ final class AuthService
 
         if ($user === null) {
             Hash::burn(); // custo de CPU equivalente ao caso real
+
             throw HttpException::unauthorized('E-mail ou senha incorretos.');
         }
 
@@ -190,7 +191,7 @@ final class AuthService
         $this->users->clearFailedAttempts((int) $user['id']);
 
         $familyId = bin2hex(random_bytes(16));
-        $refresh  = $this->refreshTokens->issue(
+        $refresh = $this->refreshTokens->issue(
             (int) $user['id'],
             $familyId,
             Config::int('REFRESH_TOKEN_TTL_DAYS', 30),
@@ -327,7 +328,7 @@ final class AuthService
         }
 
         $userId = (int) $row['user_id'];
-        $user   = $this->users->findById($userId);
+        $user = $this->users->findById($userId);
 
         if ($user === null) {
             throw HttpException::notFound('Conta não encontrada.');

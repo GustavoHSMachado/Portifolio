@@ -38,14 +38,14 @@ final class HealthController
             $latencyMs = round((hrtime(true) - $start) / 1e6, 2);
         } catch (\Throwable) {
             return Response::json([
-                'status'     => 'degraded',
-                'checks'     => ['database' => 'down'],
+                'status' => 'degraded',
+                'checks' => ['database' => 'down'],
             ], 503);
         }
 
         return Response::ok([
-            'status' => 'ok',
-            'checks' => ['database' => 'up'],
+            'status'    => 'ok',
+            'checks'    => ['database' => 'up'],
             'latencyMs' => $latencyMs,
         ]);
     }

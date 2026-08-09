@@ -21,7 +21,7 @@ final class Validator
     private array $valid = [];
 
     /**
-     * @param array<string,mixed>  $data
+     * @param array<string,mixed> $data
      * @param array<string,string> $rules
      */
     private function __construct(
@@ -46,7 +46,7 @@ final class Validator
             $rules = explode('|', $ruleString);
 
             $isRequired = in_array('required', $rules, true);
-            $isEmpty    = $value === null || $value === '';
+            $isEmpty = $value === null || $value === '';
 
             if ($isRequired && $isEmpty) {
                 $this->errors[$field][] = 'Campo obrigatório.';
@@ -80,11 +80,11 @@ final class Validator
                 ? sprintf('Deve ter no máximo %d caracteres.', (int) $param) : null,
             'digits' => preg_match('/^\d+$/', $value) !== 1
                 ? 'Deve conter apenas números.' : null,
-            'between' => $this->betweenError($value, (string) $param),
+            'between'    => $this->betweenError($value, (string) $param),
             'alpha_dash' => preg_match('/^[A-Za-z0-9._-]+$/', $value) !== 1
                 ? 'Use apenas letras, números, ponto, hífen ou underscore.' : null,
             'password' => $this->passwordError($value),
-            'url' => filter_var($value, FILTER_VALIDATE_URL) === false
+            'url'      => filter_var($value, FILTER_VALIDATE_URL) === false
                 ? 'URL inválida.' : null,
             'hex' => preg_match('/^[a-f0-9]+$/i', $value) !== 1
                 ? 'Formato de token inválido.' : null,

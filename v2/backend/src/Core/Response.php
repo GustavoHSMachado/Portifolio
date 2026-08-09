@@ -56,9 +56,9 @@ final class Response
         ?string $code = null,
     ): self {
         return self::json(array_filter([
-            'error'   => $message,
-            'code'    => $code,
-            'errors'  => $errors ?: null,
+            'error'  => $message,
+            'code'   => $code,
+            'errors' => $errors ?: null,
         ], static fn ($v) => $v !== null), $status);
     }
 

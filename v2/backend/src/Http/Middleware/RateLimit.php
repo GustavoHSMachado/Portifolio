@@ -30,7 +30,7 @@ final class RateLimit implements MiddlewareInterface
 
         [$max, $window] = $this->rulesFor($request->path);
 
-        $key    = sprintf('%s|%s|%s', $request->ip, $request->method, $request->path);
+        $key = sprintf('%s|%s|%s', $request->ip, $request->method, $request->path);
         $result = $this->limiter->hit($key, $max, $window);
 
         if (!$result->allowed) {
@@ -50,10 +50,10 @@ final class RateLimit implements MiddlewareInterface
     {
         // Rotas de autenticação são alvo de força bruta — limite bem mais apertado.
         $strict = [
-            '/api/v1/auth/login'           => [5, 900],
-            '/api/v1/auth/register'        => [3, 3600],
-            '/api/v1/auth/forgot-password' => [3, 3600],
-            '/api/v1/auth/reset-password'  => [5, 3600],
+            '/api/v1/auth/login'               => [5, 900],
+            '/api/v1/auth/register'            => [3, 3600],
+            '/api/v1/auth/forgot-password'     => [3, 3600],
+            '/api/v1/auth/reset-password'      => [5, 3600],
             '/api/v1/auth/resend-verification' => [3, 3600],
         ];
 

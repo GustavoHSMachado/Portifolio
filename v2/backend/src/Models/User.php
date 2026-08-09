@@ -13,7 +13,7 @@ use App\Support\Hash;
  */
 final class User
 {
-    public const ROLE_USER  = 'user';
+    public const ROLE_USER = 'user';
     public const ROLE_ADMIN = 'admin';
 
     public function __construct(private readonly Connection $db)
@@ -120,13 +120,13 @@ final class User
     public static function toPublic(array $user): array
     {
         return [
-            'id'             => (int) $user['id'],
-            'name'           => $user['name'],
-            'email'          => $user['email'],
-            'phone'          => $user['phone'] ?? null,
-            'role'           => $user['role'],
-            'emailVerified'  => !empty($user['email_verified_at']),
-            'createdAt'      => $user['created_at'] ?? null,
+            'id'            => (int) $user['id'],
+            'name'          => $user['name'],
+            'email'         => $user['email'],
+            'phone'         => $user['phone'] ?? null,
+            'role'          => $user['role'],
+            'emailVerified' => !empty($user['email_verified_at']),
+            'createdAt'     => $user['created_at'] ?? null,
         ];
     }
 }

@@ -28,7 +28,7 @@ final class App
         Config::boot($this->basePath);
 
         $this->container = new Container();
-        $this->router    = new Router($this->container);
+        $this->router = new Router($this->container);
         $this->container->instance(Container::class, $this->container);
 
         $this->bootObservability();
@@ -56,7 +56,7 @@ final class App
     {
         $this->router->useGlobal($this->globalMiddleware());
 
-        $auth     = [Authenticate::class];
+        $auth = [Authenticate::class];
         $verified = [Authenticate::class, RequireVerifiedEmail::class];
 
         // Saúde
@@ -85,11 +85,11 @@ final class App
 
         if ($dsn !== null && $dsn !== '' && class_exists(\Sentry\SentrySdk::class)) {
             \Sentry\init([
-                'dsn'                  => $dsn,
-                'environment'          => Config::get('APP_ENV', 'production'),
-                'release'              => Config::get('APP_VERSION', 'dev'),
-                'traces_sample_rate'   => (float) Config::get('SENTRY_TRACES_SAMPLE_RATE', '0.2'),
-                'send_default_pii'     => false, // nunca enviar dados pessoais
+                'dsn'                => $dsn,
+                'environment'        => Config::get('APP_ENV', 'production'),
+                'release'            => Config::get('APP_VERSION', 'dev'),
+                'traces_sample_rate' => (float) Config::get('SENTRY_TRACES_SAMPLE_RATE', '0.2'),
+                'send_default_pii'   => false, // nunca enviar dados pessoais
             ]);
         }
     }

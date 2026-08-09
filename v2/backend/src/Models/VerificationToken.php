@@ -18,7 +18,7 @@ use App\Database\Connection;
 final class VerificationToken
 {
     public const PURPOSE_EMAIL_VERIFICATION = 'email_verification';
-    public const PURPOSE_PASSWORD_RESET     = 'password_reset';
+    public const PURPOSE_PASSWORD_RESET = 'password_reset';
 
     public function __construct(private readonly Connection $db)
     {

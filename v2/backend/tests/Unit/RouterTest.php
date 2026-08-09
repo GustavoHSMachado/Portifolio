@@ -16,10 +16,10 @@ final class RouterTest extends TestCase
     private function request(string $method, string $path): Request
     {
         $_SERVER['REQUEST_METHOD'] = $method;
-        $_SERVER['REQUEST_URI']    = $path;
-        $_SERVER['REMOTE_ADDR']    = '127.0.0.1';
+        $_SERVER['REQUEST_URI'] = $path;
+        $_SERVER['REMOTE_ADDR'] = '127.0.0.1';
         $_POST = [];
-        $_GET  = [];
+        $_GET = [];
 
         return Request::fromGlobals();
     }

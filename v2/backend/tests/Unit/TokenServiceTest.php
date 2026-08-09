@@ -36,7 +36,7 @@ final class TokenServiceTest extends TestCase
     #[Test]
     public function emite_e_verifica_token(): void
     {
-        $token  = $this->service->issueAccessToken($this->user());
+        $token = $this->service->issueAccessToken($this->user());
         $claims = $this->service->verifyAccessToken($token);
 
         self::assertNotNull($claims);
@@ -52,7 +52,7 @@ final class TokenServiceTest extends TestCase
         [$header, $payload, $signature] = explode('.', $token);
 
         // Troca o papel para admin e mantém a assinatura antiga.
-        $forged = json_decode(base64_decode(strtr($payload, '-_', '+/')), true);
+        $forged = json_decode(base64_decode(strtr($payload, '-_', '+/'), true), true);
         $forged['role'] = 'admin';
         $newPayload = rtrim(strtr(base64_encode(json_encode($forged)), '+/', '-_'), '=');
 

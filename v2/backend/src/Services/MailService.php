@@ -84,8 +84,8 @@ final class MailService
         try {
             $mail->isSMTP();
             $mail->CharSet = PHPMailer::CHARSET_UTF8;
-            $mail->Host    = (string) Config::get('MAIL_HOST');
-            $mail->Port    = Config::int('MAIL_PORT', 587);
+            $mail->Host = (string) Config::get('MAIL_HOST');
+            $mail->Port = Config::int('MAIL_PORT', 587);
             $mail->Timeout = 10;
 
             // Servidores de captura locais (Mailpit, MailHog) não têm auth nem TLS.
@@ -104,7 +104,7 @@ final class MailService
             if ($encryption !== '') {
                 $mail->SMTPSecure = $encryption;
             } else {
-                $mail->SMTPSecure  = '';
+                $mail->SMTPSecure = '';
                 $mail->SMTPAutoTLS = false;
             }
 
@@ -115,7 +115,7 @@ final class MailService
             $mail->addAddress($to);
             $mail->Subject = $subject;
             $mail->isHTML(true);
-            $mail->Body    = $html;
+            $mail->Body = $html;
             $mail->AltBody = strip_tags(preg_replace('/<br\s*\/?>/i', "\n", $html) ?? '');
 
             return $mail->send();

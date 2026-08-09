@@ -132,7 +132,7 @@ final class AuthFlowTest extends TestCase
     public function token_expirado_e_rejeitado(): void
     {
         $userId = $this->seedUser();
-        $token  = bin2hex(random_bytes(32));
+        $token = bin2hex(random_bytes(32));
 
         $this->db->run(
             "INSERT INTO verification_tokens (user_id, purpose, token_hash, expires_at)
@@ -149,7 +149,7 @@ final class AuthFlowTest extends TestCase
     public function token_de_proposito_errado_nao_serve(): void
     {
         $userId = $this->seedUser();
-        $token  = bin2hex(random_bytes(32));
+        $token = bin2hex(random_bytes(32));
 
         $this->db->run(
             "INSERT INTO verification_tokens (user_id, purpose, token_hash, expires_at)
@@ -175,9 +175,9 @@ final class AuthFlowTest extends TestCase
     #[Test]
     public function reuso_de_refresh_token_e_detectavel(): void
     {
-        $userId   = $this->seedUser();
+        $userId = $this->seedUser();
         $familyId = bin2hex(random_bytes(16));
-        $token    = bin2hex(random_bytes(32));
+        $token = bin2hex(random_bytes(32));
 
         $this->db->run(
             "INSERT INTO refresh_tokens (user_id, family_id, token_hash, expires_at)
@@ -186,7 +186,7 @@ final class AuthFlowTest extends TestCase
         );
 
         $refresh = new RefreshToken($this->db);
-        $row     = $refresh->find($token);
+        $row = $refresh->find($token);
 
         self::assertNotNull($row);
         self::assertTrue($refresh->isUsable($row));
@@ -201,9 +201,9 @@ final class AuthFlowTest extends TestCase
     #[Test]
     public function revogar_familia_derruba_todos_os_tokens_da_sessao(): void
     {
-        $userId   = $this->seedUser();
+        $userId = $this->seedUser();
         $familyId = bin2hex(random_bytes(16));
-        $refresh  = new RefreshToken($this->db);
+        $refresh = new RefreshToken($this->db);
 
         $tokens = [];
         foreach (range(1, 3) as $i) {

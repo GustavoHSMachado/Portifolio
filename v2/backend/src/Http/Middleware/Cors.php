@@ -16,7 +16,7 @@ final class Cors implements MiddlewareInterface
 {
     public function handle(Request $request, callable $next): Response
     {
-        $origin  = $request->header('origin');
+        $origin = $request->header('origin');
         $allowed = Config::list('CORS_ALLOWED_ORIGINS');
 
         $isAllowed = $origin !== null && in_array($origin, $allowed, true);

@@ -36,7 +36,7 @@ $db->run(
 );
 
 $applied = array_column($db->all('SELECT filename FROM migrations'), 'filename');
-$files   = glob(__DIR__ . '/migrations/*.sql') ?: [];
+$files = glob(__DIR__ . '/migrations/*.sql') ?: [];
 sort($files);
 
 $pending = array_values(array_filter(
@@ -45,9 +45,9 @@ $pending = array_values(array_filter(
 ));
 
 if (in_array('--status', $argv, true)) {
-    printf("Aplicadas: %d | Pendentes: %d%s", count($applied), count($pending), PHP_EOL);
+    printf('Aplicadas: %d | Pendentes: %d%s', count($applied), count($pending), PHP_EOL);
     foreach ($pending as $file) {
-        echo "  [ ] " . basename($file) . PHP_EOL;
+        echo '  [ ] ' . basename($file) . PHP_EOL;
     }
     exit(0);
 }
@@ -87,7 +87,7 @@ foreach ($pending as $file) {
         }
 
         $db->run('INSERT INTO migrations (filename, batch) VALUES (?, ?)', [$name, $batch]);
-        echo "ok (" . count($statements) . " comando(s))\n";
+        echo 'ok (' . count($statements) . " comando(s))\n";
     } catch (Throwable $e) {
         echo "FALHOU\n";
         fwrite(STDERR, "  {$e->getMessage()}\n");
@@ -96,4 +96,4 @@ foreach ($pending as $file) {
     }
 }
 
-printf("%d migração(ões) aplicada(s) no batch %d.%s", count($pending), $batch, PHP_EOL);
+printf('%d migração(ões) aplicada(s) no batch %d.%s', count($pending), $batch, PHP_EOL);

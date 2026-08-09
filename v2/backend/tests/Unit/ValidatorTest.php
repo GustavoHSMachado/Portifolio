@@ -72,11 +72,11 @@ final class ValidatorTest extends TestCase
     public static function senhas(): array
     {
         return [
-            'curta demais'         => ['abc123', false],
-            'só repetição'         => ['aaaaaaaaaaaa', false],
-            'comum na blocklist'   => ['password123', false],
-            'válida'               => ['portifolioSeguro7', true],
-            'longa com espaços'    => ['uma frase longa como senha', true],
+            'curta demais'       => ['abc123', false],
+            'só repetição'       => ['aaaaaaaaaaaa', false],
+            'comum na blocklist' => ['password123', false],
+            'válida'             => ['portifolioSeguro7', true],
+            'longa com espaços'  => ['uma frase longa como senha', true],
         ];
     }
 

@@ -8,6 +8,11 @@
 .env.local
 .env.*.local
 
+# Ajustes de ambiente que valem só na máquina de quem desenvolve.
+# O Compose mescla este arquivo automaticamente; versioná-lo imporia a
+# configuração de uma máquina a todo mundo.
+docker-compose.override.yml
+
 # Dependências
 /v1/vendor/
 /v2/backend/vendor/

@@ -66,16 +66,28 @@ foreach ($pending as $file) {
     try {
         $sql = file_get_contents($file) ?: '';
 
-        // Divide por ';' respeitando que comentários não contêm ';' relevante aqui.
-        foreach (array_filter(array_map('trim', explode(';', $sql))) as $statement) {
-            if ($statement === '' || str_starts_with($statement, '--')) {
-                continue;
-            }
+        // Os comentários saem ANTES da divisão por ';'. Sem isso, o cabeçalho de
+        // comentário no topo do arquivo fica colado no primeiro comando, o bloco
+        // inteiro passa a "começar com --" e era descartado em silêncio: a
+        // migração era marcada como aplicada sem criar nada, e o banco travava
+        // nesse estado porque as pendentes zeravam.
+        $sql = preg_replace('/^[ \t]*--.*$/m', '', $sql) ?? $sql;
+
+        $statements = array_filter(
+            array_map('trim', explode(';', $sql)),
+            static fn (string $s): bool => $s !== ''
+        );
+
+        if ($statements === []) {
+            throw new RuntimeException('nenhum comando SQL encontrado no arquivo');
+        }
+
+        foreach ($statements as $statement) {
             $db->run($statement);
         }
 
         $db->run('INSERT INTO migrations (filename, batch) VALUES (?, ?)', [$name, $batch]);
-        echo "ok\n";
+        echo "ok (" . count($statements) . " comando(s))\n";
     } catch (Throwable $e) {
         echo "FALHOU\n";
         fwrite(STDERR, "  {$e->getMessage()}\n");

@@ -45,3 +45,7 @@ docker-compose.override.yml
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Permissões que o Claude Code grava por máquina. O .claude/CLAUDE.md, esse
+# sim, é versionado: vale para quem clonar o repositório.
+.claude/settings.local.json

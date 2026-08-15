@@ -23,19 +23,37 @@
             <file>src/Support/helpers.php</file>
         </exclude>
     </source>
-    <coverage>
-        <report>
-            <clover outputFile="coverage.xml"/>
-            <html outputDirectory="coverage-html"/>
-        </report>
-    </coverage>
+    <!--
+        Sem <report> aqui de propósito. Declarar relatório no XML faz o PHPUnit
+        pedir cobertura em toda execução e avisar que o Xdebug não está em modo
+        coverage — e com failOnWarning esse aviso reprovava a suíte inteira.
+        Quem quer cobertura pede na linha de comando: composer run test:coverage.
+    -->
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_DEBUG" value="true"/>
         <env name="APP_KEY" value="test-key-0000000000000000000000000000000000"/>
         <env name="JWT_SECRET" value="test-jwt-secret-0000000000000000000000000000"/>
-        <env name="DB_NAME" value="portifolio_test"/>
         <env name="MAIL_DRIVER" value="log"/>
         <env name="LOG_PATH" value="php://memory"/>
+
+        <!--
+            force="true" é obrigatório aqui. Sem ele o PHPUnit preserva a
+            variável já existente no ambiente, e o container de desenvolvimento
+            exporta DB_NAME=portifolio: a suíte daria TRUNCATE no banco de
+            trabalho. DatabaseTestCase ainda exige o sufixo _test como segunda
+            barreira.
+        -->
+        <env name="DB_NAME" value="portifolio_test" force="true"/>
+
+        <!--
+            Sem force: o host e as credenciais mudam por ambiente. No container
+            valem os valores do compose (DB_HOST=db); no CI e fora do Docker
+            valem os padrões abaixo.
+        -->
+        <env name="DB_HOST" value="127.0.0.1"/>
+        <env name="DB_PORT" value="3306"/>
+        <env name="DB_USER" value="root"/>
+        <env name="DB_PASS" value="root"/>
     </php>
 </phpunit>

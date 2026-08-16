@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Core;
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ContentController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\Authenticate;
@@ -12,6 +13,7 @@ use App\Http\Middleware\Cors;
 use App\Http\Middleware\ErrorHandler;
 use App\Http\Middleware\RateLimit;
 use App\Http\Middleware\RequestId;
+use App\Http\Middleware\RequireAdmin;
 use App\Http\Middleware\RequireVerifiedEmail;
 use App\Http\Middleware\SecurityHeaders;
 
@@ -78,6 +80,31 @@ final class App
         $this->router->post('/api/v1/auth/change-password', [AuthController::class, 'changePassword'], $auth);
         $this->router->get('/api/v1/me', [UserController::class, 'me'], $auth);
         $this->router->put('/api/v1/me', [UserController::class, 'updateProfile'], $verified);
+
+        // Conteúdo do portfólio — leitura pública, sem autenticação.
+        $this->router->get('/api/v1/content', [ContentController::class, 'index']);
+        $this->router->get('/api/v1/content/projects/{slug}', [ContentController::class, 'project']);
+
+        // Painel de conteúdo. RequireAdmin e não apenas Authenticate: qualquer
+        // conta confirmada poderia reescrever o portfólio inteiro de outra forma.
+        $admin = [Authenticate::class, RequireAdmin::class];
+
+        $this->router->get('/api/v1/admin/content', [ContentController::class, 'adminIndex'], $admin);
+        $this->router->put('/api/v1/admin/profile', [ContentController::class, 'updateProfile'], $admin);
+
+        $this->router->post('/api/v1/admin/education', [ContentController::class, 'saveEducation'], $admin);
+        $this->router->put('/api/v1/admin/education/{id}', [ContentController::class, 'saveEducation'], $admin);
+
+        $this->router->post('/api/v1/admin/experiences', [ContentController::class, 'saveExperience'], $admin);
+        $this->router->put('/api/v1/admin/experiences/{id}', [ContentController::class, 'saveExperience'], $admin);
+
+        $this->router->post('/api/v1/admin/skills', [ContentController::class, 'saveSkill'], $admin);
+        $this->router->put('/api/v1/admin/skills/{id}', [ContentController::class, 'saveSkill'], $admin);
+
+        $this->router->post('/api/v1/admin/projects', [ContentController::class, 'saveProject'], $admin);
+        $this->router->put('/api/v1/admin/projects/{id}', [ContentController::class, 'saveProject'], $admin);
+
+        $this->router->delete('/api/v1/admin/{collection}/{id}', [ContentController::class, 'destroy'], $admin);
     }
 
     private function bootObservability(): void

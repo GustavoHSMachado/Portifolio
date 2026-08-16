@@ -41,6 +41,7 @@ final class App
      * (para capturar falhas de todos os seguintes), CORS antes do rate limit
      * (o preflight não deve consumir cota).
      */
+    /** @return list<class-string> */
     private function globalMiddleware(): array
     {
         return [

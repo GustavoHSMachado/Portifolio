@@ -30,7 +30,11 @@ final class User
         );
     }
 
-    /** Inclui o hash da senha — use somente no fluxo de autenticação. */
+    /**
+     * Inclui o hash da senha — use somente no fluxo de autenticação.
+     *
+     * @return array<string, mixed>|null
+     */
     public function findByEmailWithSecret(string $email): ?array
     {
         return $this->db->first(
@@ -110,13 +114,19 @@ final class User
         );
     }
 
+    /** @param array<string, mixed> $user */
     public function isLocked(array $user): bool
     {
         return $user['locked_until'] !== null
             && new \DateTimeImmutable($user['locked_until']) > new \DateTimeImmutable();
     }
 
-    /** Remove campos sensíveis antes de devolver o usuário na API. */
+    /**
+     * Remove campos sensíveis antes de devolver o usuário na API.
+     *
+     * @param array<string, mixed> $user
+     * @return array<string, mixed>
+     */
     public static function toPublic(array $user): array
     {
         return [

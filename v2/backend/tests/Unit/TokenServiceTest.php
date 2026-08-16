@@ -23,7 +23,10 @@ final class TokenServiceTest extends TestCase
         $this->service = new TokenService();
     }
 
-    /** @return array<string,mixed> */
+    /**
+     * @param array<string, mixed> $overrides
+     * @return array<string, mixed>
+     */
     private function user(array $overrides = []): array
     {
         return array_merge([
@@ -52,9 +55,16 @@ final class TokenServiceTest extends TestCase
         [$header, $payload, $signature] = explode('.', $token);
 
         // Troca o papel para admin e mantém a assinatura antiga.
-        $forged = json_decode(base64_decode(strtr($payload, '-_', '+/'), true), true);
+        $cru = base64_decode(strtr($payload, '-_', '+/'), true)
+            ?: self::fail('o payload do token não era base64 válido');
+
+        $forged = json_decode($cru, true);
+        self::assertIsArray($forged);
+
         $forged['role'] = 'admin';
-        $newPayload = rtrim(strtr(base64_encode(json_encode($forged)), '+/', '-_'), '=');
+
+        $json = json_encode($forged) ?: self::fail('não foi possível recodificar o payload');
+        $newPayload = rtrim(strtr(base64_encode($json), '+/', '-_'), '=');
 
         self::assertNull($this->service->verifyAccessToken("{$header}.{$newPayload}.{$signature}"));
     }

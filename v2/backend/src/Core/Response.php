@@ -9,7 +9,17 @@ namespace App\Core;
  */
 final class Response
 {
-    /** @param array<string,string> $headers */
+    /**
+     * @param array<string, string> $headers
+     * @param list<array{
+     *     name: string,
+     *     value: string,
+     *     expires: int,
+     *     httpOnly: bool,
+     *     sameSite: 'Lax'|'None'|'Strict',
+     *     path: string
+     * }> $cookies
+     */
     private function __construct(
         public readonly int $status,
         public readonly mixed $payload,
@@ -18,6 +28,7 @@ final class Response
     ) {
     }
 
+    /** @param array<string, string> $headers */
     public static function json(mixed $data, int $status = 200, array $headers = []): self
     {
         return new self($status, $data, $headers);
@@ -67,6 +78,13 @@ final class Response
         return new self($this->status, $this->payload, [...$this->headers, $name => $value], $this->cookies);
     }
 
+    /**
+     * O setcookie só aceita estes três valores em SameSite; aceitar string
+     * livre aqui empurraria o erro para runtime, onde ele vira cookie
+     * silenciosamente descartado pelo navegador.
+     *
+     * @param 'Lax'|'None'|'Strict' $sameSite
+     */
     public function withCookie(
         string $name,
         string $value,

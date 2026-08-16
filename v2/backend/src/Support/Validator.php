@@ -30,6 +30,10 @@ final class Validator
     ) {
     }
 
+    /**
+     * @param array<string, mixed> $data
+     * @param array<string, string> $rules campo => regras separadas por '|'
+     */
     public static function make(array $data, array $rules): self
     {
         $validator = new self($data, $rules);

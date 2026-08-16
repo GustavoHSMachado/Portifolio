@@ -41,9 +41,13 @@ final class Container
     }
 
     /**
-     * @template T of object
-     * @param class-string<T>|string $id
-     * @return T|mixed
+     * Resolve um serviço pelo identificador.
+     *
+     * Sem generics de propósito: o id também pode ser um apelido registrado à
+     * mão, e não apenas um class-string. Prometer o tipo do retorno obrigaria
+     * a mentir nesses casos — quem chama sabe o que pediu.
+     *
+     * @param class-string|string $id
      */
     public function get(string $id): mixed
     {

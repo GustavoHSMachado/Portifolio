@@ -12,6 +12,7 @@ use Dotenv\Dotenv;
  */
 final class Config
 {
+    /** @var array<string, string|null> */
     private static array $cache = [];
     private static bool $booted = false;
 
@@ -55,8 +56,11 @@ final class Config
             return self::$cache[$key];
         }
 
+        // O ?? já descarta null em cada etapa, e getenv devolve string|false —
+        // então só false sobra para tratar aqui. Testar null de novo era código
+        // morto: a condição nunca podia ser verdadeira.
         $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
-        $value = ($value === false || $value === null) ? $default : (string) $value;
+        $value = $value === false ? $default : (string) $value;
 
         return self::$cache[$key] = $value;
     }

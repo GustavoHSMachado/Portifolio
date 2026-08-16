@@ -70,6 +70,7 @@ final class RefreshToken
         );
     }
 
+    /** @param array<string, mixed> $row */
     public function isUsable(array $row): bool
     {
         return $row['revoked_at'] === null

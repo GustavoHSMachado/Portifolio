@@ -11,51 +11,85 @@ use App\Http\Middleware\MiddlewareInterface;
  *
  * Middlewares globais rodam em toda requisição; os de rota rodam depois,
  * na ordem declarada, e antes do controller.
+ *
+ * @phpstan-type RouteHandler array{class-string, string}
+ * @phpstan-type MiddlewareList list<class-string>
+ * @phpstan-type Route array{
+ *     method: string,
+ *     pattern: string,
+ *     regex: string,
+ *     params: list<string>,
+ *     handler: RouteHandler,
+ *     middleware: MiddlewareList
+ * }
  */
 final class Router
 {
-    /** @var array<int, array{method:string, pattern:string, regex:string, params:string[], handler:array, middleware:string[]}> */
+    /** @var list<Route> */
     private array $routes = [];
 
-    /** @var string[] */
+    /** @var MiddlewareList */
     private array $globalMiddleware = [];
 
     public function __construct(private readonly Container $container)
     {
     }
 
-    /** @param string[] $middleware */
+    /**
+     * @param RouteHandler $handler
+     * @param MiddlewareList $middleware
+     */
     public function get(string $path, array $handler, array $middleware = []): void
     {
         $this->add('GET', $path, $handler, $middleware);
     }
 
+    /**
+     * @param RouteHandler $handler
+     * @param MiddlewareList $middleware
+     */
     public function post(string $path, array $handler, array $middleware = []): void
     {
         $this->add('POST', $path, $handler, $middleware);
     }
 
+    /**
+     * @param RouteHandler $handler
+     * @param MiddlewareList $middleware
+     */
     public function put(string $path, array $handler, array $middleware = []): void
     {
         $this->add('PUT', $path, $handler, $middleware);
     }
 
+    /**
+     * @param RouteHandler $handler
+     * @param MiddlewareList $middleware
+     */
     public function patch(string $path, array $handler, array $middleware = []): void
     {
         $this->add('PATCH', $path, $handler, $middleware);
     }
 
+    /**
+     * @param RouteHandler $handler
+     * @param MiddlewareList $middleware
+     */
     public function delete(string $path, array $handler, array $middleware = []): void
     {
         $this->add('DELETE', $path, $handler, $middleware);
     }
 
-    /** @param string[] $middleware */
+    /** @param MiddlewareList $middleware */
     public function useGlobal(array $middleware): void
     {
         $this->globalMiddleware = [...$this->globalMiddleware, ...$middleware];
     }
 
+    /**
+     * @param RouteHandler $handler
+     * @param MiddlewareList $middleware
+     */
     private function add(string $method, string $path, array $handler, array $middleware): void
     {
         $params = [];
@@ -118,7 +152,10 @@ final class Router
         return Response::error('Recurso não encontrado.', 404, code: 'not_found');
     }
 
-    /** @param string[] $middleware */
+    /**
+     * @param MiddlewareList $middleware
+     * @param RouteHandler|null $handler
+     */
     private function runPipeline(Request $request, array $middleware, ?array $handler): Response
     {
         $next = function (Request $req) use ($handler): Response {

@@ -147,7 +147,7 @@ final class AuthService
     // Login e sessão
     // ------------------------------------------------------------------
 
-    /** @return array{user:array,accessToken:string,expiresIn:int,refreshToken:string} */
+    /** @return array{user: array<string, mixed>, accessToken: string, expiresIn: int, refreshToken: string} */
     public function login(string $email, string $password, ?string $userAgent, string $ip): array
     {
         $user = $this->users->findByEmailWithSecret($email);
@@ -213,7 +213,7 @@ final class AuthService
      * Rotaciona o refresh token. Se um token já rotacionado voltar,
      * assumimos roubo e derrubamos a família inteira.
      *
-     * @return array{accessToken:string,expiresIn:int,refreshToken:string,user:array}
+     * @return array{accessToken: string, expiresIn: int, refreshToken: string, user: array<string, mixed>}
      */
     public function refresh(string $refreshToken, ?string $userAgent, string $ip): array
     {

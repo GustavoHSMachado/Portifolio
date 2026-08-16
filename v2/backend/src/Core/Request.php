@@ -10,8 +10,15 @@ namespace App\Core;
  */
 final class Request
 {
+    /** @var array<string, mixed> */
     private array $attributes = [];
 
+    /**
+     * @param array<string, mixed> $query
+     * @param array<string, mixed> $body
+     * @param array<string, string> $headers
+     * @param array<string, string> $cookies
+     */
     private function __construct(
         public readonly string $method,
         public readonly string $path,

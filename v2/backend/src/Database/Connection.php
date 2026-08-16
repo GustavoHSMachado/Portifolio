@@ -60,7 +60,10 @@ final class Connection
         return $stmt;
     }
 
-    /** @return array<string,mixed>|null */
+    /**
+     * @param array<int|string, mixed> $params
+     * @return array<string, mixed>|null
+     */
     public function first(string $sql, array $params = []): ?array
     {
         $row = $this->run($sql, $params)->fetch();
@@ -68,7 +71,10 @@ final class Connection
         return $row === false ? null : $row;
     }
 
-    /** @return list<array<string,mixed>> */
+    /**
+     * @param array<int|string, mixed> $params
+     * @return list<array<string, mixed>>
+     */
     public function all(string $sql, array $params = []): array
     {
         return $this->run($sql, $params)->fetchAll();
@@ -79,7 +85,12 @@ final class Connection
         return (int) $this->pdo()->lastInsertId();
     }
 
-    /** @template T @param callable():T $callback @return T */
+    /**
+     * @template T
+     *
+     * @param callable(self):T $callback
+     * @return T
+     */
     public function transaction(callable $callback): mixed
     {
         $pdo = $this->pdo();

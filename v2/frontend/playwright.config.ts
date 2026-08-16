@@ -17,7 +17,12 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 2 : undefined,
   timeout: 30_000,
-  expect: { timeout: 5_000 },
+
+  // Fora do CI os testes rodam contra o servidor de desenvolvimento, que
+  // compila cada rota na primeira visita — o que pode passar de 10s e nada
+  // tem a ver com o produto. No CI o webServer faz build de produção antes,
+  // então 5s continua sendo um limite honesto lá.
+  expect: { timeout: process.env.CI ? 5_000 : 20_000 },
 
   reporter: process.env.CI
     ? [

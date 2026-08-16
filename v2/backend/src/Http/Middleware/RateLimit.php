@@ -14,10 +14,30 @@ use App\Services\RateLimiter;
  * Rate limit persistente (banco), por IP + rota.
  * Persistente e não por sessão — na v1 o limite morria ao trocar de sessão.
  *
- * Limites por rota vêm de RATE_LIMIT_RULES; o padrão global protege o resto.
+ * Os limites das rotas de autenticação estão em STRICT_RULES e cada um pode ser
+ * sobrescrito por ambiente. Os padrões são os valores de produção: um ambiente
+ * que não define nada continua protegido.
  */
 final class RateLimit implements MiddlewareInterface
 {
+    /**
+     * Rotas de autenticação: alvo de força bruta e de criação de contas em
+     * massa, por isso limites bem mais apertados que o padrão global.
+     *
+     * O primeiro item é o sufixo da variável de ambiente que sobrescreve o par.
+     * Registro em 3 por hora protege produção, mas inviabiliza suíte E2E
+     * repetível — daí a possibilidade de afrouxar só onde faz sentido.
+     *
+     * @var array<string, array{string, int, int}>
+     */
+    private const STRICT_RULES = [
+        '/api/v1/auth/login'               => ['LOGIN', 5, 900],
+        '/api/v1/auth/register'            => ['REGISTER', 3, 3600],
+        '/api/v1/auth/forgot-password'     => ['FORGOT_PASSWORD', 3, 3600],
+        '/api/v1/auth/reset-password'      => ['RESET_PASSWORD', 5, 3600],
+        '/api/v1/auth/resend-verification' => ['RESEND_VERIFICATION', 3, 3600],
+    ];
+
     public function __construct(private readonly RateLimiter $limiter)
     {
     }
@@ -48,17 +68,13 @@ final class RateLimit implements MiddlewareInterface
     /** @return array{int,int} [tentativas, janela em segundos] */
     private function rulesFor(string $path): array
     {
-        // Rotas de autenticação são alvo de força bruta — limite bem mais apertado.
-        $strict = [
-            '/api/v1/auth/login'               => [5, 900],
-            '/api/v1/auth/register'            => [3, 3600],
-            '/api/v1/auth/forgot-password'     => [3, 3600],
-            '/api/v1/auth/reset-password'      => [5, 3600],
-            '/api/v1/auth/resend-verification' => [3, 3600],
-        ];
+        if (isset(self::STRICT_RULES[$path])) {
+            [$nome, $max, $janela] = self::STRICT_RULES[$path];
 
-        if (isset($strict[$path])) {
-            return $strict[$path];
+            return [
+                Config::int("RATE_LIMIT_{$nome}_MAX", $max),
+                Config::int("RATE_LIMIT_{$nome}_WINDOW", $janela),
+            ];
         }
 
         return [

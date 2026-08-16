@@ -87,6 +87,26 @@ services:
       MAIL_FROM_ADDRESS: nao-responda@portifolio.local
       MAIL_FROM_NAME: Portifólio (dev)
 
+      # Limites de autenticação afrouxados APENAS no ambiente local.
+      #
+      # Em produção valem os padrões do próprio código (registro: 3 por hora),
+      # e um ambiente que não define nada continua com eles. Aqui eles
+      # inviabilizariam uma suíte E2E repetível: o contador persiste no banco,
+      # então a segunda execução dentro da mesma hora falharia sempre.
+      #
+      # Quem prova que o limite funciona é RateLimiterTest, que exercita o
+      # bloqueio e a virada de janela diretamente, sem depender destes valores.
+      RATE_LIMIT_REGISTER_MAX: 100
+      RATE_LIMIT_REGISTER_WINDOW: 60
+      RATE_LIMIT_LOGIN_MAX: 100
+      RATE_LIMIT_LOGIN_WINDOW: 60
+      RATE_LIMIT_FORGOT_PASSWORD_MAX: 100
+      RATE_LIMIT_FORGOT_PASSWORD_WINDOW: 60
+      RATE_LIMIT_RESET_PASSWORD_MAX: 100
+      RATE_LIMIT_RESET_PASSWORD_WINDOW: 60
+      RATE_LIMIT_RESEND_VERIFICATION_MAX: 100
+      RATE_LIMIT_RESEND_VERIFICATION_WINDOW: 60
+
       TERMS_VERSION: 1.0.0
       PRIVACY_VERSION: 1.0.0
 
@@ -163,11 +183,52 @@ services:
         condition: service_healthy
     networks: [portifolio]
 
+  # ------------------------------------------------------------------
+  e2e:
+  # ------------------------------------------------------------------
+  # Executor dos testes de ponta a ponta.
+  #
+  #   docker compose --profile e2e run --rm e2e
+  #
+  # Fica atrás de um profile porque a imagem passa de 2 GB: quem não vai rodar
+  # E2E não paga o download. O container `web` é Alpine, e o Playwright não
+  # distribui navegadores para musl — por isso um container próprio, com a
+  # imagem oficial, em vez de instalar os navegadores lá.
+  #
+  # A tag precisa acompanhar a versão de @playwright/test no package.json:
+  # imagem e biblioteca desalinhadas resultam em navegador que não abre.
+    profiles: ["e2e"]
+    image: mcr.microsoft.com/playwright:v1.62.1-noble
+    container_name: portifolio-e2e
+    working_dir: /app
+    environment:
+      # O global-setup encaminha 3000 e 8001 do container para web e api, então
+      # o navegador do teste usa os mesmos endereços de quem navega da máquina —
+      # inclusive a origem que a allowlist do CORS espera.
+      E2E_FORWARD: "1"
+      E2E_BASE_URL: http://localhost:3000
+      MAILPIT_URL: http://mailpit:8025
+      # CI fica deliberadamente vazio: com ela, o playwright.config sobe o
+      # próprio servidor com build de produção, e o alvo aqui é o container web.
+    volumes:
+      - ./v2/frontend:/app
+      - e2e-node-modules:/app/node_modules
+    command: sh -c "npm install --no-audit --no-fund && npx playwright test"
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    networks: [portifolio]
+
 volumes:
   db-data:
   api-vendor:
   web-node-modules:
   web-next:
+  e2e-node-modules:
 
 networks:
   portifolio:

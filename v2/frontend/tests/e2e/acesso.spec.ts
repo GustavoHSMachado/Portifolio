@@ -12,7 +12,11 @@ test.describe("proteção de rota", () => {
   test("manda para o login quem tenta abrir o painel sem sessão", async ({ page }) => {
     await page.goto("/painel");
 
-    await expect(page).toHaveURL(/\/entrar/);
+    // Timeout maior aqui de propósito: o redirecionamento é client-side e só
+    // acontece depois que o AuthProvider resolve a sessão. Numa primeira visita
+    // o Next ainda compila a rota sob demanda, e o padrão de 5s expira antes de
+    // a página sequer hidratar — falha por lentidão, não por falta de proteção.
+    await expect(page).toHaveURL(/\/entrar/, { timeout: 30_000 });
   });
 
   // A rota /admin ainda não existe, embora entrar/page.tsx redirecione para ela

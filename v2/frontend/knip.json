@@ -1,9 +1,8 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "next": { "entry": ["src/app/**/{page,layout,route,template,error,not-found,loading}.tsx"] },
-  "entry": ["src/app/**/*.tsx", "playwright.config.ts", "vitest.config.ts"],
+  "entry": ["src/app/**/*.tsx"],
   "project": ["src/**/*.{ts,tsx}"],
-  "ignore": ["src/**/*.d.ts"],
-  "ignoreDependencies": ["@stryker-mutator/vitest-runner", "husky"],
+  "ignoreDependencies": ["@commitlint/cli", "lint-staged"],
   "ignoreExportsUsedInFile": true
 }

@@ -22,16 +22,14 @@
     "test:mutation": "stryker run",
     "knip": "knip",
     "analyze": "ANALYZE=true next build",
-    "perf:budget": "lighthouse-ci autorun",
+    "perf:budget": "npx --yes @lhci/cli autorun --config=lighthouserc.json",
     "prepare": "husky"
   },
   "dependencies": {
-    "@sentry/nextjs": "^8.26.0",
     "framer-motion": "^11.3.28",
     "next": "^14.2.5",
     "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "zod": "^3.23.8"
+    "react-dom": "^18.3.1"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.8.3",

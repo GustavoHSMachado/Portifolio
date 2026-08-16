@@ -140,6 +140,11 @@ services:
       # O navegador é quem faz estas chamadas, então valem as portas do host.
       NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8000}
       NEXT_PUBLIC_SITE_URL: http://localhost:${WEB_PORT:-3000}
+      # A renderização no servidor acontece dentro da rede do compose, onde
+      # localhost é o próprio container do web. O conteúdo público é buscado
+      # por aqui para chegar no HTML — sem isso ele só apareceria após o
+      # JavaScript rodar, e buscador nenhum enxergaria o portfólio.
+      API_INTERNAL_URL: http://api:8000
       # Necessário para o hot reload funcionar em bind mount no Windows/macOS.
       WATCHPACK_POLLING: "true"
     ports:

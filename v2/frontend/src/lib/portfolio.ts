@@ -86,6 +86,36 @@ export interface PortfolioContent {
   projects: Project[];
 }
 
+/**
+ * Conteúdo público, buscado durante a renderização no servidor.
+ *
+ * Não passa pelo cliente de API: aquele cuida de token e renovação de sessão,
+ * que não existem aqui. Roda dentro da rede do compose, onde o endereço da API
+ * é o nome do serviço — localhost seria o próprio container do web.
+ *
+ * O resultado é revalidado a cada minuto. Conteúdo salvo no painel aparece no
+ * site em até 60 segundos, e em troca a página é servida pronta: o texto está
+ * no HTML, o que importa tanto para buscadores quanto para o tempo até a
+ * primeira pintura.
+ */
+export async function fetchContent(): Promise<PortfolioContent> {
+  const base =
+    process.env.API_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+
+  const response = await fetch(`${base}/api/v1/content`, {
+    next: { revalidate: 60 },
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`A API respondeu ${response.status} ao buscar o conteúdo.`);
+  }
+
+  const body = (await response.json()) as { data: PortfolioContent };
+
+  return body.data;
+}
+
 /** Conteúdo do painel: inclui rascunhos. Exige papel de admin. */
 export function fetchAdminContent() {
   return api.get<PortfolioContent>("/api/v1/admin/content");

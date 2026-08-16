@@ -3,7 +3,8 @@
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
-import { ApiError, api, setAccessToken } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
+import { ApiError } from "@/lib/api";
 import { fadeInUp, shake, staggerContainer } from "@/lib/motion";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -11,12 +12,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import styles from "./page.module.css";
-
-interface LoginResponse {
-  user: { id: number; name: string; email: string; role: string; emailVerified: boolean };
-  accessToken: string;
-  expiresIn: number;
-}
 
 /**
  * Tela de login — referência de como toda tela com formulário deve se comportar.
@@ -32,6 +27,7 @@ interface LoginResponse {
 export default function LoginPage() {
   const router = useRouter();
   const toast = useToast();
+  const { login } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -51,16 +47,16 @@ export default function LoginPage() {
     setFieldErrors({});
 
     try {
-      const result = await api.post<LoginResponse>(
-        "/api/v1/auth/login",
-        { email, password },
-        { skipAuth: true },
-      );
+      // Passa pelo login do AuthProvider, e não pela API direto: só ele
+      // popula o usuário no contexto e agenda a renovação do token. Chamando a
+      // API aqui, o token era guardado mas o contexto continuava sem usuário —
+      // o /painel via "não autenticado" e devolvia para cá, com o login tendo
+      // dado 200. E a sessão expirava em 15 minutos, sem renovar.
+      const user = await login(email, password);
 
-      setAccessToken(result.data.accessToken);
-      toast.success(`Bem-vindo de volta, ${result.data.user.name.split(" ")[0]}.`);
+      toast.success(`Bem-vindo de volta, ${user.name.split(" ")[0]}.`);
 
-      router.push(result.data.user.role === "admin" ? "/admin" : "/painel");
+      router.push(user.role === "admin" ? "/admin" : "/painel");
     } catch (error) {
       if (!(error instanceof ApiError)) {
         setFormError("Ocorreu um erro inesperado. Tente novamente.");

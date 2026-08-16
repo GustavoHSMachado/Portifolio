@@ -1,6 +1,6 @@
 "use client";
 
-import { fadeInUp, staggerContainer, staggerItem, viewportOnce } from "@/lib/motion";
+import { fadeInUp, staggerContainer, viewportOnce } from "@/lib/motion";
 import { motion } from "framer-motion";
 import type { ReactNode } from "react";
 
@@ -60,7 +60,7 @@ export function RevealList({
 
 export function RevealItem({ children, className }: { children: ReactNode; className?: string }) {
   return (
-    <motion.div className={className} variants={staggerItem}>
+    <motion.div className={className} variants={fadeInUp}>
       {children}
     </motion.div>
   );

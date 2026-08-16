@@ -64,19 +64,6 @@ export function SkeletonText({ lines = 3, className }: { lines?: number; classNa
   );
 }
 
-/** Placeholder de card que espelha a estrutura real: mídia, título, corpo. */
-export function SkeletonCard({ className }: { className?: string }) {
-  return (
-    <div className={[styles.card, className ?? ""].filter(Boolean).join(" ")}>
-      <Skeleton height={180} radius="var(--radius-md)" />
-      <div className={styles.cardBody}>
-        <Skeleton height="1.25em" width="65%" delay={60} />
-        <SkeletonText lines={2} />
-      </div>
-    </div>
-  );
-}
-
 /**
  * Envelope acessível para qualquer região em carregamento.
  * Anuncia uma única vez, em vez de deixar o leitor de tela em silêncio.

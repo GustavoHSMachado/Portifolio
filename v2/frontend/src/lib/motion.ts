@@ -61,18 +61,6 @@ export const fadeInUp: Variants = {
   exit: { opacity: 0, y: -8, transition: transition.exit },
 };
 
-export const fadeIn: Variants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: transition.base },
-  exit: { opacity: 0, transition: transition.exit },
-};
-
-export const scaleIn: Variants = {
-  hidden: { opacity: 0, scale: 0.96 },
-  visible: { opacity: 1, scale: 1, transition: transition.base },
-  exit: { opacity: 0, scale: 0.98, transition: transition.exit },
-};
-
 /** Modal: cresce do centro, sai encolhendo levemente. */
 export const modalContent: Variants = {
   hidden: { opacity: 0, scale: 0.94, y: 8 },
@@ -84,13 +72,6 @@ export const overlay: Variants = {
   hidden: { opacity: 0 },
   visible: { opacity: 1, transition: { duration: duration.base } },
   exit: { opacity: 0, transition: { duration: duration.fast } },
-};
-
-/** Gaveta lateral (menu mobile). */
-export const drawer: Variants = {
-  hidden: { x: "100%" },
-  visible: { x: 0, transition: transition.springy },
-  exit: { x: "100%", transition: transition.exit },
 };
 
 /** Toast: entra pela direita, sai desmontando. */
@@ -139,8 +120,6 @@ export function staggerContainer(itemCount = 6): Variants {
   };
 }
 
-export const staggerItem: Variants = fadeInUp;
-
 /* ------------------------------------------------------------------ */
 /* Transição entre páginas                                             */
 /* ------------------------------------------------------------------ */
@@ -168,11 +147,6 @@ export const pageTransition: Variants = {
 export const pressable = {
   whileHover: { scale: 1.02, transition: transition.fast },
   whileTap: { scale: 0.97, transition: { duration: duration.instant } },
-} as const;
-
-export const pressableSubtle = {
-  whileHover: { y: -2, transition: transition.fast },
-  whileTap: { y: 0, scale: 0.99, transition: { duration: duration.instant } },
 } as const;
 
 /** Chamar atenção para um erro sem ser agressivo. */

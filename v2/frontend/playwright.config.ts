@@ -9,6 +9,9 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Encaminha as portas quando os testes rodam dentro do container, para que o
+  // navegador enxergue os mesmos endereços de quem navega da máquina.
+  globalSetup: "./tests/e2e/global-setup.ts",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

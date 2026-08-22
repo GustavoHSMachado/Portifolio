@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   description:
     "Como coletamos, usamos e protegemos seus dados pessoais, em conformidade com a LGPD.",
   robots: { index: true, follow: true },
+  alternates: { canonical: "/legal/politica-de-privacidade" },
 };
 
 export default function PoliticaDePrivacidadePage() {

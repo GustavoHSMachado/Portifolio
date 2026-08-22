@@ -7,6 +7,7 @@ export const metadata: Metadata = {
   title: "Termos de Uso",
   description: "Condições de uso do portfólio de Gustavo Henrique Santos Machado.",
   robots: { index: true, follow: true },
+  alternates: { canonical: "/legal/termos-de-uso" },
 };
 
 export default function TermosDeUsoPage() {

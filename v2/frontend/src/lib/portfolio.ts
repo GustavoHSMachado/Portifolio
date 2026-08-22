@@ -116,6 +116,35 @@ export async function fetchContent(): Promise<PortfolioContent> {
   return body.data;
 }
 
+const EMPTY_CONTENT: PortfolioContent = {
+  profile: null,
+  education: [],
+  experiences: [],
+  skills: [],
+  projects: [],
+};
+
+/**
+ * Mesma busca, mas que não derruba a renderização.
+ *
+ * A home é gerada no build e revalidada a cada 60 segundos. Com fetchContent
+ * puro, uma API fora do ar no momento do build aborta a geração da página e,
+ * por consequência, a imagem de produção inteira — foi o que aconteceu ao
+ * construir a imagem, onde a API sequer existe. Aqui a falha vira conteúdo
+ * vazio: a página sai no ar, e a primeira revalidação bem-sucedida a preenche.
+ *
+ * Em contrapartida, uma API fora do ar publica uma home vazia por até um ciclo
+ * de revalidação. É o troco por não deixar o site inteiro fora do ar junto.
+ */
+export async function fetchContentSafe(): Promise<PortfolioContent> {
+  try {
+    return await fetchContent();
+  } catch (error) {
+    console.error("Conteúdo indisponível ao renderizar; seguindo com a home vazia.", error);
+    return EMPTY_CONTENT;
+  }
+}
+
 /** Conteúdo do painel: inclui rascunhos. Exige papel de admin. */
 export function fetchAdminContent() {
   return api.get<PortfolioContent>("/api/v1/admin/content");

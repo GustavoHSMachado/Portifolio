@@ -7,8 +7,15 @@
 #    prod  standalone, imagem mínima, usuário sem privilégio
 # ==========================================================
 
-FROM node:20-alpine AS base
-RUN apk add --no-cache libc6-compat
+# Base em Debian slim, e não em Alpine.
+#
+# O Next compila com o SWC, que é um binário nativo com variante por libc. O
+# package-lock.json foi gerado fora do Alpine e suas entradas não trazem o campo
+# "libc", então o npm instalava apenas a variante glibc — que no Alpine falha com
+# "Error relocating ... __register_atfork: symbol not found" e derrubava o
+# `npm run build` do estágio de produção. Em Debian a variante glibc é a certa
+# e o mesmo lockfile serve os dois lados.
+FROM node:20-bookworm-slim AS base
 WORKDIR /app
 
 # ---------- dependências ----------
@@ -38,7 +45,7 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
 # Usuário sem privilégio: container rodando como root é risco desnecessário.
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+RUN groupadd --system --gid 1001 nodejs && useradd --system --uid 1001 --gid nodejs nextjs
 
 COPY --from=build --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=build --chown=nextjs:nodejs /app/.next/static ./.next/static

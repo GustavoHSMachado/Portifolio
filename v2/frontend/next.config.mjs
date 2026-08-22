@@ -7,6 +7,11 @@ const nextConfig = {
   // sem precisar de node_modules completo. Ver docker/web/Dockerfile.
   output: "standalone",
 
+  // Diretório de saída configurável. Com o servidor de desenvolvimento rodando,
+  // um build de produção no mesmo .next mistura os runtimes dev e prod e falha
+  // na prerenderização — sintoma que não tem nada a ver com o código.
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
+
   // Otimização de imagem — parte do "lazy loading quando fizer sentido".
   images: {
     formats: ["image/avif", "image/webp"],

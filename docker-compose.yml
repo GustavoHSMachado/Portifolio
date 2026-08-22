@@ -196,9 +196,13 @@ services:
   #   docker compose --profile e2e run --rm e2e
   #
   # Fica atrás de um profile porque a imagem passa de 2 GB: quem não vai rodar
-  # E2E não paga o download. O container `web` é Alpine, e o Playwright não
-  # distribui navegadores para musl — por isso um container próprio, com a
-  # imagem oficial, em vez de instalar os navegadores lá.
+  # E2E não paga o download. Container próprio, e não os navegadores instalados
+  # dentro do `web`: a imagem oficial já traz navegador e dependências de sistema
+  # na versão certa, e mantém 2 GB fora da imagem de desenvolvimento.
+  #
+  # (Até 22/08/2026 o motivo era outro: o `web` rodava em Alpine, para o qual o
+  # Playwright não distribui navegadores. Hoje ele é Debian — ver o Dockerfile —
+  # mas separar o executor continua valendo pelo tamanho.)
   #
   # A tag precisa acompanhar a versão de @playwright/test no package.json:
   # imagem e biblioteca desalinhadas resultam em navegador que não abre.

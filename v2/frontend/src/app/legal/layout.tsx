@@ -10,7 +10,7 @@ import styles from "./layout.module.css";
 export default function LegalLayout({ children }: { children: ReactNode }) {
   return (
     <div className={styles.page}>
-      <div className={styles.container}>
+      <main id="conteudo" className={styles.container}>
         <Link href="/" className={styles.back}>
           <span aria-hidden="true">←</span> Voltar ao início
         </Link>
@@ -26,7 +26,7 @@ export default function LegalLayout({ children }: { children: ReactNode }) {
             Política de Privacidade
           </Link>
         </footer>
-      </div>
+      </main>
     </div>
   );
 }

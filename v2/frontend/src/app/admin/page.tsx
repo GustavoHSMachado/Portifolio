@@ -65,7 +65,7 @@ export default function AdminPage() {
 
   if (checkingSession || loading) {
     return (
-      <div className={styles.page}>
+      <main id="conteudo" className={styles.page}>
         <div className={styles.container}>
           <LoadingRegion label="Carregando o painel de conteúdo">
             <Skeleton height="2.5rem" width="40%" />
@@ -75,22 +75,22 @@ export default function AdminPage() {
             </div>
           </LoadingRegion>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (!content) {
     return (
-      <div className={styles.page}>
+      <main id="conteudo" className={styles.page}>
         <div className={styles.container}>
           <p className={styles.empty}>Conteúdo indisponível. Recarregue a página.</p>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className={styles.page}>
+    <main id="conteudo" className={styles.page}>
       <motion.div
         className={styles.container}
         variants={staggerContainer(6)}
@@ -120,7 +120,7 @@ export default function AdminPage() {
 
         <ProjectSection items={content.projects} onChanged={reload} />
       </motion.div>
-    </div>
+    </main>
   );
 }
 

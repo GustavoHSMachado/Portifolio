@@ -7,10 +7,11 @@ import {
   type Profile,
   type Project,
   type Skill,
-  fetchContent,
+  fetchContentSafe,
   formatMonth,
   formatPeriod,
 } from "@/lib/portfolio";
+import { buildPersonJsonLd, serializeJsonLd } from "@/lib/structured-data";
 import type { Metadata } from "next";
 import Link from "next/link";
 import styles from "./page.module.css";
@@ -24,7 +25,7 @@ import styles from "./page.module.css";
  */
 
 export async function generateMetadata(): Promise<Metadata> {
-  const { profile } = await fetchContent();
+  const { profile } = await fetchContentSafe();
 
   if (!profile) {
     return { title: "Portfólio" };
@@ -32,19 +33,21 @@ export async function generateMetadata(): Promise<Metadata> {
 
   const description = profile.summary.slice(0, 155);
 
+  const title = `${profile.fullName} — ${profile.role}`;
+
   return {
-    title: `${profile.fullName} — ${profile.role}`,
+    title,
     description,
-    openGraph: {
-      title: `${profile.fullName} — ${profile.role}`,
-      description,
-      type: "profile",
-    },
+    /* Canonical absoluto: sem ele, o mesmo conteúdo servido em www e sem www,
+       ou com parâmetro de campanha na URL, conta como páginas diferentes. */
+    alternates: { canonical: "/" },
+    openGraph: { title, description, type: "profile", url: "/" },
+    twitter: { card: "summary_large_image", title, description },
   };
 }
 
 export default async function HomePage() {
-  const { profile, education, experiences, skills, projects } = await fetchContent();
+  const { profile, education, experiences, skills, projects } = await fetchContentSafe();
 
   if (!profile) {
     return (
@@ -57,9 +60,19 @@ export default async function HomePage() {
   }
 
   const location = [profile.city, profile.state].filter(Boolean).join(", ");
+  const jsonLd = buildPersonJsonLd({ profile, education, experiences, skills, projects });
 
   return (
     <div className={styles.page}>
+      {/* JSON-LD no corpo, e não no <head>: o Next só aceita metadata declarada em
+          `metadata`, e dados estruturados são válidos em qualquer ponto do
+          documento. Ver serializeJsonLd para o tratamento do "<" no conteúdo. */}
+      <script
+        type="application/ld+json"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD exige script inline; o valor é JSON escapado por serializeJsonLd.
+        dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
+      />
+
       <header className={styles.hero}>
         <div className={styles.glow} aria-hidden="true" />
 
@@ -80,6 +93,7 @@ export default async function HomePage() {
                   rel="noopener noreferrer"
                 >
                   Ver no GitHub
+                  <ExternalHint />
                 </a>
               ) : null}
               <a href="#projetos" className={styles.secondary}>
@@ -145,6 +159,16 @@ export default async function HomePage() {
   );
 }
 
+/**
+ * Aviso de que o link abre em outra aba.
+ *
+ * A seta ↗ dá o recado a quem enxerga, mas é aria-hidden e não chega a quem usa
+ * leitor de tela — que descobriria a aba nova só depois de sair da página.
+ */
+function ExternalHint() {
+  return <span className="sr-only"> (abre em nova aba)</span>;
+}
+
 /* ------------------------------------------------------------------ */
 /* Projetos                                                            */
 /* ------------------------------------------------------------------ */
@@ -155,9 +179,11 @@ function ProjectsSection({ projects }: { projects: Project[] }) {
   }
 
   return (
-    <section className={styles.section} aria-labelledby="projetos" id="projetos">
+    /* O id da âncora fica na seção; o do título é outro, senão o aria-labelledby
+       aponta para a própria seção e ela perde o nome acessível. */
+    <section className={styles.section} aria-labelledby="projetos-titulo" id="projetos">
       <Reveal>
-        <h2 id="projetos" className={styles.sectionTitle}>
+        <h2 id="projetos-titulo" className={styles.sectionTitle}>
           Projetos
         </h2>
         <p className={styles.sectionSubtitle}>
@@ -209,11 +235,13 @@ function ProjectsSection({ projects }: { projects: Project[] }) {
                 {project.repositoryUrl ? (
                   <a href={project.repositoryUrl} target="_blank" rel="noopener noreferrer">
                     Código
+                    <ExternalHint />
                   </a>
                 ) : null}
                 {project.demoUrl ? (
                   <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">
                     Demonstração
+                    <ExternalHint />
                   </a>
                 ) : null}
               </div>
@@ -369,6 +397,7 @@ function VideoSection({ profile }: { profile: Profile }) {
         >
           Assistir no YouTube
           <span aria-hidden="true"> ↗</span>
+          <ExternalHint />
         </a>
       </Reveal>
     </section>
@@ -412,6 +441,7 @@ function ContactSection({ profile }: { profile: Profile }) {
               <span className={styles.socialArrow} aria-hidden="true">
                 ↗
               </span>
+              <ExternalHint />
             </a>
           </RevealItem>
         ))}

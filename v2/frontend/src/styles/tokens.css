@@ -50,6 +50,11 @@
   --text-primary: #f5f5f7;
   --text-secondary: #c9c9d1;
   --text-tertiary: #8a8a95;
+  /*
+   * Só para o estado desabilitado, onde o baixo contraste é o próprio recado.
+   * Texto que a pessoa precisa ler usa --text-tertiary (5,4:1 ou mais sobre as
+   * superfícies do tema); este fica em 2,7:1 e reprovaria em qualquer um deles.
+   */
   --text-disabled: #5a5a66;
   --text-inverse: #0b0b0f;
 

@@ -98,7 +98,7 @@ export default function PainelPage() {
 
   if (loading || !user) {
     return (
-      <div className={styles.page} aria-busy="true">
+      <main id="conteudo" className={styles.page} aria-busy="true">
         {/* <output> anuncia sozinho: role="status" e aria-live="polite" são implícitos. */}
         <output className="sr-only">Carregando seu painel</output>
         <div className={styles.container}>
@@ -108,12 +108,12 @@ export default function PainelPage() {
             <Skeleton height={140} radius="var(--radius-lg)" delay={100} />
           </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   return (
-    <div className={styles.page}>
+    <main id="conteudo" className={styles.page}>
       <motion.div
         className={styles.container}
         variants={staggerContainer(4)}
@@ -257,6 +257,6 @@ export default function PainelPage() {
           </div>
         </form>
       </Modal>
-    </div>
+    </main>
   );
 }

@@ -137,7 +137,7 @@
 .readOnlyHint {
   font-size: var(--text-xs);
   line-height: var(--leading-normal);
-  color: var(--text-disabled);
+  color: var(--text-tertiary);
 }
 
 .modalError {

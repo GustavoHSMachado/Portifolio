@@ -8,8 +8,16 @@
   position: relative;
   display: grid;
   place-items: center;
-  min-height: 88dvh;
-  padding: var(--space-8) var(--space-4);
+  /*
+   * A capa não toma mais a tela inteira. Em portfólio, quem avalia quer ver
+   * trabalho: com 88dvh o primeiro projeto só aparecia depois de um scroll
+   * completo. Agora ela ocupa pouco mais da metade da dobra e o início da
+   * seção de projetos fica visível, sinalizando que há conteúdo abaixo.
+   */
+  min-height: min(62dvh, 34rem);
+  /* O respiro do topo escala com a tela: 96px fixos empurravam o resumo para
+     fora da dobra no celular sem acrescentar nada em telas grandes. */
+  padding: clamp(var(--space-6), 7vh, var(--space-9)) var(--space-4) var(--space-7);
   overflow: hidden;
   text-align: center;
 }
@@ -52,7 +60,9 @@
 .lead {
   max-width: 58ch;
   margin: 0 auto var(--space-6);
-  font-size: var(--text-lg);
+  /* O resumo é o parágrafo mais longo da capa e, em 18px fixos, ocupava quase
+     metade da tela do celular sozinho. */
+  font-size: clamp(var(--text-base), 3.6vw, var(--text-lg));
   line-height: var(--leading-normal);
   color: var(--text-tertiary);
 }
@@ -79,8 +89,10 @@
     var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
 }
 
+/* Tinta escura sobre o laranja: branco sobre #e8503a dá 3,7:1 e reprova no AA
+   para texto normal; a tinta escura sobe para 5,3:1 sem tocar na cor da marca. */
 .primary {
-  color: #fff;
+  color: var(--text-inverse);
   background-color: var(--accent);
 }
 
@@ -173,7 +185,7 @@
   font-weight: var(--weight-medium);
   letter-spacing: var(--tracking-wide);
   text-transform: uppercase;
-  color: var(--text-disabled);
+  color: var(--text-tertiary);
 }
 
 .cardTitle {
@@ -272,14 +284,14 @@
 .socialHandle {
   flex: 1;
   font-size: var(--text-sm);
-  color: var(--text-disabled);
+  color: var(--text-tertiary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .socialArrow {
-  color: var(--text-disabled);
+  color: var(--text-tertiary);
   transition: transform var(--duration-fast) var(--ease-out), color var(--duration-fast)
     var(--ease-out);
 }
@@ -326,7 +338,7 @@
 .copyright,
 .footerNav {
   font-size: var(--text-sm);
-  color: var(--text-disabled);
+  color: var(--text-tertiary);
 }
 
 .footerNav {
@@ -335,7 +347,12 @@
   gap: var(--space-3);
 }
 
+/* Alvo de toque de 44px sem mudar o desenho: a altura extra vem do inline-flex,
+   e o link continua ocupando a mesma largura de texto. */
 .footerLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--text-tertiary);
   text-decoration: none;
   transition: color var(--duration-fast) var(--ease-out);
@@ -374,14 +391,44 @@
   text-align: center;
 }
 
+/*
+ * Duas colunas a partir de ~62rem de container, uma abaixo disso.
+ *
+ * O card ocupava a largura inteira (1108px no desktop) enquanto o texto parava
+ * em 68ch — sobrava uma faixa vazia à direita de cada bloco. Estreitando o card
+ * até perto da medida de leitura, o texto preenche o card e ainda cabe o dobro
+ * de conteúdo na dobra. O minmax com min(100%, ...) evita que a coluna force
+ * estouro horizontal em telas estreitas.
+ */
 .projects,
 .timeline {
   display: grid;
   gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+  align-items: stretch;
 }
 
+/* O invólucro de animação fica entre o grid e o card; sem esticá-lo, o
+   height: 100% do card não tem a que se referir e as alturas desalinham. */
+.projects > *,
+.timeline > * {
+  height: 100%;
+}
+
+/* O teto de largura fica no card, não na coluna: `auto-fit` conta as colunas
+   pelo tamanho máximo do track, e um máximo em rem faria o grid parar em uma
+   coluna só. Com 1fr nas colunas e o teto aqui, duas colunas se formam quando
+   há espaço, e um item sozinho não estica até os 1108px do container.
+
+   40rem ≈ 75 caracteres por linha, o limite a partir do qual a leitura cansa.
+   No tablet, onde o grid tem uma coluna de ~726px, o card fica quase cheio; no
+   desktop com um único projeto, para antes de virar uma linha de 125. */
 .project,
 .entry {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 40rem;
   padding: var(--space-5);
   background-color: var(--surface-raised);
   border: 1px solid var(--border-subtle);
@@ -401,7 +448,6 @@
 
 .projectSummary {
   margin: 0;
-  max-width: 68ch;
   color: var(--text-secondary);
   line-height: var(--leading-normal);
 }
@@ -444,7 +490,6 @@
 
 .caseStudy dd {
   margin: 0;
-  max-width: 72ch;
   color: var(--text-secondary);
   line-height: var(--leading-normal);
 }
@@ -453,9 +498,18 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-4);
+  /* margin-top: auto encosta os links na base — em grid de duas colunas os
+     cards têm alturas diferentes e os links ficariam em linhas distintas. */
+  margin-top: auto;
+  padding-top: var(--space-2);
 }
 
+/* Alvo de toque: um link de 22px de altura é difícil de acertar com o polegar.
+   O padding leva a área a 44px sem afastar visualmente os links entre si. */
 .projectLinks a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   color: var(--accent);
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
@@ -488,7 +542,6 @@
 
 .entryBody {
   margin: 0;
-  max-width: 72ch;
   color: var(--text-secondary);
   line-height: var(--leading-normal);
 }
@@ -512,7 +565,9 @@
 }
 
 .videoLink {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   margin-top: var(--space-4);
   color: var(--accent);
   font-weight: var(--weight-medium);

@@ -64,7 +64,7 @@
 /* ---------- Variantes ---------- */
 .primary {
   background-color: var(--accent);
-  color: #fff;
+  color: var(--text-inverse);
   box-shadow: var(--shadow-sm);
 }
 
@@ -100,7 +100,7 @@
 
 .danger {
   background-color: var(--danger);
-  color: #fff;
+  color: var(--text-inverse);
 }
 
 .danger:hover:not(:disabled) {

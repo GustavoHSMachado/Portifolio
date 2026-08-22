@@ -1,6 +1,10 @@
 .shell {
   position: relative;
   display: grid;
+  /* minmax(0, 1fr) em vez de 1fr: o mínimo automático de um track de grid é o
+     min-content do conteúdo, e o formulário empurrava o track para além da
+     tela — em 320px a coluna passava dos 320 e o cartão vazava para fora. */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   min-height: 100dvh;
   padding: var(--space-4);

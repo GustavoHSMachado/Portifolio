@@ -53,8 +53,10 @@
   outline: none;
 }
 
+/* Placeholder é texto exibido, e por isso segue a régua de contraste do texto
+   auxiliar. O token "disabled" fica reservado ao estado desabilitado real. */
 .input::placeholder {
-  color: var(--text-disabled);
+  color: var(--text-tertiary);
 }
 
 .input:disabled {
@@ -70,8 +72,12 @@
   transition: background-color 100000s ease-in-out 0s;
 }
 
+/* O campo tem 46px de altura; o botão acompanha para o alvo de toque ficar do
+   tamanho do controle que ele modifica, em vez dos 35px que tinha. */
 .reveal {
   flex-shrink: 0;
+  align-self: stretch;
+  min-height: 44px;
   padding: var(--space-2) var(--space-4);
   font-family: var(--font-sans);
   font-size: var(--text-xs);

@@ -50,7 +50,12 @@
   font-size: var(--text-sm);
 }
 
+/* Alvo de toque de 44px — o link ficava em 22px de altura. */
 .link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-1);
   color: var(--text-tertiary);
   text-decoration: none;
   border-radius: var(--radius-sm);
@@ -69,7 +74,7 @@
 }
 
 .divider {
-  color: var(--text-disabled);
+  color: var(--text-tertiary);
 }
 
 /* ---- Compartilhado pelas demais telas de autenticação ---- */

@@ -15,8 +15,20 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 2 : undefined,
-  timeout: 30_000,
+  // Dois workers também fora do CI, e não "metade dos núcleos".
+  //
+  // Do outro lado há um só servidor de desenvolvimento, que compila sob
+  // demanda numa thread. Com quatro navegadores disputando esse gargalo, a
+  // suíte falhava entre dois e seis cenários por rodada, sempre em lugares
+  // diferentes e por esgotar tempo — chegando a servir página em branco. Com
+  // dois, passaram os 70. Vale a pena: uma suíte que falha ao acaso não é
+  // consultada, e o que ela deixa de dizer é justamente onde há defeito.
+  workers: 2,
+  // Mesmo motivo do expect abaixo: fora do CI, cada rota é compilada na
+  // primeira visita. Os fluxos longos — criar conta, confirmar por e-mail,
+  // recuperar e redefinir a senha, entrar — encadeiam seis navegações e
+  // passavam dos 30s por compilação, não por lentidão do produto.
+  timeout: process.env.CI ? 30_000 : 60_000,
 
   // Fora do CI os testes rodam contra o servidor de desenvolvimento, que
   // compila cada rota na primeira visita — o que pode passar de 10s e nada

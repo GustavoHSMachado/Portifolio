@@ -147,7 +147,12 @@ test.describe("recuperação de senha", () => {
     await page.getByLabel("Confirmar nova senha").fill(senhaNova);
     await page.getByRole("button", { name: "Salvar nova senha" }).click();
 
-    await page.goto("/entrar");
+    // A própria tela redireciona ao concluir. Antes havia um page.goto("/entrar")
+    // aqui, que atropelava a requisição de redefinição: o goto cancela o que está
+    // em voo, e o login seguinte tentava a senha nova numa conta que ainda tinha
+    // a antiga. Passava por sorte quando a API respondia antes da navegação, e
+    // falhava nos cinco navegadores quando o servidor estava mais lento.
+    await expect(page).toHaveURL(/\/entrar/);
     await page.getByLabel("E-mail").fill(usuario.email);
     await page.getByLabel("Senha", { exact: true }).fill(senhaNova);
     await page.getByRole("button", { name: "Entrar" }).click();

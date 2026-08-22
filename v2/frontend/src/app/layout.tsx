@@ -2,21 +2,30 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AuthProvider } from "@/hooks/useAuth";
 import type { Metadata, Viewport } from "next";
-import { Open_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import type { ReactNode } from "react";
 import "@/styles/globals.css";
 
 /**
  * Open Sans herdada da v1 — decisão de produto.
+ *
+ * Servida de um arquivo versionado, e não buscada no Google durante o build:
+ * ver src/app/fonts/README.md. É a mesma fonte variável que o Google entrega,
+ * no subconjunto latino.
+ *
  * `display: swap` evita texto invisível durante o carregamento da fonte (FOIT),
  * que é uma das causas mais comuns de layout shift e de "página travada".
  */
-const openSans = Open_Sans({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
+const openSans = localFont({
+  src: "./fonts/open-sans-latin.woff2",
+  weight: "400 700",
+  style: "normal",
   display: "swap",
   variable: "--font-open-sans",
   fallback: ["-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
+  /* Ajusta as métricas da fonte de reserva às da Open Sans, para o texto não
+     mudar de tamanho quando a real chega. É o que mantém o CLS em zero. */
+  adjustFontFallback: "Arial",
 });
 
 export const metadata: Metadata = {
@@ -53,9 +62,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
 
         <AuthProvider>
           <ToastProvider>
-            <div id="conteudo">
-              <PageTransition>{children}</PageTransition>
-            </div>
+            <PageTransition>{children}</PageTransition>
           </ToastProvider>
         </AuthProvider>
       </body>

@@ -11,7 +11,20 @@
 
 :root {
   /* ---------- Tipografia ---------- */
-  --font-sans: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  /*
+   * A família vem de --font-open-sans, que o next/font declara no layout raiz
+   * com um nome gerado (__openSans_xxxxxx) e já traz a cadeia de reserva.
+   *
+   * Antes daqui constava a string literal "Open Sans", que só casa com a fonte
+   * instalada na máquina de quem visita: o arquivo servido pelo próprio site
+   * ficava com status "unloaded" no navegador, baixado e nunca aplicado. Quem
+   * não tivesse Open Sans instalada lia o site em Segoe UI ou Roboto.
+   *
+   * O segundo valor é reserva para contextos sem o layout raiz — os testes de
+   * componente, por exemplo, que renderizam fora dele.
+   */
+  --font-sans: var(--font-open-sans, "Open Sans"), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
 
   /* Escala tipográfica em razão 1.25 (terça maior) */

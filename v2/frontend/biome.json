@@ -6,7 +6,14 @@
     "useIgnoreFile": true
   },
   "files": {
-    "ignore": ["node_modules", ".next", "coverage", "playwright-report", "test-results"]
+    "ignore": [
+      "node_modules",
+      ".next",
+      ".next-prod",
+      "coverage",
+      "playwright-report",
+      "test-results"
+    ]
   },
   "formatter": {
     "enabled": true,

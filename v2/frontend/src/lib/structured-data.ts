@@ -17,13 +17,20 @@ export function buildPersonJsonLd({
   education,
   experiences,
   skills,
-  projects,
+  projects = [],
 }: {
   profile: Profile;
   education: Education[];
   experiences: Experience[];
   skills: Skill[];
-  projects: Project[];
+  /**
+   * Opcional desde 23/08/2026, quando os projetos passaram a exigir sessão.
+   *
+   * Marcar como dado estruturado algo que não está visível na página é
+   * exatamente o que os buscadores classificam como spam — a regra da marcação
+   * é descrever o que se vê.
+   */
+  projects?: Project[];
 }) {
   const sameAs = [profile.githubUrl, profile.linkedinUrl, profile.websiteUrl].filter(
     (url): url is string => Boolean(url),
@@ -82,5 +89,5 @@ export function buildPersonJsonLd({
  * como "<" pelo parser de JSON.
  */
 export function serializeJsonLd(data: unknown): string {
-  return JSON.stringify(data).replace(/</g, "\u003c");
+  return JSON.stringify(data).replace(/</g, "\\u003c");
 }

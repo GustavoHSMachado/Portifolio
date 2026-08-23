@@ -35,12 +35,32 @@ final class ContentController
             throw HttpException::notFound('Conteúdo do portfólio ainda não foi cadastrado.');
         }
 
+        /*
+         * Os projetos saíram daqui em 23/08/2026.
+         *
+         * Eles passaram a exigir sessão, e esconder a seção só na tela não
+         * protegeria nada: este endpoint é público e devolvia tudo — título,
+         * estudo de caso e links — para quem abrisse a URL. Quem quer o
+         * conteúdo pede ao servidor, não ao HTML.
+         *
+         * O que fica público é a contagem, que a home usa para dizer quantos
+         * projetos existem lá dentro. Um número não conta nada sobre o trabalho
+         * e é o que dá a quem chega uma razão para criar a conta.
+         */
         return Response::ok([
-            'profile'     => $this->presentProfile($profile),
-            'education'   => array_map($this->presentEducation(...), $this->content->education()),
-            'experiences' => array_map($this->presentExperience(...), $this->content->experiences()),
-            'skills'      => array_map($this->presentSkill(...), $this->content->skills()),
-            'projects'    => array_map($this->presentProject(...), $this->content->publishedProjects()),
+            'profile'      => $this->presentProfile($profile),
+            'education'    => array_map($this->presentEducation(...), $this->content->education()),
+            'experiences'  => array_map($this->presentExperience(...), $this->content->experiences()),
+            'skills'       => array_map($this->presentSkill(...), $this->content->skills()),
+            'projectCount' => count($this->content->publishedProjects()),
+        ]);
+    }
+
+    /** Projetos completos, só para quem tem sessão. */
+    public function projects(Request $request): Response
+    {
+        return Response::ok([
+            'projects' => array_map($this->presentProject(...), $this->content->publishedProjects()),
         ]);
     }
 
@@ -161,7 +181,7 @@ final class ContentController
         $data = Validator::make($request->body, [
             'name'     => 'required|max:80',
             'category' => 'required|max:60',
-            'evidence' => 'max:255',
+            'evidence' => 'max:400',
         ])->validated();
 
         $id = $this->content->save('skills', [

@@ -7,6 +7,7 @@ namespace App\Core;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\HealthController;
+use App\Http\Controllers\MessageController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\Cors;
@@ -99,14 +100,25 @@ final class App
         $this->router->put('/api/v1/me', [UserController::class, 'updateProfile'], $verified);
 
         // Conteúdo do portfólio — leitura pública, sem autenticação.
+        // Público: perfil, formação, experiência, habilidades e a contagem de
+        // projetos. Os projetos em si exigem sessão desde 23/08/2026.
         $this->router->get('/api/v1/content', [ContentController::class, 'index']);
-        $this->router->get('/api/v1/content/projects/{slug}', [ContentController::class, 'project']);
+        $this->router->get('/api/v1/projects', [ContentController::class, 'projects'], $auth);
+
+        // Envio de sugestões e dúvidas. A leitura fica com as demais rotas
+        // administrativas, abaixo, onde $admin já existe.
+        $this->router->post('/api/v1/messages', [MessageController::class, 'store']);
+        $this->router->get('/api/v1/projects/{slug}', [ContentController::class, 'project'], $auth);
 
         // Painel de conteúdo. RequireAdmin e não apenas Authenticate: qualquer
         // conta confirmada poderia reescrever o portfólio inteiro de outra forma.
         $admin = [Authenticate::class, RequireAdmin::class];
 
         $this->router->get('/api/v1/admin/content', [ContentController::class, 'adminIndex'], $admin);
+
+        // Caixa de entrada das mensagens do site.
+        $this->router->get('/api/v1/admin/messages', [MessageController::class, 'index'], $admin);
+        $this->router->post('/api/v1/admin/messages/{id}/read', [MessageController::class, 'markRead'], $admin);
         $this->router->put('/api/v1/admin/profile', [ContentController::class, 'updateProfile'], $admin);
 
         $this->router->post('/api/v1/admin/education', [ContentController::class, 'saveEducation'], $admin);

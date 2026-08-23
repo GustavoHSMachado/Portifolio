@@ -8,11 +8,11 @@ import { useRequireAuth } from "@/hooks/useAuth";
 import { ApiError } from "@/lib/api";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
 import {
+  type AdminContent,
   type Collection,
   EDUCATION_LEVELS,
   type Education,
   type Experience,
-  type PortfolioContent,
   type Profile,
   type Project,
   type Skill,
@@ -40,7 +40,7 @@ export default function AdminPage() {
   const { loading: checkingSession } = useRequireAuth({ adminOnly: true });
   const toast = useToast();
 
-  const [content, setContent] = useState<PortfolioContent | null>(null);
+  const [content, setContent] = useState<AdminContent | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {

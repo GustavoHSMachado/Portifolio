@@ -83,7 +83,13 @@ export interface PortfolioContent {
   education: Education[];
   experiences: Experience[];
   skills: Skill[];
-  projects: Project[];
+  /**
+   * Quantos projetos existem, sem dizer quais.
+   *
+   * O endpoint público deixou de devolver os projetos em 23/08/2026: eles
+   * exigem sessão. O número é o que a home usa para convidar quem chega.
+   */
+  projectCount: number;
 }
 
 /**
@@ -121,7 +127,7 @@ const EMPTY_CONTENT: PortfolioContent = {
   education: [],
   experiences: [],
   skills: [],
-  projects: [],
+  projectCount: 0,
 };
 
 /**
@@ -146,8 +152,17 @@ export async function fetchContentSafe(): Promise<PortfolioContent> {
 }
 
 /** Conteúdo do painel: inclui rascunhos. Exige papel de admin. */
+/**
+ * O painel administrativo enxerga os projetos, inclusive os não publicados —
+ * é onde eles são editados. Daí um tipo próprio: o conteúdo público perdeu a
+ * lista quando os projetos passaram a exigir sessão.
+ */
+export interface AdminContent extends Omit<PortfolioContent, "projectCount"> {
+  projects: Project[];
+}
+
 export function fetchAdminContent() {
-  return api.get<PortfolioContent>("/api/v1/admin/content");
+  return api.get<AdminContent>("/api/v1/admin/content");
 }
 
 export type Collection = "education" | "experiences" | "skills" | "projects";
@@ -211,3 +226,16 @@ export const EDUCATION_LEVELS: Record<EducationLevel, string> = {
   doutorado: "Doutorado",
   curso: "Curso",
 };
+
+/**
+ * Projetos completos, para quem tem sessão.
+ *
+ * Roda no cliente, e não na renderização do servidor: o token de acesso vive na
+ * memória do navegador — nunca em cookie legível nem em armazenamento local —,
+ * e o servidor que monta a página não tem como alcançá-lo.
+ */
+export async function fetchProjects(): Promise<Project[]> {
+  const result = await api.get<{ projects: Project[] }>("/api/v1/projects");
+
+  return result.data.projects;
+}

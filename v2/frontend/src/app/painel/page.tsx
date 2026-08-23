@@ -164,6 +164,10 @@ export default function PainelPage() {
           </div>
 
           <div className={styles.headerActions}>
+            {/* É o que a sessão passou a dar de acesso: os projetos completos. */}
+            <Link href="/projetos" className={styles.adminLink}>
+              Ver projetos
+            </Link>
             {user.role === "admin" ? (
               <Link href="/admin" className={styles.adminLink}>
                 Painel admin

@@ -26,19 +26,21 @@ final class AuthController
     public function register(Request $request): Response
     {
         /*
-         * Cadastro público fechado por padrão.
+         * Cadastro público aberto por padrão desde 23/08/2026.
          *
-         * Este é um portfólio: a única conta que precisa existir é a do dono,
-         * criada por database/create-admin.php. Uma tela de cadastro aberta
-         * coletaria nome, e-mail, telefone e IP de terceiros sem entregar nada
-         * em troca — dado pessoal sob a LGPD, guardado sem finalidade.
+         * Ele foi fechado por um dia, quando a única conta necessária era a do
+         * dono. Os projetos passaram a exigir sessão para serem lidos, e a porta
+         * teve de reabrir: sem cadastro, ninguém além do dono veria trabalho
+         * nenhum — nem quem o site existe para convencer.
          *
-         * A porta continua no código, atrás de configuração, porque a suíte E2E
-         * exercita o fluxo de cadastro e confirmação de e-mail. O padrão é o
-         * valor de produção, como nos limites de rate limit: quem não define
-         * nada fica fechado.
+         * A troca é consciente e cobra um preço: o site volta a guardar nome,
+         * e-mail, telefone e IP de terceiros, o que é dado pessoal sob a LGPD.
+         * O aceite versionado dos termos (legal_acceptances) e o expurgo
+         * agendado existem justamente para esse caso.
+         *
+         * A chave continua no código para poder fechar de novo sem deploy.
          */
-        if (!Config::bool('REGISTRATION_ENABLED', false)) {
+        if (!Config::bool('REGISTRATION_ENABLED', true)) {
             throw new HttpException(
                 'O cadastro está fechado neste site.',
                 403,

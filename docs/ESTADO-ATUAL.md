@@ -22,19 +22,22 @@ segurança, validação dos quatro critérios e o PR para a `master`.
 | 2 | Conteúdo no banco, painel de edição, home pública | ✅ |
 | 3 | Responsividade, acessibilidade, SEO, performance, assets | ✅ |
 | 4 | Dívida técnica | ✅ |
-| 5 | Revisão de segurança, validação final, PR | ⬜ |
+| 5 | Revisão de segurança, validação final, PR | ▶ B26 e B27 feitos; falta o PR |
 
 ### Os quatro critérios
 
-| Critério | Situação |
-|---|---|
-| **Limpo** | Atendido no que a esteira mede: 8 gates verdes, sem código morto |
-| **Funcional** | Fluxos cobertos por 154 verificações automatizadas |
-| **Rápido** | 196 KB efetivos contra orçamento de 500 KB; CLS zero |
-| **Responsivo** | Auditado em 320, 375, 768 e 1280 px, sem estouro horizontal |
+Validados em 23/08/2026 (B27), com medição e não por impressão:
 
-A validação formal dos quatro é o item B27, ainda em aberto — o que está acima é
-medição pontual, não a auditoria de fechamento.
+| Critério | Como foi medido | Resultado |
+|---|---|---|
+| **Limpo** | PHPStan nível 8, Biome, Knip, TypeScript | 0 erros; 4 avisos de complexidade; sem código morto |
+| **Funcional** | PHPUnit, Vitest, Playwright | 48 + 46 + 80 = **174 verificações**, todas verdes |
+| **Rápido** | Build de produção servido e baixado recurso a recurso | **205 KB** de 500 KB do orçamento; 295 KB de folga |
+| **Responsivo** | Home, login, código 2FA, painel e projetos em 320 px | Sem estouro, sem rolagem horizontal, alvos de 44 px |
+
+Ressalva honesta sobre "Rápido": o peso foi medido de verdade, mas a **nota do
+Lighthouse não** — ela exige baixar o `@lhci/cli`. O que está aferido é o
+orçamento de bytes, o CLS zero e o build de produção completo.
 
 ---
 
@@ -177,8 +180,29 @@ registrado. Removido em 22/08/2026, com dump guardado em
 
 | ID | Fase | Tarefa | Pri |
 |---|---|---|---|
-| B26 | 5 | Revisão de segurança final | P1 |
-| B27 | 5 | Validar os quatro critérios | P1 |
 | B28 | 5 | PR da `dev` para a `master` | P1 · com o Gustavo |
 
-Concluídos até aqui: B01–B25, B29–B43 — 40 itens. Restam apenas os três da Fase 5.
+Concluídos: B01–B27, B29–B49 — 48 itens. Falta apenas o PR para a `master`.
+
+## O que a revisão de segurança encontrou (B26)
+
+**Um XSS armazenado, real e explorável.** O JSON-LD da home é escrito num
+`<script>` inline com conteúdo vindo do painel, e a função que deveria escapá-lo
+não escapava nada: estava escrita como `.replace(/</g, "\u003c")`, e em
+JavaScript `"\u003c"` **é** o caractere `<` — a troca não fazia efeito. Havia até
+um comentário afirmando que aquilo protegia. Corrigido com barra dupla, e quatro
+testes em `structured-data.test.ts` passaram a executar a função, porque um
+comentário mente e um teste não.
+
+Como passava despercebido: o React escapa o HTML visível corretamente, então a
+tela parecia certa. Só o bloco de dados estruturados levava a carga.
+
+**O site não tinha Content-Security-Policy** — a API tinha. Adicionada em
+`next.config.mjs`. Ela não substitui escapar a saída, mas limita o estrago de um
+escape que falhe: sem `connect-src` liberado, um script injetado não consegue
+enviar para fora o que roubou.
+
+O resto passou: token forjado e `alg: none` recusados, rotas protegidas
+respondendo 401, sem enumeração de contas (nem por mensagem nem por tempo de
+resposta), cookie de sessão com `HttpOnly` e `SameSite`, sem stack trace em erro
+e sem segredo em log.

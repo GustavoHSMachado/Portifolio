@@ -277,7 +277,7 @@ Revise como designer de produto sênior e corrija o que estiver:
   largura ao carregar, lista sem estado vazio, texto cortado no mobile.
 
 **Todo valor de tema sai de `styles/tokens.css`:** cor, espaçamento, tipografia,
-raio, sombra, duração e curva de animação. Se você escreveu `#e8503a`, `16px` de
+raio, sombra, duração e curva de animação. Se você escreveu `#5aa9ff`, `16px` de
 margem ou `0.3s` direto no componente, está errado.
 
 Ficam de fora dessa regra, por serem dimensões intrínsecas do componente e não

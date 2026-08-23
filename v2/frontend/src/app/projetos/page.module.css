@@ -235,3 +235,41 @@
 .voltar:hover {
   color: var(--accent);
 }
+
+/* ---------------------------------------------------------------- */
+/*  Navegação                                                        */
+/* ---------------------------------------------------------------- */
+
+/* Saída no topo: quem percorre a lista não precisa rolar até o fim. */
+.topo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+}
+
+.topoLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+}
+
+.topoLink:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.rodapeLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-5);
+}

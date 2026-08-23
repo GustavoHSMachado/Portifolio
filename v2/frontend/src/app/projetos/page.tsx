@@ -62,6 +62,15 @@ export default function ProjetosPage() {
   return (
     <main id="conteudo" className={styles.page}>
       <div className={styles.container}>
+        <nav className={styles.topo} aria-label="Navegação">
+          <Link href="/" className={styles.topoLink}>
+            <span aria-hidden="true">←</span> Home
+          </Link>
+          <Link href="/painel" className={styles.topoLink}>
+            Meu painel
+          </Link>
+        </nav>
+
         <header className={styles.header}>
           <p className={styles.eyebrow}>Projetos</p>
           <h1 className={styles.title}>O que eu construí</h1>
@@ -99,9 +108,14 @@ export default function ProjetosPage() {
         ) : null}
 
         <Reveal>
-          <Link href="/painel" className={styles.voltar}>
-            <span aria-hidden="true">←</span> Voltar ao painel
-          </Link>
+          <div className={styles.rodapeLinks}>
+            <Link href="/" className={styles.voltar}>
+              <span aria-hidden="true">←</span> Voltar para a home
+            </Link>
+            <Link href="/painel" className={styles.voltar}>
+              <span aria-hidden="true">←</span> Voltar ao painel
+            </Link>
+          </div>
         </Reveal>
       </div>
     </main>

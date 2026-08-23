@@ -1,5 +1,7 @@
 import { Reveal, RevealItem, RevealList } from "@/components/motion/Reveal";
+import { AcaoProjetos, TextoProjetos } from "@/components/ui/AcaoProjetos";
 import { ContactForm } from "@/components/ui/ContactForm";
+import { LinkDeAcesso } from "@/components/ui/LinkDeAcesso";
 import { SkillIcon } from "@/components/ui/SkillIcon";
 import {
   EDUCATION_LEVELS,
@@ -81,9 +83,7 @@ export default async function HomePage() {
         atrás da sessão, isso deixou de ser um detalhe.
       */}
       <nav className={styles.topBar} aria-label="Acesso">
-        <Link href="/entrar" className={styles.topLink}>
-          Entrar
-        </Link>
+        <LinkDeAcesso className={styles.topLink} />
       </nav>
 
       <header className={styles.hero}>
@@ -117,9 +117,7 @@ export default async function HomePage() {
                   <ExternalHint />
                 </a>
               ) : null}
-              <Link href="/entrar" className={styles.secondary}>
-                Entrar para ver os projetos
-              </Link>
+              <AcaoProjetos className={styles.secondary} />
             </div>
           </div>
         </div>
@@ -204,19 +202,10 @@ function ProjetosBloqueados({ quantidade }: { quantidade: number }) {
               : `Há ${quantidade} projetos detalhados aqui dentro.`}
           </p>
 
-          <p className={styles.gatedBody}>
-            Cada um traz o problema que apareceu, as decisões que tomei e o resultado, com link para
-            ver o projeto no ar. Para abrir, entre com sua conta — leva menos de um minuto criar
-            uma.
-          </p>
+          <TextoProjetos className={styles.gatedBody} />
 
           <div className={styles.gatedActions}>
-            <Link href="/entrar" className={styles.primary}>
-              Entrar
-            </Link>
-            <Link href="/criar-conta" className={styles.secondary}>
-              Criar conta
-            </Link>
+            <AcaoProjetos className={styles.primary} classNameSecundaria={styles.secondary} />
           </div>
         </div>
       </Reveal>

@@ -95,6 +95,12 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-nao-responda@portifolio.local}
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Portifólio}
 
+      # Destino da mensagem endereçada a domínio reservado enquanto o SMTP real
+      # está configurado: ela é desviada para cá em vez de sair. Deixe o host
+      # vazio para descartá-la.
+      MAIL_SANDBOX_HOST: ${MAIL_SANDBOX_HOST:-mailpit}
+      MAIL_SANDBOX_PORT: ${MAIL_SANDBOX_PORT:-1025}
+
       # Limites de autenticação afrouxados APENAS no ambiente local.
       #
       # Em produção valem os padrões do próprio código (registro: 3 por hora),

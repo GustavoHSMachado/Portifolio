@@ -61,7 +61,7 @@ test.describe("cadastro e confirmação de e-mail", () => {
     await page.goto(`/confirmar-email?token=${token}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
 
-    await limparCaixa(request);
+    await limparCaixa(request, usuario.email);
     await entrar(page, request, usuario.email, usuario.senha);
 
     await expect(page).toHaveURL(/\/painel/);
@@ -85,7 +85,7 @@ test.describe("cadastro e confirmação de e-mail", () => {
     await page.goto(`/confirmar-email?token=${confirmacao}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
 
-    await limparCaixa(request);
+    await limparCaixa(request, usuario.email);
 
     // O primeiro passo é a senha, e ele não pode entregar sessão nenhuma.
     await page.goto("/entrar");
@@ -118,7 +118,7 @@ test.describe("cadastro e confirmação de e-mail", () => {
     await page.goto(`/confirmar-email?token=${confirmacao}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
 
-    await limparCaixa(request);
+    await limparCaixa(request, usuario.email);
 
     await page.goto("/entrar");
     await page.getByLabel("E-mail").fill(usuario.email);
@@ -168,9 +168,7 @@ test.describe("cadastro e confirmação de e-mail", () => {
 });
 
 test.describe("recuperação de senha", () => {
-  test("envia o link sem revelar se a conta existe", async ({ page, request }) => {
-    await limparCaixa(request);
-
+  test("envia o link sem revelar se a conta existe", async ({ page }) => {
     const inexistente = `nao-existe-${Date.now()}@portifolio.local`;
 
     await page.goto("/recuperar-senha");
@@ -200,7 +198,7 @@ test.describe("recuperação de senha", () => {
     await page.goto(`/confirmar-email?token=${confirmacao}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
 
-    await limparCaixa(request);
+    await limparCaixa(request, usuario.email);
 
     // As duas etapas da recuperação vivem na mesma rota desde que o token de
     // 64 caracteres deu lugar ao código de 7 dígitos: um código não pode
@@ -239,7 +237,7 @@ test.describe("recuperação de senha", () => {
     // exercita continua sendo a sessão de verdade.
     const abaLogin = await page.context().newPage();
 
-    await limparCaixa(request);
+    await limparCaixa(request, usuario.email);
     await entrar(abaLogin, request, usuario.email, senhaNova);
 
     await expect(abaLogin).toHaveURL(/\/painel/);

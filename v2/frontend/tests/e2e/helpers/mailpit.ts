@@ -14,11 +14,18 @@ interface MensagemResumida {
   To: Array<{ Address: string }>;
 }
 
-/** Espera a chegada da mensagem mais recente para o endereço e devolve o corpo. */
+/**
+ * Espera a chegada da mensagem mais recente para o endereço e devolve o corpo.
+ *
+ * A janela é de 30s, e não de 15s como antes: com o SMTP real configurado, o
+ * e-mail de domínio reservado não vai direto ao Mailpit — ele é desviado para
+ * lá pelo MailService, o que custa uma conexão a mais por mensagem. Sob os dois
+ * workers da suíte isso passou dos 15s e derrubou um cenário que estava certo.
+ */
 export async function aguardarEmail(
   request: APIRequestContext,
   destinatario: string,
-  { tentativas = 30, intervaloMs = 500 } = {},
+  { tentativas = 60, intervaloMs = 500 } = {},
 ): Promise<string> {
   for (let tentativa = 0; tentativa < tentativas; tentativa++) {
     const busca = await request.get(
@@ -66,9 +73,37 @@ export function extrairToken(corpo: string): string {
   return token;
 }
 
-/** Limpa a caixa entre cenários, para uma busca não achar e-mail de outro teste. */
-export async function limparCaixa(request: APIRequestContext): Promise<void> {
-  await request.delete(`${MAILPIT_URL}/api/v1/messages`);
+/**
+ * Apaga o que já chegou para este destinatário, e só para ele.
+ *
+ * Existe porque vários cenários esperam um segundo e-mail para o mesmo
+ * endereço — o código de acesso depois do link de confirmação — e a busca
+ * devolveria o anterior.
+ *
+ * Antes isto limpava a caixa inteira, e essa era a causa de uma falha
+ * intermitente que parecia lentidão: com dois workers, um cenário apagava a
+ * mensagem que o outro ainda estava esperando. O endereço de cada teste já é
+ * único (timestamp + aleatório), então limpar por destinatário resolve o
+ * problema real sem tocar no que não é seu.
+ */
+export async function limparCaixa(request: APIRequestContext, destinatario: string): Promise<void> {
+  const busca = await request.get(
+    `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${destinatario}`)}`,
+  );
+
+  if (!busca.ok()) {
+    return;
+  }
+
+  const { messages = [] } = (await busca.json()) as { messages?: MensagemResumida[] };
+
+  if (messages.length === 0) {
+    return;
+  }
+
+  await request.delete(`${MAILPIT_URL}/api/v1/messages`, {
+    data: { IDs: messages.map((m) => m.ID) },
+  });
 }
 
 /**

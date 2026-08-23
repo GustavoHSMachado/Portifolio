@@ -176,7 +176,8 @@ final class MailService
         }
 
         /*
-         * Endereço de domínio reservado nunca sai por SMTP autenticado.
+         * Endereço de domínio reservado nunca sai por SMTP autenticado — ele
+         * é desviado para o servidor de captura local.
          *
          * A suíte E2E cadastra contas em @portifolio.local e cada rodada gera
          * dezenas de mensagens. Contra o Mailpit isso é inofensivo — ele existe
@@ -194,27 +195,35 @@ final class MailService
          * teste e documentação: nenhum deles é entregável em lugar nenhum.
          */
         if ($this->isSmtpAutenticado() && $this->isDominioReservado($to)) {
-            $this->logger->info('E-mail para domínio reservado não foi enviado', [
-                'para'    => str_mask_email($to),
-                'assunto' => $subject,
-            ]);
-
-            return true;
+            return $this->desviarParaCaptura($to, $subject, $html);
         }
 
+        return $this->entregar($to, $subject, $html, null);
+    }
+
+    /**
+     * Entrega a mensagem por SMTP.
+     *
+     * $captura, quando presente, substitui host e porta e desliga autenticação
+     * e TLS — é o caminho para o servidor de captura local.
+     *
+     * @param array{host:string,port:int}|null $captura
+     */
+    private function entregar(string $to, string $subject, string $html, ?array $captura): bool
+    {
         $mail = new PHPMailer(true);
 
         try {
             $mail->isSMTP();
             $mail->CharSet = PHPMailer::CHARSET_UTF8;
-            $mail->Host = (string) Config::get('MAIL_HOST');
-            $mail->Port = Config::int('MAIL_PORT', 587);
+            $mail->Host = $captura['host'] ?? (string) Config::get('MAIL_HOST');
+            $mail->Port = $captura['port'] ?? Config::int('MAIL_PORT', 587);
             $mail->Timeout = 10;
 
             // Servidores de captura locais (Mailpit, MailHog) não têm auth nem TLS.
             // Só habilitamos autenticação quando há credencial configurada.
-            $username = (string) Config::get('MAIL_USERNAME', '');
-            $encryption = (string) Config::get('MAIL_ENCRYPTION', 'tls');
+            $username = $captura === null ? (string) Config::get('MAIL_USERNAME', '') : '';
+            $encryption = $captura === null ? (string) Config::get('MAIL_ENCRYPTION', 'tls') : '';
 
             if ($username !== '') {
                 $mail->SMTPAuth = true;
@@ -315,6 +324,44 @@ final class MailService
     }
 
     /** Há credencial de SMTP configurada? Servidor de captura local não pede. */
+    /**
+     * Manda para o servidor de captura o que não pode sair pelo SMTP real.
+     *
+     * Descartar seria mais simples, mas cega a suíte E2E: ela cadastra contas
+     * em domínio reservado e depois lê a caixa do Mailpit para pegar o link de
+     * confirmação e o código de segundo fator. Sem a mensagem lá, o teste falha
+     * por um motivo que não é defeito do produto.
+     *
+     * Se a captura não responder — ninguém subiu o Mailpit, é uma máquina de
+     * produção — o registro em log basta: a operação observada não pode falhar
+     * porque o e-mail de teste não teve para onde ir.
+     */
+    private function desviarParaCaptura(string $to, string $subject, string $html): bool
+    {
+        $host = trim((string) Config::get('MAIL_SANDBOX_HOST', 'mailpit'));
+
+        if ($host !== '') {
+            $porta = Config::int('MAIL_SANDBOX_PORT', 1025);
+
+            if ($this->entregar($to, $subject, $html, ['host' => $host, 'port' => $porta])) {
+                $this->logger->info('E-mail para domínio reservado foi desviado para a captura', [
+                    'para'    => str_mask_email($to),
+                    'assunto' => $subject,
+                    'captura' => $host . ':' . $porta,
+                ]);
+
+                return true;
+            }
+        }
+
+        $this->logger->info('E-mail para domínio reservado não foi enviado', [
+            'para'    => str_mask_email($to),
+            'assunto' => $subject,
+        ]);
+
+        return true;
+    }
+
     private function isSmtpAutenticado(): bool
     {
         return trim((string) Config::get('MAIL_USERNAME', '')) !== '';

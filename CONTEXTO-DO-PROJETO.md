@@ -48,14 +48,21 @@ de aceite verificável** — sem isso não dá para saber quando terminou.
 ### 2.2 Branches
 
 ```
-main                    produção, protegida
-develop                 integração
+master                  produção, protegida
+dev                     integração
 fix/<issue>-<slug>      correção
 feat/<issue>-<slug>     nova função
 chore/<issue>-<slug>    melhoria interna
 ```
 
 Exemplo: `feat/42-recuperacao-de-senha`
+
+Os nomes são `master` e `dev`, e não `main` e `develop`: o repositório nasceu
+assim e renomear quebraria os clones existentes por ganho nenhum.
+
+**Enquanto a refatoração da v2 durar, vale uma regra mais restrita:** todo o
+trabalho acontece na `dev`, e a `master` só recebe alterações ao final, com
+autorização explícita do Gustavo. Ele trata a `master` como produção.
 
 ### 2.3 Commits — Conventional Commits
 
@@ -75,7 +82,7 @@ O `commitlint` roda no CI e reprova mensagens fora do padrão.
 
 ### 2.4 Pull Requests
 
-**Toda entrega passa por PR. Ninguém commita direto na main.**
+**Toda entrega passa por PR. Ninguém commita direto na `master`.**
 
 Todo PR precisa conter, sem exceção:
 
@@ -192,7 +199,10 @@ Estas regras existem porque a v1 violou todas elas. Detalhes em
    ponto do código chama `password_hash` diretamente.
 3. **Toda query é preparada.** Zero concatenação de input em SQL.
 4. **Toda saída é escapada.** React já escapa por padrão; `dangerouslySetInnerHTML`
-   é proibido pelo Biome.
+   é proibido pelo Biome. A única exceção no repositório é o bloco de JSON-LD da
+   home, onde a marcação exige um `<script>` inline — e ali o valor passa por
+   `serializeJsonLd`, que escapa `<` para `\u003c`, porque o conteúdo é editável
+   pelo painel e um `</script>` digitado num campo fecharia a tag no meio.
 5. **Token de uso único, com expiração, guardado como hash.** Vale para
    confirmação de e-mail e redefinição de senha.
 6. **Mensagens genéricas em fluxos de conta.** Nunca revele se um e-mail existe.
@@ -200,6 +210,18 @@ Estas regras existem porque a v1 violou todas elas. Detalhes em
 8. **Autorização verificada no servidor, sempre.** Esconder um botão no front não é controle de acesso.
 9. **Erro nunca vaza stack trace** para o cliente em produção.
 10. **Log nunca contém senha, token ou cookie.** O `Logger` redige campos sensíveis automaticamente.
+11. **Resposta de erro também precisa de CORS.** O `Cors` vem antes do
+    `ErrorHandler` no pipeline global, e 404 e 405 passam pelo pipeline como
+    qualquer outra rota. Um middleware só enxerga a resposta que o seguinte
+    devolve: com o `Cors` abaixo do `ErrorHandler`, todo 401, 422 e 429 saía sem
+    `Access-Control-Allow-Origin`, o navegador recusava entregar o corpo ao
+    JavaScript e o `fetch` rejeitava. O sintoma era silencioso e caro — "senha
+    incorreta" e "muitas tentativas" chegavam ao usuário como "não conseguimos
+    falar com o servidor".
+12. **Exclusão de conta anonimiza, não apenas marca.** `User::softDelete`
+    reescreve e-mail e nome e apaga o telefone junto com o `deleted_at`. Marcar
+    sem anonimizar deixaria o endereço preso pela constraint única para sempre,
+    e manteria dado pessoal de quem pediu para sair.
 
 **Ao tocar em autenticação, autorização ou dados pessoais:** marque a caixa
 correspondente no PR e peça revisão de segurança explícita.
@@ -267,7 +289,7 @@ vivem no CSS Module do próprio componente.
 
 ## 6. Esteira de qualidade
 
-Nenhum código entra na main sem passar por:
+Nenhum código entra na `master` sem passar por:
 
 | Etapa | Ferramenta | Bloqueia? |
 |---|---|---|
@@ -317,7 +339,7 @@ Datadog e New Relic por OTLP, sem acoplar o código a um fornecedor.
 
 ## 8. O que NÃO fazer
 
-- ❌ Commitar direto na `main`
+- ❌ Commitar direto na `master`
 - ❌ Abrir PR sem Issue
 - ❌ Escrever "corrigido diversos bugs" como descrição
 - ❌ Adicionar dependência sem justificar no PR
@@ -343,7 +365,71 @@ Datadog e New Relic por OTLP, sem acoplar o código a um fornecedor.
 | `docs/API.md` | Referência dos endpoints *(a criar)* |
 | `v1/README.md` | Estado e limites do legado |
 | `v2/scripts/criar-issues.sh` | Criação das Issues via `gh` |
-| `v2/scripts/configurar-repo.sh` | Branches, proteção da main e segurança |
+| `v2/scripts/configurar-repo.sh` | Branches, proteção da `master` e segurança |
 | `docs/legal/TERMOS-DE-USO.md` | Minuta dos Termos — pendente de revisão jurídica |
 | `docs/legal/POLITICA-DE-PRIVACIDADE.md` | Minuta da Política — pendente de revisão jurídica |
 | `docker-compose.yml` + `Makefile` | Ambiente local completo em containers |
+
+---
+
+## 10. Autenticação em dois fatores
+
+Decisão do dono do produto, tomada em 22/08/2026. Vale para **todo** login.
+
+### Como funciona
+
+1. **Senha.** `POST /api/v1/auth/login` confere e-mail e senha e responde
+   `{ challenge, expiresIn }` — **sem token de sessão**.
+2. **Código.** Um número de 7 dígitos vai por e-mail, válido por
+   `LOGIN_2FA_TTL` minutos, de uso único.
+3. **Sessão.** `POST /api/v1/auth/login/verify` troca o código pela sessão. É
+   só aqui que access token e refresh token nascem.
+
+Recuperar e trocar senha seguem o mesmo desenho: primeiro o pedido, depois o
+código digitado na tela. Nenhum código trafega por URL — ele ficaria no
+histórico do navegador, no cabeçalho `Referer` e nos logs de intermediários.
+
+### O que protege o código de 7 dígitos
+
+São 10 milhões de combinações: muito para uma pessoa, pouco para um script.
+Três camadas, e cada uma cobre o que a outra deixa passar:
+
+| Camada | Onde vive | O que impede |
+|---|---|---|
+| `VerificationToken::MAX_ATTEMPTS` | por código, no banco | força bruta contra **uma conta**, mesmo distribuída por vários IPs |
+| Rate limit de `login/verify` | por IP | um endereço tentando contra **várias contas** |
+| Expiração curta | por código | reaproveitar um código vazado dias depois |
+
+### Política de senha
+
+Mínimo de 7 caracteres, com maiúscula, minúscula, número e símbolo.
+
+Registre-se a contrapartida: o NIST SP 800-63B recomenda o oposto — comprimento
+acima de tudo, sem classes obrigatórias, porque a exigência empurra as pessoas
+para padrões previsíveis (`Senha123!` satisfaz a regra sendo péssima). O que
+compensa aqui é o segundo fator: senha correta sozinha não entra.
+
+### Senha já usada não volta
+
+`password_history` guarda os hashes das últimas senhas de cada conta, incluindo a
+em vigor. Troca e recuperação recusam com 422 antes de qualquer escrita — o
+código de confirmação não é consumido, e a pessoa corrige sem recomeçar o fluxo.
+
+A comparação é uma chamada de `password_verify` por entrada, porque cada hash
+Argon2id tem sal próprio e dois hashes da mesma senha nunca são iguais. É esse
+mesmo sal que impede alguém, de posse do banco, de perceber que duas contas usam
+a senha idêntica — e é o que MD5 não faria.
+
+O limite (`PASSWORD_HISTORY_SIZE`, padrão 5) existe porque cada verificação custa
+cerca de 200ms: guardar tudo deixaria a troca mais lenta a cada ano de conta, e
+manteria material sensível sem prazo.
+
+### Acesso administrativo
+
+- `ADMIN_EMAIL` no `.env` amarra a área administrativa a uma conta. Papel de
+  admin no banco só vale para aquele endereço — a segunda condição vive no
+  arquivo do servidor, fora do alcance de quem escreva na tabela.
+- `REGISTRATION_ENABLED` abre o cadastro público, e o padrão do código é
+  **false**. Num portfólio, a única conta necessária é a do dono, criada por
+  `php database/create-admin.php`. O `docker-compose` liga no ambiente local
+  porque a suíte E2E exercita cadastro e confirmação de e-mail.

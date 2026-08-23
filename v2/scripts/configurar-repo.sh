@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Configura o repositório: branches, proteção da main e Actions.
+# Configura o repositório: branches, proteção da master e Actions.
 # Rode DEPOIS de criar-issues.sh.
 #
 #   bash v2/scripts/configurar-repo.sh
@@ -18,25 +18,25 @@ echo "📦 Repositório: $REPO"
 echo
 
 # ------------------------------------------------------------------
-# 1. Branch develop
+# 1. Branch dev
 # ------------------------------------------------------------------
-echo "🌿 Branch develop"
-if git show-ref --verify --quiet refs/heads/develop; then
+echo "🌿 Branch dev"
+if git show-ref --verify --quiet refs/heads/dev; then
   echo "  · já existe localmente"
 else
-  git branch develop 2>/dev/null && echo "  ✓ criada localmente" || true
+  git branch dev 2>/dev/null && echo "  ✓ criada localmente" || true
 fi
 
-git push -u origin develop 2>/dev/null && echo "  ✓ enviada para o remoto" || echo "  · já existe no remoto"
+git push -u origin dev 2>/dev/null && echo "  ✓ enviada para o remoto" || echo "  · já existe no remoto"
 echo
 
 # ------------------------------------------------------------------
-# 2. Proteção da main
+# 2. Proteção da master
 # ------------------------------------------------------------------
-echo "🔒 Proteção da branch main"
+echo "🔒 Proteção da branch master"
 echo "   Exigindo: quality-gate verde, 1 aprovação, sem force push."
 
-if gh api -X PUT "repos/$OWNER/$NAME/branches/main/protection" \
+if gh api -X PUT "repos/$OWNER/$NAME/branches/master/protection" \
   -H "Accept: application/vnd.github+json" \
   -f "required_status_checks[strict]=true" \
   -f "required_status_checks[contexts][]=Quality Gate" \

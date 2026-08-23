@@ -141,7 +141,7 @@ Ou abra: https://github.com/GustavoHSMachado/Portifolio/issues
 
 ## Parte 3 — Configurar o repositório
 
-Isso cria a branch `develop` e protege a `main` para que nada entre sem passar
+Isso cria a branch `dev` e protege a `master` para que nada entre sem passar
 pela esteira.
 
 ```powershell
@@ -153,7 +153,7 @@ aviso**, configure na mão:
 
 1. Abra https://github.com/GustavoHSMachado/Portifolio/settings/branches
 2. Clique em **Add branch protection rule**
-3. Branch name pattern: `main`
+3. Branch name pattern: `master`
 4. Marque:
    - ☑ Require a pull request before merging → Required approvals: **1**
    - ☑ Require status checks to pass before merging → busque e marque **Quality Gate**
@@ -224,7 +224,7 @@ git push -u origin feat/fundacao-v2
 ### 4.5 Abrir o Pull Request
 
 ```powershell
-gh pr create --base develop --fill
+gh pr create --base dev --fill
 ```
 
 Isso abre o PR usando o template. **Preencha as quatro seções obrigatórias:**
@@ -475,7 +475,7 @@ A partir daqui, **toda mudança segue este ciclo**. Sem exceção.
 gh issue list
 
 # 2. Crie a branch a partir dela (o número vem da issue)
-git checkout develop
+git checkout dev
 git pull
 git checkout -b fix/12-nome-curto-da-tarefa
 
@@ -487,7 +487,7 @@ Refs #12"
 
 # 4. Envie e abra o PR
 git push -u origin fix/12-nome-curto-da-tarefa
-gh pr create --base develop --fill
+gh pr create --base dev --fill
 
 # 5. Preencha o template do PR (as 4 seções obrigatórias)
 gh pr view --web
@@ -570,7 +570,7 @@ gh issue view 12                   # ver detalhes
 gh issue create                    # criar (abre o seletor de template)
 
 # Pull Requests
-gh pr create --base develop --fill # abrir
+gh pr create --base dev --fill # abrir
 gh pr checks --watch               # acompanhar o CI
 gh pr view --web                   # abrir no navegador
 gh pr merge --squash --delete-branch

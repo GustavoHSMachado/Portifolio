@@ -8,6 +8,14 @@ agente ou pessoa entender como o projeto chegou ao estado atual.
 **Responsável:** Gustavo Henrique Santos Machado
 **Repositório:** github.com/GustavoHSMachado/Portifolio
 
+> ⚠️ **Este documento é um registro de 08–09 de agosto e não descreve o estado
+> atual.** O projeto andou bastante depois dele: a esteira passou a rodar de
+> verdade, o conteúdo saiu de trás do login, e as fases 3 e 4 foram concluídas.
+> Números, mapa de arquivos e "próximos passos" daqui em diante valem para
+> aquela data.
+>
+> Para o estado de hoje, veja **[ESTADO-ATUAL.md](ESTADO-ATUAL.md)**.
+
 ---
 
 ## Índice
@@ -341,7 +349,7 @@ bundle < 1MB · página < 500KB.
 | `.github/pull_request_template.md` | Template com as 4 seções obrigatórias |
 | `.github/ISSUE_TEMPLATE/` | Três templates: correção, melhoria, nova função |
 | `v2/scripts/criar-issues.sh` | Cria 25 issues + 10 labels (idempotente) |
-| `v2/scripts/configurar-repo.sh` | Branch develop, proteção da main, segurança |
+| `v2/scripts/configurar-repo.sh` | Branch dev, proteção da master, segurança |
 
 ---
 
@@ -579,7 +587,7 @@ cd "$env:USERPROFILE\OneDrive\Área de Trabalho\Projetos\Portifolio"
 gh auth login
 bash v2/scripts/criar-issues.sh --dry-run   # simula
 bash v2/scripts/criar-issues.sh             # cria
-bash v2/scripts/configurar-repo.sh          # protege a main
+bash v2/scripts/configurar-repo.sh          # protege a master
 ```
 
 ### 🟠 3. Subir a stack e validar
@@ -692,7 +700,7 @@ make lint
 # GitHub
 bash v2/scripts/criar-issues.sh --dry-run
 bash v2/scripts/configurar-repo.sh
-gh pr create --base develop --fill
+gh pr create --base dev --fill
 gh pr checks --watch
 ```
 

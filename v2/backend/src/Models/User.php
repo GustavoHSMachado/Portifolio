@@ -45,12 +45,54 @@ final class User
         );
     }
 
+    /**
+     * Sem filtro por deleted_at, e isso é intencional: ver softDelete(), que
+     * anonimiza o e-mail ao excluir. Uma conta excluída não guarda mais o
+     * endereço, então não há o que ignorar aqui — e filtrar seria pior, porque
+     * deixaria passar um INSERT que a constraint UNIQUE recusaria depois.
+     */
     public function emailExists(string $email): bool
     {
         return $this->db->first(
             'SELECT id FROM users WHERE email = ? LIMIT 1',
             [mb_strtolower($email)]
         ) !== null;
+    }
+
+    /**
+     * Exclusão lógica que libera o e-mail para um novo cadastro.
+     *
+     * A tensão que isto resolve: uq_users_email é único na tabela inteira, e as
+     * leituras filtram deleted_at IS NULL. Uma conta apenas marcada como
+     * excluída sumiria da aplicação mas continuaria segurando o endereço para
+     * sempre — a pessoa não conseguiria voltar com o mesmo e-mail, sem nenhuma
+     * explicação visível na tela.
+     *
+     * As duas saídas usuais são um índice único composto com deleted_at, ou
+     * anonimizar. O índice composto não funciona em MySQL: NULL nunca é igual a
+     * NULL, então (email, NULL) se repetiria à vontade e a unicidade entre
+     * contas ativas — que é a que importa — deixaria de valer.
+     *
+     * Anonimizar resolve os dois lados de uma vez. O endereço fica livre no
+     * mesmo instante, e o registro deixa de guardar dado pessoal de quem pediu
+     * para sair, que é o que a LGPD espera de uma exclusão a pedido do titular.
+     * O que sobra é a linha com o id, preservando as chaves estrangeiras de
+     * quem aponta para ela.
+     *
+     * O hash da senha permanece: não identifica ninguém e o login já é
+     * impossível, porque findByEmailWithSecret ignora linhas excluídas.
+     */
+    public function softDelete(int $id): void
+    {
+        $this->db->run(
+            "UPDATE users
+                SET deleted_at = NOW(),
+                    email      = CONCAT('excluido+', id, '@invalido.local'),
+                    name       = 'Conta excluída',
+                    phone      = NULL
+              WHERE id = ? AND deleted_at IS NULL",
+            [$id]
+        );
     }
 
     public function create(string $name, string $email, string $phone, string $password): int

@@ -70,6 +70,28 @@ final class RefreshToken
         );
     }
 
+    /**
+     * Housekeeping — chamado por database/purge.php.
+     *
+     * Esta e a tabela que mais cresce do sistema: ganha uma linha a cada
+     * rotacao, ou seja, uma a cada quinze minutos por sessao ativa. Sem
+     * expurgo ela so aumenta.
+     *
+     * O corte e por expires_at, e nao por rotated_at, de proposito. Um token ja
+     * rotacionado ainda serve para alguma coisa: e reapresentando-o que se
+     * detecta roubo, e a resposta e revogar a familia inteira. Apagar cedo
+     * demais trocaria esse sinal por um "sessao invalida" generico, que barra o
+     * acesso mas nao avisa ninguem de que houve vazamento. Depois de expirado
+     * isso nao muda nada — isUsable ja recusaria o token de qualquer forma.
+     */
+    public function purgeExpired(int $graceDays = 30): int
+    {
+        return $this->db->run(
+            'DELETE FROM refresh_tokens WHERE expires_at < DATE_SUB(NOW(), INTERVAL ? DAY)',
+            [$graceDays]
+        )->rowCount();
+    }
+
     /** @param array<string, mixed> $row */
     public function isUsable(array $row): bool
     {

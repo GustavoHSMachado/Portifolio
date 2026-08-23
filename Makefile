@@ -11,7 +11,8 @@ LOAD_ENV := if [ -f .env ]; then set -a; . ./.env; set +a; fi
 
 .DEFAULT_GOAL := help
 .PHONY: help up down restart build rebuild logs ps shell-api shell-web shell-db \
-        migrate migrate-status test test-api test-web test-e2e lint typecheck check \
+        migrate migrate-status purge purge-dry purge-e2e \
+        test test-api test-web test-e2e lint typecheck check \
         secrets clean reset urls
 
 ## ---------------------------------------------------------------- ##
@@ -81,6 +82,12 @@ migrate: ## Aplica as migrações pendentes
 migrate-status: ## Lista migrações aplicadas e pendentes
 	$(COMPOSE) exec api php database/migrate.php --status
 
+purge: ## Expurga tokens expirados e janelas de rate limit
+	$(COMPOSE) exec api php database/purge.php
+
+purge-dry: ## Mostra o que o expurgo apagaria, sem apagar
+	$(COMPOSE) exec api php database/purge.php --dry-run
+
 ## ---------------------------------------------------------------- ##
 ##  Qualidade                                                        ##
 ## ---------------------------------------------------------------- ##
@@ -93,8 +100,21 @@ test-api: ## Testes do backend (PHPUnit)
 test-web: ## Testes do frontend (Vitest)
 	$(COMPOSE) exec web npm run test
 
-test-e2e: ## Testes de ponta a ponta (Playwright)
-	$(COMPOSE) exec web npm run test:e2e
+# O executor é o serviço `e2e`, e não o `web`: a imagem oficial do Playwright
+# traz navegador e dependências de sistema na versão certa. Rodar no `web`
+# falha por não haver navegador instalado lá.
+#
+# A limpeza roda mesmo quando a suíte falha, e o código de saída preservado é o
+# dos testes — senão uma rodada vermelha deixaria as contas para trás, que é
+# justamente quando alguém vai querer inspecionar o banco.
+test-e2e: ## Testes de ponta a ponta (Playwright) e limpeza das contas criadas
+	@status=0; \
+	$(COMPOSE) --profile e2e run --rm e2e || status=$$?; \
+	$(COMPOSE) exec -T api php database/purge.php --test-data; \
+	exit $$status
+
+purge-e2e: ## Remove as contas que a suíte E2E deixou no banco
+	$(COMPOSE) exec api php database/purge.php --test-data
 
 lint: ## Lint de backend e frontend
 	$(COMPOSE) exec api composer run lint

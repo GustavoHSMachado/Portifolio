@@ -36,6 +36,50 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+interface SessaoRenovada {
+  user: User;
+  accessToken: string;
+  expiresIn: number;
+}
+
+/**
+ * Renovação em voo, compartilhada por toda a aba.
+ *
+ * O refresh token é rotativo e de uso único: usar o mesmo duas vezes é, para o
+ * servidor, indício de token roubado — ele revoga a família inteira e derruba a
+ * sessão. Isso transforma qualquer chamada concorrente em logout.
+ *
+ * E concorrência aqui é rotina, não exceção: com o StrictMode, o efeito de
+ * montagem roda duas vezes em desenvolvimento, e as duas chamadas saem com o
+ * mesmo cookie. Era o que acontecia a cada F5 — a sessão válida virava tela de
+ * login. Fora do provider porque precisa sobreviver à remontagem que causa o
+ * problema; um ref dentro do componente nasceria zerado junto com ela.
+ *
+ * O api.ts tem a mesma proteção para o refresh disparado por 401, mas aquela
+ * promise é interna ao módulo e não cobre esta chamada, que passa por fora do
+ * interceptor (skipAuth).
+ *
+ * O que isto NÃO cobre: duas abas abertas ao mesmo tempo, cada uma com seu
+ * próprio módulo. Fechar essa porta exige janela de tolerância na rotação, do
+ * lado do servidor.
+ */
+let renovacaoEmAndamento: Promise<SessaoRenovada> | null = null;
+
+function renovarSessao(): Promise<SessaoRenovada> {
+  if (renovacaoEmAndamento) {
+    return renovacaoEmAndamento;
+  }
+
+  renovacaoEmAndamento = api
+    .post<SessaoRenovada>("/api/v1/auth/refresh", undefined, { skipAuth: true })
+    .then((result) => result.data)
+    .finally(() => {
+      renovacaoEmAndamento = null;
+    });
+
+  return renovacaoEmAndamento;
+}
+
 /**
  * Estado de autenticação da aplicação.
  *
@@ -73,15 +117,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const silentRefresh = useCallback(async () => {
     try {
-      const result = await api.post<{ user: User; accessToken: string; expiresIn: number }>(
-        "/api/v1/auth/refresh",
-        undefined,
-        { skipAuth: true },
-      );
+      const sessao = await renovarSessao();
 
-      setAccessToken(result.data.accessToken);
-      setUser(result.data.user);
-      scheduleRefresh(result.data.expiresIn);
+      setAccessToken(sessao.accessToken);
+      setUser(sessao.user);
+      scheduleRefresh(sessao.expiresIn);
     } catch {
       // Sem sessão válida — estado deslogado é o resultado correto, não um erro.
       setAccessToken(null);
@@ -203,5 +243,38 @@ export function useRequireAuth(options: { adminOnly?: boolean } = {}) {
     }
   }, [user, loading, options.adminOnly, router]);
 
-  return { user, loading };
+  /**
+   * Saída para quando o servidor recusa o que o papel deixava passar.
+   *
+   * O papel no banco é só metade da regra: o RequireAdmin também exige que o
+   * e-mail seja o do ADMIN_EMAIL, e essa parte mora no .env do servidor — o
+   * cliente não tem como consultá-la. Uma conta marcada como admin no banco
+   * que não seja aquela passa pela guarda acima e leva 403 na primeira
+   * chamada. Sem isto, o resultado era uma tela administrativa aberta e vazia:
+   * nenhum dado vazava, mas ficava a impressão de que havia algo ali.
+   */
+  const sairSeBarrado = useCallback(
+    (error: unknown): boolean => {
+      if (!(error instanceof ApiError)) {
+        return false;
+      }
+
+      if (error.status === 401) {
+        router.replace("/entrar");
+
+        return true;
+      }
+
+      if (error.status === 403) {
+        router.replace("/painel");
+
+        return true;
+      }
+
+      return false;
+    },
+    [router],
+  );
+
+  return { user, loading, sairSeBarrado };
 }

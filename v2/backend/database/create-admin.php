@@ -78,6 +78,28 @@ if (mb_strlen($nome) < 3) {
     exit(1);
 }
 
+/*
+ * O telefone entra aqui pela mesma razão que entra no cadastro pela tela: é o
+ * canal de retorno quando alguém procura pelo site. Antes o script gravava
+ * NULL, e a conta do dono nascia com menos dados que a de um visitante.
+ *
+ * A regra é a mesma do formulário — só dígitos, com DDD, entre 10 e 13 —, e a
+ * validação vive na mesma classe, para o terminal não virar a porta larga.
+ */
+$telefone = ler('Telefone com DDD (só números): ');
+
+$validacaoTelefone = Validator::make(
+    ['phone' => $telefone],
+    ['phone' => 'required|digits|between:10,13'],
+);
+
+if ($validacaoTelefone->fails()) {
+    foreach ($validacaoTelefone->errors()['phone'] ?? [] as $erro) {
+        fwrite(STDERR, "  • {$erro}\n");
+    }
+    exit(1);
+}
+
 $senha = lerSegredo('Senha: ');
 $senhaConfirmada = lerSegredo('Confirme a senha: ');
 
@@ -104,18 +126,18 @@ $existente = $db->first('SELECT id FROM users WHERE email = ?', [$emailConfigura
 if ($existente !== null) {
     $db->run(
         "UPDATE users
-            SET name = ?, password_hash = ?, role = 'admin', email_verified_at = NOW(),
+            SET name = ?, phone = ?, password_hash = ?, role = 'admin', email_verified_at = NOW(),
                 deleted_at = NULL, failed_attempts = 0, locked_until = NULL, updated_at = NOW()
           WHERE id = ?",
-        [$nome, Hash::make($senha), $existente['id']]
+        [$nome, $telefone, Hash::make($senha), $existente['id']]
     );
 
     echo "\n✓ Conta de {$emailConfigurado} atualizada e promovida a administradora.\n";
 } else {
     $db->run(
         "INSERT INTO users (name, email, phone, password_hash, role, email_verified_at, created_at, updated_at)
-         VALUES (?, ?, NULL, ?, 'admin', NOW(), NOW(), NOW())",
-        [$nome, $emailConfigurado, Hash::make($senha)]
+         VALUES (?, ?, ?, ?, 'admin', NOW(), NOW(), NOW())",
+        [$nome, $emailConfigurado, $telefone, Hash::make($senha)]
     );
 
     echo "\n✓ Administrador criado: {$emailConfigurado}\n";

@@ -26,6 +26,9 @@ import styles from "./page.module.css";
  * ler o portfólio e o que encurta o tempo até a primeira pintura.
  */
 
+/** Lema do rodape, na faixa que atravessa a tela. */
+const LEMA = "Que Eu Seja Melhor Que Ontem, Mas Não Tão Bom Quanto Amanhã!";
+
 export async function generateMetadata(): Promise<Metadata> {
   const { profile } = await fetchContentSafe();
 
@@ -137,12 +140,19 @@ export default async function HomePage() {
         <MensagemSection />
       </main>
 
+      {/*
+        Uma passagem por vez: a frase entra pela direita, atravessa e sai pela
+        esquerda antes de recomecar. Sem copias, entao o texto visivel e o mesmo
+        que o leitor de tela anuncia — nao precisa de legenda separada.
+      */}
+      <div className={styles.faixa}>
+        <p className={styles.faixaTexto}>{LEMA}</p>
+      </div>
+
       <footer className={styles.footer}>
         <p className={styles.copyright}>
           © {new Date().getFullYear()} {profile.fullName}
         </p>
-        {/* Curta de propósito: quem estreitar a janela confirma na hora. */}
-        <p className={styles.footerNote}>Este site se adapta a qualquer tamanho de tela.</p>
         <nav className={styles.footerNav} aria-label="Documentos legais">
           <Link href="/legal/termos-de-uso" className={styles.footerLink}>
             Termos de Uso

@@ -649,16 +649,6 @@
   border-color: var(--border-strong);
 }
 
-/* ---------------- Nota de responsividade no rodapé ---------------- */
-
-/* Terceiro item do rodapé, entre o copyright e os links legais. */
-.footerNote {
-  margin: 0;
-  font-size: var(--text-sm);
-  line-height: var(--leading-normal);
-  color: var(--text-tertiary);
-}
-
 /* ---------------- Ícone da tecnologia ---------------- */
 
 /*
@@ -681,4 +671,65 @@
 .cardIcon svg {
   width: 1.375rem;
   height: 1.375rem;
+}
+
+/* ---------------- Faixa com o lema ---------------- */
+
+/*
+ * Movimento continuo tem duas regras que nao sao opiniao:
+ *
+ * 1. Precisa parar. A WCAG 2.2.2 exige controle sobre qualquer movimento
+ *    automatico que passe de cinco segundos — aqui, parar no hover e no foco
+ *    do teclado, que e o que alguem faz ao tentar ler a frase inteira.
+ * 2. Precisa sumir para quem pediu menos movimento. O texto continua la,
+ *    parado e legivel — a frase importa, a animacao e enfeite.
+ */
+.faixa {
+  overflow: hidden;
+  padding: var(--space-4) 0 var(--space-2);
+}
+
+/*
+ * O padding-left de 100% e relativo a largura da faixa, ou seja, a da tela:
+ * empurra a frase para fora, a direita, antes de comecar. Ja o translateX de
+ * -100% e relativo a largura do proprio elemento, padding incluido, e leva
+ * tudo para fora a esquerda. O resultado e uma passagem completa por ciclo,
+ * com a frase aparecendo uma vez so.
+ */
+.faixaTexto {
+  display: inline-block;
+  margin: 0;
+  padding-left: 100%;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+  white-space: nowrap;
+  will-change: transform;
+  animation: correr 18s linear infinite;
+}
+
+.faixa:hover .faixaTexto,
+.faixa:focus-within .faixaTexto {
+  animation-play-state: paused;
+}
+
+@keyframes correr {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sem movimento a frase fica centrada e inteira, sem depender de esperar. */
+  .faixaTexto {
+    display: block;
+    padding-left: 0;
+    text-align: center;
+    white-space: normal;
+    animation: none;
+  }
 }

@@ -1,0 +1,75 @@
+.acesso {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/*
+ * O nome não é link nem botão: é só a resposta a "estou logado em qual conta?".
+ * Fica antes das ações porque é o que explica por que elas mudaram.
+ */
+.saudacao {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/*
+ * O nome no azul do sistema, o mesmo --accent que marca rótulo de seção e link
+ * no resto do site. É o único pedaço da barra que identifica a pessoa, e a cor
+ * de destaque existe justamente para isso.
+ */
+.nome {
+  color: var(--accent);
+  font-weight: var(--weight-bold);
+}
+
+/*
+ * Sair é ação, não navegação — precisa ser button para o teclado e o leitor de
+ * tela anunciarem como tal. O visual acompanha o link ao lado: mesma altura,
+ * mesmo raio, mesma transição. A diferença é a borda transparente e o texto em
+ * --text-secondary, o mesmo par de estados dos demais links secundários do
+ * site, que passam para --accent no hover.
+ */
+.sair {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out), border-color var(--duration-fast)
+    var(--ease-out);
+}
+
+.sair:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: var(--border-subtle);
+}
+
+.sair:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.sair:disabled {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+@media (max-width: 30rem) {
+  /* Em tela estreita o nome completo empurraria as ações para fora. */
+  .saudacao {
+    width: 100%;
+    text-align: right;
+  }
+}

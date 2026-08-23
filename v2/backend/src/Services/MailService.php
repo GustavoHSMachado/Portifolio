@@ -175,6 +175,33 @@ final class MailService
             return true;
         }
 
+        /*
+         * Endereço de domínio reservado nunca sai por SMTP autenticado.
+         *
+         * A suíte E2E cadastra contas em @portifolio.local e cada rodada gera
+         * dezenas de mensagens. Contra o Mailpit isso é inofensivo — ele existe
+         * para capturá-las. Contra um servidor de verdade, viram outras tantas
+         * devoluções, e provedor nenhum tolera isso por muito tempo: a punição
+         * é a reputação do remetente cair ou a conta ser suspensa.
+         *
+         * A condição é a autenticação, e não o nome do ambiente. Servidor de
+         * captura local não pede usuário; quando há um configurado, do outro
+         * lado existe alguém para se incomodar com a devolução. Assim a mesma
+         * configuração serve local e produção, que é como o dono do projeto
+         * pediu, sem que os testes cheguem a sair da máquina.
+         *
+         * Os domínios vêm das RFCs 2606 e 6761, que os reservam justamente para
+         * teste e documentação: nenhum deles é entregável em lugar nenhum.
+         */
+        if ($this->isSmtpAutenticado() && $this->isDominioReservado($to)) {
+            $this->logger->info('E-mail para domínio reservado não foi enviado', [
+                'para'    => str_mask_email($to),
+                'assunto' => $subject,
+            ]);
+
+            return true;
+        }
+
         $mail = new PHPMailer(true);
 
         try {
@@ -285,6 +312,37 @@ final class MailService
           </table>
         </body></html>
         HTML;
+    }
+
+    /** Há credencial de SMTP configurada? Servidor de captura local não pede. */
+    private function isSmtpAutenticado(): bool
+    {
+        return trim((string) Config::get('MAIL_USERNAME', '')) !== '';
+    }
+
+    /**
+     * O endereço é de um domínio reservado para teste?
+     *
+     * RFC 2606 e RFC 6761. Nenhum deles resolve na internet: uma mensagem para
+     * lá só pode virar devolução.
+     */
+    private function isDominioReservado(string $email): bool
+    {
+        $arroba = strrchr($email, '@');
+
+        if ($arroba === false) {
+            return false;
+        }
+
+        $dominio = mb_strtolower(substr($arroba, 1));
+
+        foreach (['.local', '.localhost', '.test', '.invalid', '.example'] as $sufixo) {
+            if (str_ends_with($dominio, $sufixo)) {
+                return true;
+            }
+        }
+
+        return in_array($dominio, ['example.com', 'example.net', 'example.org'], true);
     }
 
     private function esc(string $value): string

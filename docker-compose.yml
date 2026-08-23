@@ -78,14 +78,22 @@ services:
       DB_PASS: ${DB_ROOT_PASSWORD:-root}
 
       # Mailpit captura tudo — nenhum e-mail sai de verdade em desenvolvimento.
-      MAIL_DRIVER: smtp
-      MAIL_HOST: mailpit
-      MAIL_PORT: 1025
-      MAIL_USERNAME: ""
-      MAIL_PASSWORD: ""
-      MAIL_ENCRYPTION: ""
-      MAIL_FROM_ADDRESS: nao-responda@portifolio.local
-      MAIL_FROM_NAME: Portifólio (dev)
+      # E-mail. Os padrões apontam para o Mailpit, que captura tudo sem enviar.
+      # Preencha MAIL_* no .env para usar o SMTP de verdade — a mesma
+      # configuração serve local e produção.
+      #
+      # Mensagens para domínios reservados (.local, .test, example.com) nunca
+      # saem por SMTP autenticado: ver MailService::isDominioReservado. É o que
+      # permite a suíte E2E rodar com o servidor real configurado sem despejar
+      # devoluções na reputação do remetente.
+      MAIL_DRIVER: ${MAIL_DRIVER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-nao-responda@portifolio.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Portifólio}
 
       # Limites de autenticação afrouxados APENAS no ambiente local.
       #

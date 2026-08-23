@@ -82,8 +82,8 @@ final class Validator
                 ? sprintf('Deve ter no mínimo %d caracteres.', (int) $param) : null,
             'max' => mb_strlen($value) > (int) $param
                 ? sprintf('Deve ter no máximo %d caracteres.', (int) $param) : null,
-            'digits' => preg_match('/^\d+$/', $value) !== 1
-                ? 'Deve conter apenas números.' : null,
+            // digits sozinho: só números. digits:7: exatamente sete deles.
+            'digits' => $this->digitsError($value, $param),
             'between'    => $this->betweenError($value, (string) $param),
             'alpha_dash' => preg_match('/^[A-Za-z0-9._-]+$/', $value) !== 1
                 ? 'Use apenas letras, números, ponto, hífen ou underscore.' : null,
@@ -113,16 +113,54 @@ final class Validator
     }
 
     /**
-     * Política de senha alinhada ao NIST SP 800-63B: comprimento acima de tudo,
-     * sem exigir símbolos obrigatórios (que empurram o usuário para padrões previsíveis).
+     * Política de senha: mínimo de 7 caracteres com maiúscula, minúscula, número
+     * e símbolo. Decisão do dono do produto, tomada em 22/08/2026.
+     *
+     * Vale registrar o que ela troca. O NIST SP 800-63B recomenda o contrário —
+     * comprimento acima de tudo, sem exigir classes de caractere — porque a
+     * obrigação empurra as pessoas para padrões previsíveis: a maiúscula vai
+     * para a primeira letra, o número e o símbolo para o fim, e "Senha123!"
+     * satisfaz a regra sendo péssima. Um mínimo de 7 também é curto: o espaço
+     * de busca fica menor que o dos 10 caracteres exigidos antes.
+     *
+     * O que compensa isso aqui é o segundo fator. Desde a mesma data, senha
+     * correta sozinha não entra: é preciso o código enviado por e-mail. Quem
+     * adivinhar a senha ainda precisa da caixa de entrada.
      */
+    private function digitsError(string $value, ?string $param): ?string
+    {
+        if (preg_match('/^\d+$/', $value) !== 1) {
+            return 'Deve conter apenas números.';
+        }
+
+        $exigidos = (int) $param;
+
+        if ($exigidos > 0 && mb_strlen($value) !== $exigidos) {
+            return sprintf('Deve ter exatamente %d dígitos.', $exigidos);
+        }
+
+        return null;
+    }
+
     private function passwordError(string $value): ?string
     {
-        if (mb_strlen($value) < 10) {
-            return 'A senha deve ter no mínimo 10 caracteres.';
+        if (mb_strlen($value) < 7) {
+            return 'A senha deve ter no mínimo 7 caracteres.';
         }
         if (mb_strlen($value) > 128) {
             return 'A senha deve ter no máximo 128 caracteres.';
+        }
+        if (preg_match('/[A-ZÀ-Þ]/u', $value) !== 1) {
+            return 'A senha deve conter pelo menos uma letra maiúscula.';
+        }
+        if (preg_match('/[a-zà-þ]/u', $value) !== 1) {
+            return 'A senha deve conter pelo menos uma letra minúscula.';
+        }
+        if (preg_match('/\d/', $value) !== 1) {
+            return 'A senha deve conter pelo menos um número.';
+        }
+        if (preg_match('/[^\p{L}\p{N}]/u', $value) !== 1) {
+            return 'A senha deve conter pelo menos um caractere especial.';
         }
         if (preg_match('/^(.)\1+$/', $value) === 1) {
             return 'A senha não pode ser um único caractere repetido.';

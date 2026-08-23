@@ -19,8 +19,8 @@ final class ValidatorTest extends TestCase
             'name'                  => 'Gustavo Henrique',
             'email'                 => 'gustavo@example.com',
             'phone'                 => '31986585208',
-            'password'              => 'umaSenhaBoa123',
-            'password_confirmation' => 'umaSenhaBoa123',
+            'password'              => 'umaSenhaBoa123!',
+            'password_confirmation' => 'umaSenhaBoa123!',
         ], [
             'name'     => 'required|min:3|max:120',
             'email'    => 'required|email',
@@ -72,11 +72,17 @@ final class ValidatorTest extends TestCase
     public static function senhas(): array
     {
         return [
-            'curta demais'       => ['abc123', false],
-            'só repetição'       => ['aaaaaaaaaaaa', false],
-            'comum na blocklist' => ['password123', false],
-            'válida'             => ['portifolioSeguro7', true],
-            'longa com espaços'  => ['uma frase longa como senha', true],
+            // A política passou a exigir maiúscula, minúscula, número e símbolo
+            // com no mínimo 7 caracteres — ver Validator::passwordError.
+            'curta demais'         => ['Ab1!de', false],
+            'só repetição'         => ['aaaaaaaaaaaa', false],
+            'comum na blocklist'   => ['password123', false],
+            'sem maiúscula'        => ['senha123!', false],
+            'sem minúscula'        => ['SENHA123!', false],
+            'sem número'           => ['SenhaBoa!', false],
+            'sem símbolo'          => ['SenhaBoa123', false],
+            'no limite dos sete'   => ['Ab1!def', true],
+            'longa com tudo'       => ['uma Frase longa como senha 7!', true],
         ];
     }
 

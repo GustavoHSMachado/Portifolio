@@ -25,6 +25,27 @@ final class AuthController
 
     public function register(Request $request): Response
     {
+        /*
+         * Cadastro público fechado por padrão.
+         *
+         * Este é um portfólio: a única conta que precisa existir é a do dono,
+         * criada por database/create-admin.php. Uma tela de cadastro aberta
+         * coletaria nome, e-mail, telefone e IP de terceiros sem entregar nada
+         * em troca — dado pessoal sob a LGPD, guardado sem finalidade.
+         *
+         * A porta continua no código, atrás de configuração, porque a suíte E2E
+         * exercita o fluxo de cadastro e confirmação de e-mail. O padrão é o
+         * valor de produção, como nos limites de rate limit: quem não define
+         * nada fica fechado.
+         */
+        if (!Config::bool('REGISTRATION_ENABLED', false)) {
+            throw new HttpException(
+                'O cadastro está fechado neste site.',
+                403,
+                errorCode: 'registration_closed'
+            );
+        }
+
         $data = Validator::make($request->body, [
             'name'     => 'required|min:3|max:120',
             'email'    => 'required|email|max:190',
@@ -89,6 +110,25 @@ final class AuthController
             $request->ip,
         );
 
+        // Nenhum token aqui: a sessão só nasce no segundo passo.
+        return Response::ok($result, 'Enviamos um código para o seu e-mail.');
+    }
+
+    /** Segundo passo do login: o código recebido por e-mail. */
+    public function verifyLoginCode(Request $request): Response
+    {
+        $data = Validator::make($request->body, [
+            'email' => 'required|email|max:190',
+            'code'  => 'required|digits:7',
+        ])->validated();
+
+        $result = $this->auth->verifyLoginCode(
+            $data['email'],
+            $data['code'],
+            $request->header('user-agent'),
+            $request->ip,
+        );
+
         return $this->withRefreshCookie(
             Response::ok([
                 'user'        => $result['user'],
@@ -135,33 +175,52 @@ final class AuthController
         // Sempre 200 com a mesma mensagem — não revela se o e-mail existe.
         return Response::ok(
             null,
-            'Se este e-mail estiver cadastrado, você receberá um link de redefinição em instantes.'
+            'Se este e-mail estiver cadastrado, você receberá um código de redefinição em instantes.'
         );
     }
 
     public function resetPassword(Request $request): Response
     {
         $data = Validator::make($request->body, [
-            'token'    => 'required|hex|between:64,64',
+            'email'    => 'required|email|max:190',
+            'code'     => 'required|digits:7',
             'password' => 'required|password|confirmed',
         ])->validated();
 
-        $this->auth->resetPassword($data['token'], $data['password']);
+        $this->auth->resetPassword($data['email'], $data['code'], $data['password']);
 
         return Response::ok(null, 'Senha redefinida. Faça login com a nova senha.')
             ->withCookie(self::REFRESH_COOKIE, '', time() - 3600);
     }
 
-    public function changePassword(Request $request): Response
+    /** Primeiro passo da troca de senha: confere a atual e dispara o código. */
+    public function requestPasswordChange(Request $request): Response
     {
         $data = Validator::make($request->body, [
             'currentPassword' => 'required|max:128',
-            'password'        => 'required|password|confirmed',
+        ])->validated();
+
+        $expiresIn = $this->auth->requestPasswordChange(
+            (int) $request->userId(),
+            $data['currentPassword'],
+        );
+
+        return Response::ok(
+            ['challenge' => 'password_change', 'expiresIn' => $expiresIn],
+            'Enviamos um código para o seu e-mail.'
+        );
+    }
+
+    public function changePassword(Request $request): Response
+    {
+        $data = Validator::make($request->body, [
+            'code'     => 'required|digits:7',
+            'password' => 'required|password|confirmed',
         ])->validated();
 
         $this->auth->changePassword(
             (int) $request->userId(),
-            $data['currentPassword'],
+            $data['code'],
             $data['password'],
         );
 

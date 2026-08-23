@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { aguardarEmail, extrairToken, limparCaixa } from "./helpers/mailpit";
+import { aguardarEmail, entrar, extrairCodigo, extrairToken, limparCaixa } from "./helpers/mailpit";
 
 /**
  * O caminho completo da conta: cadastrar, confirmar o e-mail, entrar.
@@ -32,7 +32,8 @@ function usuarioNovo() {
     nome: "Gustavo Henrique",
     email: `teste-${carimbo}@portifolio.local`,
     telefone: "31986585208",
-    senha: "umaSenhaBoa123",
+    // A política exige maiúscula, minúscula, número e símbolo, com sete no mínimo.
+    senha: "umaSenhaBoa123!",
   };
 }
 
@@ -60,13 +61,79 @@ test.describe("cadastro e confirmação de e-mail", () => {
     await page.goto(`/confirmar-email?token=${token}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
 
+    await limparCaixa(request);
+    await entrar(page, request, usuario.email, usuario.senha);
+
+    await expect(page).toHaveURL(/\/painel/);
+    await expect(page.getByRole("heading", { name: /Olá, Gustavo/i })).toBeVisible();
+  });
+
+  test("senha correta sozinha não abre sessão", async ({ page, request }) => {
+    const usuario = usuarioNovo();
+
+    await page.goto("/criar-conta");
+    await page.getByLabel("Nome completo").fill(usuario.nome);
+    await page.getByLabel("E-mail").fill(usuario.email);
+    await page.getByLabel("Telefone").fill(usuario.telefone);
+    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
+    await page.getByLabel("Confirmar senha").fill(usuario.senha);
+    await aceitarTermos(page);
+    await page.getByRole("button", { name: "Criar conta" }).click();
+    await expect(page.getByText("Confira seu e-mail")).toBeVisible();
+
+    const confirmacao = extrairToken(await aguardarEmail(request, usuario.email));
+    await page.goto(`/confirmar-email?token=${confirmacao}`);
+    await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
+
+    await limparCaixa(request);
+
+    // O primeiro passo é a senha, e ele não pode entregar sessão nenhuma.
     await page.goto("/entrar");
     await page.getByLabel("E-mail").fill(usuario.email);
     await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
     await page.getByRole("button", { name: "Entrar" }).click();
 
-    await expect(page).toHaveURL(/\/painel/);
-    await expect(page.getByRole("heading", { name: /Olá, Gustavo/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Confirme que é você" })).toBeVisible();
+    await expect(page).toHaveURL(/\/entrar/);
+
+    // E o painel continua fechado enquanto o código não for confirmado.
+    await page.goto("/painel");
+    await expect(page).toHaveURL(/\/entrar/);
+  });
+
+  test("recusa um código de acesso errado", async ({ page, request }) => {
+    const usuario = usuarioNovo();
+
+    await page.goto("/criar-conta");
+    await page.getByLabel("Nome completo").fill(usuario.nome);
+    await page.getByLabel("E-mail").fill(usuario.email);
+    await page.getByLabel("Telefone").fill(usuario.telefone);
+    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
+    await page.getByLabel("Confirmar senha").fill(usuario.senha);
+    await aceitarTermos(page);
+    await page.getByRole("button", { name: "Criar conta" }).click();
+    await expect(page.getByText("Confira seu e-mail")).toBeVisible();
+
+    const confirmacao = extrairToken(await aguardarEmail(request, usuario.email));
+    await page.goto(`/confirmar-email?token=${confirmacao}`);
+    await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
+
+    await limparCaixa(request);
+
+    await page.goto("/entrar");
+    await page.getByLabel("E-mail").fill(usuario.email);
+    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
+    await page.getByRole("button", { name: "Entrar" }).click();
+    await expect(page.getByRole("heading", { name: "Confirme que é você" })).toBeVisible();
+
+    const codigoReal = extrairCodigo(await aguardarEmail(request, usuario.email));
+    const codigoErrado = codigoReal === "0000000" ? "1111111" : "0000000";
+
+    await page.getByLabel("Código").fill(codigoErrado);
+    await page.getByRole("button", { name: "Confirmar e entrar" }).click();
+
+    await expect(page.getByRole("alert").first()).toBeVisible();
+    await expect(page).toHaveURL(/\/entrar/);
   });
 
   test("recusa um token de confirmação inválido", async ({ page }) => {
@@ -117,7 +184,7 @@ test.describe("recuperação de senha", () => {
 
   test("permite definir uma senha nova e entrar com ela", async ({ page, request }) => {
     const usuario = usuarioNovo();
-    const senhaNova = "outraSenhaBoa456";
+    const senhaNova = "outraSenhaBoa456!";
 
     await page.goto("/criar-conta");
     await page.getByLabel("Nome completo").fill(usuario.nome);
@@ -135,28 +202,46 @@ test.describe("recuperação de senha", () => {
 
     await limparCaixa(request);
 
+    // As duas etapas da recuperação vivem na mesma rota desde que o token de
+    // 64 caracteres deu lugar ao código de 7 dígitos: um código não pode
+    // viajar pela URL, onde ficaria no histórico e nos logs de intermediários.
     await page.goto("/recuperar-senha");
     await page.getByLabel("E-mail").fill(usuario.email);
     await page.getByRole("button", { name: "Enviar link" }).click();
     await expect(page.getByText("Verifique seu e-mail")).toBeVisible();
 
-    const reset = extrairToken(await aguardarEmail(request, usuario.email));
+    const codigoReset = extrairCodigo(await aguardarEmail(request, usuario.email));
 
-    await page.goto(`/redefinir-senha?token=${reset}`);
+    await page.getByLabel("Código recebido").fill(codigoReset);
     await page.getByLabel("Nova senha", { exact: true }).fill(senhaNova);
     await page.getByLabel("Confirmar nova senha").fill(senhaNova);
     await page.getByRole("button", { name: "Salvar nova senha" }).click();
 
-    // A própria tela redireciona ao concluir. Antes havia um page.goto("/entrar")
-    // aqui, que atropelava a requisição de redefinição: o goto cancela o que está
-    // em voo, e o login seguinte tentava a senha nova numa conta que ainda tinha
-    // a antiga. Passava por sorte quando a API respondia antes da navegação, e
-    // falhava nos cinco navegadores quando o servidor estava mais lento.
+    // O toHaveURL confirma que a redefinição terminou: quem redireciona é a
+    // própria tela, ao receber a resposta da API. Sem ele havia um goto direto
+    // aqui, que cancelava a requisição em voo — e o login seguinte tentava a
+    // senha nova numa conta que ainda guardava a antiga.
     await expect(page).toHaveURL(/\/entrar/);
-    await page.getByLabel("E-mail").fill(usuario.email);
-    await page.getByLabel("Senha", { exact: true }).fill(senhaNova);
-    await page.getByRole("button", { name: "Entrar" }).click();
 
-    await expect(page).toHaveURL(/\/painel/);
+    // O login acontece em outra aba, e não nesta.
+    //
+    // A tela de login chega aqui por navegação do lado do cliente, com o
+    // PageTransition desmontando uma rota e montando a outra. Digitar no meio
+    // disso não funciona: o campo recebe o texto e a montagem o limpa, o
+    // formulário vai vazio e a resposta é "Campo obrigatório". Nenhuma espera
+    // resolveu — verificar o valor antes do clique não impede a montagem de
+    // acontecer logo depois, e tanto goto quanto reload disputam com a
+    // navegação em curso ("interrupted by another navigation" no WebKit,
+    // "NS_BINDING_ABORTED" no Firefox).
+    //
+    // Uma aba nova não tem navegação pendente nem transição para atrapalhar, e
+    // compartilha o mesmo contexto — os cookies são os mesmos, então o que se
+    // exercita continua sendo a sessão de verdade.
+    const abaLogin = await page.context().newPage();
+
+    await limparCaixa(request);
+    await entrar(abaLogin, request, usuario.email, senhaNova);
+
+    await expect(abaLogin).toHaveURL(/\/painel/);
   });
 });

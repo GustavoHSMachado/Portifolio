@@ -52,6 +52,56 @@ final class MailService
         );
     }
 
+    /** Código do segundo fator do login. */
+    public function sendLoginCode(string $to, string $name, string $code, int $ttlMinutes): bool
+    {
+        return $this->send(
+            $to,
+            'Seu código de acesso',
+            $this->codeLayout(
+                'Seu código de acesso',
+                "Olá, {$this->esc($name)}.",
+                'Use o código abaixo para concluir a entrada. Ele expira em '
+                . $ttlMinutes . ' minutos e só vale uma vez. Se não foi você que tentou entrar, '
+                . 'ignore este e-mail e troque sua senha — alguém acertou a senha da sua conta.',
+                $code
+            )
+        );
+    }
+
+    /** Código para redefinir a senha esquecida. */
+    public function sendPasswordResetCode(string $to, string $name, string $code, int $ttlMinutes): bool
+    {
+        return $this->send(
+            $to,
+            'Código para redefinir sua senha',
+            $this->codeLayout(
+                'Redefinir senha',
+                "Olá, {$this->esc($name)}.",
+                'Recebemos um pedido para redefinir sua senha. Use o código abaixo, que expira em '
+                . $ttlMinutes . ' minutos e só vale uma vez. Se não foi você, ignore este e-mail — '
+                . 'sua senha continua a mesma.',
+                $code
+            )
+        );
+    }
+
+    /** Código para confirmar a troca de senha de quem já está autenticado. */
+    public function sendPasswordChangeCode(string $to, string $name, string $code, int $ttlMinutes): bool
+    {
+        return $this->send(
+            $to,
+            'Confirme a troca de senha',
+            $this->codeLayout(
+                'Confirme a troca de senha',
+                "Olá, {$this->esc($name)}.",
+                'Para concluir a troca de senha, informe o código abaixo na tela. Ele expira em '
+                . $ttlMinutes . ' minutos. Se não foi você, ignore este e-mail e revise seus acessos.',
+                $code
+            )
+        );
+    }
+
     public function sendPasswordChangedNotice(string $to, string $name): bool
     {
         return $this->send(
@@ -151,6 +201,39 @@ final class MailService
               <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#6b6b76;border-top:1px solid #26262f;padding-top:20px;">
                 Se o botão não funcionar, copie e cole este endereço no navegador:<br>
                 <span style="color:#8a8a95;word-break:break-all;">{$safeLink}</span>
+              </p>
+            </td></tr>
+          </table>
+        </body></html>
+        HTML;
+    }
+
+    /**
+     * Variante do layout para código digitado, sem botão.
+     *
+     * O código vai espaçado e em fonte monoespaçada porque será lido da tela e
+     * digitado à mão: em fonte proporcional, 0 e O, 1 e l se confundem. Não há
+     * link nenhum aqui — um e-mail de segundo fator que traz botão para clicar
+     * ensina exatamente o hábito que o phishing explora.
+     */
+    private function codeLayout(string $title, string $greeting, string $body, string $code): string
+    {
+        $safeCode = $this->esc($code);
+
+        return <<<HTML
+        <!DOCTYPE html>
+        <html lang="pt-BR"><head><meta charset="utf-8"><title>{$title}</title></head>
+        <body style="margin:0;padding:32px 16px;background:#0b0b0f;font-family:'Open Sans',Helvetica,Arial,sans-serif;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#14141b;border-radius:16px;overflow:hidden;">
+            <tr><td style="padding:40px 40px 8px;">
+              <h1 style="margin:0 0 24px;font-size:22px;line-height:1.3;color:#f5f5f7;font-weight:600;">{$title}</h1>
+              <p style="margin:0 0 12px;font-size:15px;line-height:1.6;color:#c9c9d1;">{$greeting}</p>
+              <p style="margin:0 0 28px;font-size:15px;line-height:1.6;color:#9a9aa5;">{$body}</p>
+              <p style="margin:0;padding:20px 24px;background:#08080c;border:1px solid #26262f;border-radius:12px;text-align:center;font-family:'Courier New',Courier,monospace;font-size:32px;letter-spacing:10px;color:#f5f5f7;font-weight:700;">{$safeCode}</p>
+            </td></tr>
+            <tr><td style="padding:24px 40px 40px;">
+              <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#6b6b76;border-top:1px solid #26262f;padding-top:20px;">
+                Ninguém da nossa parte vai pedir este código por telefone, mensagem ou e-mail.
               </p>
             </td></tr>
           </table>

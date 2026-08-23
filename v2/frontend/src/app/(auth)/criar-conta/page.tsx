@@ -188,8 +188,8 @@ export default function CriarContaPage() {
             name="password"
             revealable
             autoComplete="new-password"
-            placeholder="Mínimo de 10 caracteres"
-            hint="Use ao menos 10 caracteres. Uma frase é mais segura e mais fácil de lembrar."
+            placeholder="Mínimo de 7 caracteres"
+            hint="No mínimo 7 caracteres, com maiúscula, minúscula, número e símbolo."
             required
             disabled={submitting}
             error={fieldErrors.password?.[0]}

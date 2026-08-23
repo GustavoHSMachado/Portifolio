@@ -144,23 +144,53 @@ final class Router
             return $this->runPipeline($request, $this->globalMiddleware, null);
         }
 
+        /*
+         * 404 e 405 também passam pelo pipeline global.
+         *
+         * Antes elas eram devolvidas direto daqui, sem middleware nenhum: saíam
+         * sem CORS, sem cabeçalho de segurança e sem id de correlação. Para o
+         * navegador, uma resposta de erro sem Access-Control-Allow-Origin é uma
+         * resposta que ele não entrega ao JavaScript — o fetch rejeita como
+         * falha de rede, e some a informação de que a rota simplesmente não
+         * existe, que é o que faria alguém encontrar o erro de digitação.
+         */
         if ($allowedMethods !== []) {
-            return Response::error('Método não permitido para este recurso.', 405, code: 'method_not_allowed')
-                ->withHeader('Allow', implode(', ', array_unique($allowedMethods)));
+            $permitidos = implode(', ', array_unique($allowedMethods));
+
+            return $this->runPipeline(
+                $request,
+                $this->globalMiddleware,
+                null,
+                static fn (): Response => Response::error(
+                    'Método não permitido para este recurso.',
+                    405,
+                    code: 'method_not_allowed'
+                )->withHeader('Allow', $permitidos),
+            );
         }
 
-        return Response::error('Recurso não encontrado.', 404, code: 'not_found');
+        return $this->runPipeline(
+            $request,
+            $this->globalMiddleware,
+            null,
+            static fn (): Response => Response::error('Recurso não encontrado.', 404, code: 'not_found'),
+        );
     }
 
     /**
      * @param MiddlewareList $middleware
      * @param RouteHandler|null $handler
+     * @param (callable(): Response)|null $fallback resposta final quando não há handler
      */
-    private function runPipeline(Request $request, array $middleware, ?array $handler): Response
-    {
-        $next = function (Request $req) use ($handler): Response {
+    private function runPipeline(
+        Request $request,
+        array $middleware,
+        ?array $handler,
+        ?callable $fallback = null,
+    ): Response {
+        $next = function (Request $req) use ($handler, $fallback): Response {
             if ($handler === null) {
-                return Response::noContent();
+                return $fallback !== null ? $fallback() : Response::noContent();
             }
 
             [$class, $method] = $handler;

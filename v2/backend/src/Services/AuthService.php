@@ -8,6 +8,7 @@ use App\Core\Config;
 use App\Core\HttpException;
 use App\Database\Connection;
 use App\Models\LegalAcceptance;
+use App\Models\PasswordHistory;
 use App\Models\RefreshToken;
 use App\Models\User;
 use App\Models\VerificationToken;
@@ -31,6 +32,7 @@ final class AuthService
         private readonly User $users,
         private readonly VerificationToken $verificationTokens,
         private readonly RefreshToken $refreshTokens,
+        private readonly PasswordHistory $passwordHistory,
         private readonly LegalAcceptance $legal,
         private readonly TokenService $tokens,
         private readonly MailService $mail,
@@ -69,7 +71,7 @@ final class AuthService
             );
         }
 
-        $userId = $this->db->transaction(function () use ($name, $email, $phone, $password, $context): int {
+        $result = $this->db->transaction(function () use ($name, $email, $phone, $password, $context): array {
             $id = $this->users->create($name, $email, $phone, $password);
 
             // Consentimento demonstrável: guarda qual versão foi aceita (LGPD art. 8º).
@@ -86,31 +88,61 @@ final class AuthService
                 );
             }
 
-            $this->sendVerificationEmail($id, $name, $email);
+            // A primeira senha também entra no histórico: é ela que "senha
+            // repetida" precisa reconhecer na primeira troca.
+            $this->passwordHistory->recordCurrent($id);
 
-            return $id;
+            return ['id' => $id, 'token' => $this->issueVerificationToken($id)];
         });
+
+        $userId = $result['id'];
+
+        /*
+         * O e-mail sai depois do commit, de propósito.
+         *
+         * Dentro da transação ele criava dois problemas. O SMTP é rede: uma entrega
+         * lenta segurava a transação aberta, com as linhas travadas, pelo tempo que
+         * o servidor de e-mail levasse. E a mensagem carrega um link para um token
+         * que só passa a existir no commit — quem clicasse rápido demais podia
+         * receber "link inválido" para um token legítimo.
+         *
+         * A contrapartida é que uma falha no envio agora deixa a conta criada sem
+         * e-mail entregue. É o lado certo para errar: a pessoa pede o reenvio pela
+         * tela, enquanto o caminho anterior desfazia um cadastro que já era válido.
+         * É o mesmo desenho de resetPassword e changePassword.
+         */
+        $this->mail->sendVerification($email, $name, $this->verificationLink($result['token']));
 
         $this->logger->info('Usuário registrado', ['user_id' => $userId]);
 
         return ['user' => User::toPublic($this->users->findById($userId) ?? [])];
     }
 
+    /** Reenvio: emite um token novo e entrega na hora, fora de qualquer transação. */
     public function sendVerificationEmail(int $userId, string $name, string $email): void
     {
-        $token = $this->verificationTokens->issue(
+        $link = $this->verificationLink($this->issueVerificationToken($userId));
+
+        $this->mail->sendVerification($email, $name, $link);
+    }
+
+    /** Só grava o token. Separado do envio para poder rodar dentro da transação. */
+    private function issueVerificationToken(int $userId): string
+    {
+        return $this->verificationTokens->issue(
             $userId,
             VerificationToken::PURPOSE_EMAIL_VERIFICATION,
             Config::int('EMAIL_VERIFICATION_TTL', 60),
         );
+    }
 
-        $link = sprintf(
+    private function verificationLink(string $token): string
+    {
+        return sprintf(
             '%s/confirmar-email?token=%s',
             rtrim((string) Config::get('FRONTEND_URL'), '/'),
             urlencode($token),
         );
-
-        $this->mail->sendVerification($email, $name, $link);
     }
 
     public function verifyEmail(string $token): void
@@ -147,7 +179,14 @@ final class AuthService
     // Login e sessão
     // ------------------------------------------------------------------
 
-    /** @return array{user: array<string, mixed>, accessToken: string, expiresIn: int, refreshToken: string} */
+    /**
+     * Primeiro passo do login: confere a senha e envia o código do segundo fator.
+     *
+     * Nenhum token de sessão sai daqui. Senha correta apenas habilita o segundo
+     * passo — quem descobrir a senha ainda precisa da caixa de entrada.
+     *
+     * @return array{challenge: string, expiresIn: int}
+     */
     public function login(string $email, string $password, ?string $userAgent, string $ip): array
     {
         $user = $this->users->findByEmailWithSecret($email);
@@ -190,14 +229,76 @@ final class AuthService
 
         $this->users->clearFailedAttempts((int) $user['id']);
 
-        $familyId = bin2hex(random_bytes(16));
-        $refresh = $this->refreshTokens->issue(
+        $ttl  = Config::int('LOGIN_2FA_TTL', 10);
+        $code = $this->verificationTokens->issueCode(
             (int) $user['id'],
-            $familyId,
-            Config::int('REFRESH_TOKEN_TTL_DAYS', 30),
-            $userAgent,
-            $ip,
+            VerificationToken::PURPOSE_LOGIN_2FA,
+            $ttl,
         );
+
+        $this->mail->sendLoginCode($user['email'], $user['name'], $code, $ttl);
+
+        $this->logger->info('Senha conferida, código de acesso enviado', [
+            'user_id' => $user['id'],
+            'ip'      => $ip,
+        ]);
+
+        return [
+            'challenge' => 'login_2fa',
+            'expiresIn' => $ttl * 60,
+        ];
+    }
+
+    /**
+     * Segundo passo do login: valida o código e abre a sessão.
+     *
+     * A resposta é a mesma para código errado, expirado ou inexistente. Separar
+     * os casos contaria a quem está tentando se aquela conta tem um código em
+     * aberto — e, portanto, se a senha que ele usou no primeiro passo estava
+     * certa.
+     *
+     * @return array{user: array<string, mixed>, accessToken: string, expiresIn: int, refreshToken: string}
+     */
+    public function verifyLoginCode(
+        string $email,
+        string $code,
+        ?string $userAgent,
+        string $ip,
+    ): array {
+        $user = $this->users->findByEmailWithSecret($email);
+
+        if ($user === null) {
+            throw HttpException::unauthorized('Código inválido ou expirado. Entre novamente.');
+        }
+
+        $row = $this->verificationTokens->findValidCode(
+            (int) $user['id'],
+            $code,
+            VerificationToken::PURPOSE_LOGIN_2FA,
+        );
+
+        if ($row === null) {
+            $this->logger->warning('Código de acesso recusado', [
+                'user_id' => $user['id'],
+                'ip'      => $ip,
+            ]);
+
+            throw HttpException::unauthorized('Código inválido ou expirado. Entre novamente.');
+        }
+
+        $familyId = bin2hex(random_bytes(16));
+
+        $refresh = $this->db->transaction(function () use ($row, $user, $familyId, $userAgent, $ip): string {
+            $this->verificationTokens->consume((int) $row['id']);
+
+            return $this->refreshTokens->issue(
+                (int) $user['id'],
+                $familyId,
+                Config::int('REFRESH_TOKEN_TTL_DAYS', 30),
+                $userAgent,
+                $ip,
+            );
+        });
 
         $this->logger->info('Login efetuado', ['user_id' => $user['id'], 'ip' => $ip]);
 
@@ -298,44 +399,45 @@ final class AuthService
             return;
         }
 
-        $token = $this->verificationTokens->issue(
+        $ttl  = Config::int('PASSWORD_RESET_TTL', 15);
+        $code = $this->verificationTokens->issueCode(
             (int) $user['id'],
             VerificationToken::PURPOSE_PASSWORD_RESET,
-            Config::int('PASSWORD_RESET_TTL', 30),
+            $ttl,
         );
 
-        $link = sprintf(
-            '%s/redefinir-senha?token=%s',
-            rtrim((string) Config::get('FRONTEND_URL'), '/'),
-            urlencode($token),
-        );
-
-        $this->mail->sendPasswordReset($user['email'], $user['name'], $link);
-        $this->logger->info('E-mail de reset enviado', ['user_id' => $user['id']]);
+        $this->mail->sendPasswordResetCode($user['email'], $user['name'], $code, $ttl);
+        $this->logger->info('Código de reset enviado', ['user_id' => $user['id']]);
     }
 
-    /** Consome o token, troca a senha e encerra todas as sessões ativas. */
-    public function resetPassword(string $token, string $newPassword): void
+    /** Consome o código, troca a senha e encerra todas as sessões ativas. */
+    public function resetPassword(string $email, string $code, string $newPassword): void
     {
-        $row = $this->verificationTokens->findValid($token, VerificationToken::PURPOSE_PASSWORD_RESET);
+        $user = $this->users->findByEmailWithSecret($email);
 
-        if ($row === null) {
+        $row = $user === null
+            ? null
+            : $this->verificationTokens->findValidCode(
+                (int) $user['id'],
+                $code,
+                VerificationToken::PURPOSE_PASSWORD_RESET,
+            );
+
+        if ($user === null || $row === null) {
             throw new HttpException(
-                'Link de redefinição inválido ou expirado. Solicite um novo.',
+                'Código inválido ou expirado. Solicite um novo.',
                 410,
                 errorCode: 'token_invalid'
             );
         }
 
-        $userId = (int) $row['user_id'];
-        $user = $this->users->findById($userId);
+        $userId = (int) $user['id'];
 
-        if ($user === null) {
-            throw HttpException::notFound('Conta não encontrada.');
-        }
+        $this->guardPasswordReuse($userId, $newPassword);
 
         $this->db->transaction(function () use ($row, $userId, $newPassword): void {
             $this->users->updatePassword($userId, $newPassword);
+            $this->passwordHistory->recordCurrent($userId);
             $this->verificationTokens->consume((int) $row['id']);
             // Trocou a senha, derruba tudo: quem roubou a sessão perde o acesso.
             $this->refreshTokens->revokeAllForUser($userId);
@@ -346,8 +448,39 @@ final class AuthService
         $this->logger->info('Senha redefinida via token', ['user_id' => $userId]);
     }
 
-    /** Troca de senha por usuário já autenticado — exige a senha atual. */
-    public function changePassword(int $userId, string $currentPassword, string $newPassword): void
+    /**
+     * Recusa uma senha que a conta já usou.
+     *
+     * Vale para a troca e para a recuperação, e cobre também a senha em vigor,
+     * que está no histórico. O 422 sai antes de qualquer escrita: a pessoa
+     * corrige e tenta de novo sem que o código de confirmação seja consumido.
+     */
+    private function guardPasswordReuse(int $userId, string $newPassword): void
+    {
+        if (!$this->passwordHistory->wasUsed($userId, $newPassword)) {
+            return;
+        }
+
+        $mensagem = sprintf(
+            'Esta senha já foi usada nesta conta. Escolha uma diferente das últimas %d.',
+            $this->passwordHistory->size(),
+        );
+
+        throw new HttpException($mensagem, 422, [
+            'password' => [$mensagem],
+        ], 'password_reused');
+    }
+
+    /**
+     * Primeiro passo da troca de senha: confere a senha atual e envia o código.
+     *
+     * O propósito reaproveitado é o password_reset, e não um terceiro valor no
+     * enum: os dois fluxos provam a mesma coisa — controle da caixa de entrada
+     * antes de mudar a senha. A consequência é que pedir "esqueci a senha" e
+     * "trocar senha" ao mesmo tempo deixa valendo só o código mais recente, o
+     * que é o comportamento razoável de qualquer forma.
+     */
+    public function requestPasswordChange(int $userId, string $currentPassword): int
     {
         $user = $this->users->findById($userId);
 
@@ -363,14 +496,54 @@ final class AuthService
             ], 'invalid_credentials');
         }
 
-        if (Hash::verify($newPassword, $withSecret['password_hash'])) {
-            throw new HttpException('A nova senha deve ser diferente da atual.', 422, [
-                'password' => ['A nova senha deve ser diferente da atual.'],
-            ], 'password_reused');
+        $ttl  = Config::int('PASSWORD_RESET_TTL', 15);
+        $code = $this->verificationTokens->issueCode(
+            $userId,
+            VerificationToken::PURPOSE_PASSWORD_RESET,
+            $ttl,
+        );
+
+        $this->mail->sendPasswordChangeCode($user['email'], $user['name'], $code, $ttl);
+        $this->logger->info('Código de troca de senha enviado', ['user_id' => $userId]);
+
+        return $ttl * 60;
+    }
+
+    /** Segundo passo: valida o código e aplica a senha nova. */
+    public function changePassword(int $userId, string $code, string $newPassword): void
+    {
+        $user = $this->users->findById($userId);
+
+        if ($user === null) {
+            throw HttpException::notFound('Conta não encontrada.');
         }
 
-        $this->db->transaction(function () use ($userId, $newPassword): void {
+        $withSecret = $this->users->findByEmailWithSecret($user['email']);
+
+        if ($withSecret === null) {
+            throw HttpException::notFound('Conta não encontrada.');
+        }
+
+        $row = $this->verificationTokens->findValidCode(
+            $userId,
+            $code,
+            VerificationToken::PURPOSE_PASSWORD_RESET,
+        );
+
+        if ($row === null) {
+            throw new HttpException(
+                'Código inválido ou expirado. Peça um novo.',
+                410,
+                errorCode: 'token_invalid'
+            );
+        }
+
+        $this->guardPasswordReuse($userId, $newPassword);
+
+        $this->db->transaction(function () use ($row, $userId, $newPassword): void {
             $this->users->updatePassword($userId, $newPassword);
+            $this->passwordHistory->recordCurrent($userId);
+            $this->verificationTokens->consume((int) $row['id']);
             $this->refreshTokens->revokeAllForUser($userId);
         });
 

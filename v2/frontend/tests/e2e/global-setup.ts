@@ -36,17 +36,52 @@ const ENCAMINHAMENTOS: Encaminhamento[] = [
 
 const servidores: net.Server[] = [];
 
+/**
+ * Encerra o outro lado com FIN, e não com RST.
+ *
+ * `destroy()` manda RST, que para o navegador é "a conexão morreu no meio".
+ * Com keep-alive isso acontece por motivo nenhum: o servidor de desenvolvimento
+ * fecha conexões ociosas sozinho, e o proxy transformava esse fechamento
+ * rotineiro em erro de rede. Conexão encerrada com FIN é fechamento combinado,
+ * e um pedido em voo numa conexão reaproveitada é refeito em outra.
+ *
+ * Registro honesto: a instabilidade que motivou esta função tinha outra causa —
+ * o teste preenchia o formulário antes da hidratação. Isto aqui continua sendo
+ * o comportamento correto para um proxy TCP, mas não foi o que resolveu aquilo.
+ */
+function encerrarSuavemente(socket: net.Socket): void {
+  if (!socket.destroyed) {
+    socket.end();
+  }
+}
+
+/**
+ * Erro de socket aqui é rotina, não defeito: ECONNRESET e EPIPE aparecem
+ * sempre que um dos lados desiste primeiro. O que não pode acontecer é a
+ * exceção subir e derrubar o processo de teste inteiro.
+ */
+function descartar(socket: net.Socket): void {
+  socket.destroy();
+}
+
 function encaminhar({ porta, destinoHost, destinoPorta }: Encaminhamento): Promise<void> {
   return new Promise((resolve, reject) => {
     const servidor = net.createServer((entrada) => {
       const saida = net.connect(destinoPorta, destinoHost);
 
+      // Sem o atraso de Nagle: são requisições pequenas, e esperar por mais
+      // dados para juntar num pacote só adiciona latência a cada chamada.
+      entrada.setNoDelay(true);
+      saida.setNoDelay(true);
+
       entrada.pipe(saida);
       saida.pipe(entrada);
 
-      // Uma conexão que cai não pode derrubar o processo de teste inteiro.
-      entrada.on("error", () => saida.destroy());
-      saida.on("error", () => entrada.destroy());
+      entrada.on("end", () => encerrarSuavemente(saida));
+      saida.on("end", () => encerrarSuavemente(entrada));
+
+      entrada.on("error", () => descartar(saida));
+      saida.on("error", () => descartar(entrada));
     });
 
     servidor.once("error", reject);

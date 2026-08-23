@@ -24,6 +24,7 @@ export default function PainelPage() {
   const [profileErrors, setProfileErrors] = useState<Record<string, string[]>>({});
 
   const [passwordOpen, setPasswordOpen] = useState(false);
+  const [etapaSenha, setEtapaSenha] = useState<"senha-atual" | "codigo">("senha-atual");
   const [changingPassword, setChangingPassword] = useState(false);
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string[]>>({});
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -61,6 +62,41 @@ export default function PainelPage() {
     }
   }
 
+  /**
+   * Primeiro passo: confere a senha atual e dispara o código por e-mail.
+   *
+   * A senha nova não é enviada aqui. Guardá-la pendente no servidor até a
+   * confirmação exigiria manter uma senha em trânsito entre duas requisições,
+   * e ela é pedida junto com o código no segundo passo.
+   */
+  async function handlePedirCodigo(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (changingPassword) return;
+
+    const atual = String(new FormData(event.currentTarget).get("currentPassword") ?? "");
+
+    setChangingPassword(true);
+    setPasswordErrors({});
+    setPasswordError(null);
+
+    try {
+      await api.post("/api/v1/auth/change-password/request", { currentPassword: atual });
+
+      setEtapaSenha("codigo");
+      toast.success("Enviamos um código de 7 dígitos para o seu e-mail.");
+    } catch (error) {
+      if (error instanceof ApiError && error.isValidation) {
+        setPasswordErrors(error.fieldErrors);
+        return;
+      }
+      setPasswordError(
+        error instanceof ApiError ? error.message : "Não foi possível iniciar a troca.",
+      );
+    } finally {
+      setChangingPassword(false);
+    }
+  }
+
   async function handlePassword(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (changingPassword) return;
@@ -73,12 +109,13 @@ export default function PainelPage() {
 
     try {
       await api.post("/api/v1/auth/change-password", {
-        currentPassword: String(form.get("currentPassword") ?? ""),
+        code: String(form.get("code") ?? "").trim(),
         password: String(form.get("password") ?? ""),
         password_confirmation: String(form.get("password_confirmation") ?? ""),
       });
 
       setPasswordOpen(false);
+      setEtapaSenha("senha-atual");
       toast.success("Senha alterada. Entre novamente com a nova senha.");
       // A troca de senha revoga todas as sessões no servidor — o estado local
       // precisa acompanhar, senão a interface finge que ainda está logada.
@@ -204,37 +241,66 @@ export default function PainelPage() {
         </motion.section>
       </motion.div>
 
-      <Modal open={passwordOpen} onClose={() => setPasswordOpen(false)} title="Alterar senha">
-        <form id="password-form" className={styles.form} onSubmit={handlePassword} noValidate>
-          <Input
-            label="Senha atual"
-            name="currentPassword"
-            revealable
-            autoComplete="current-password"
-            required
-            disabled={changingPassword}
-            error={passwordErrors.currentPassword?.[0]}
-          />
+      <Modal
+        open={passwordOpen}
+        onClose={() => {
+          setPasswordOpen(false);
+          setEtapaSenha("senha-atual");
+        }}
+        title="Alterar senha"
+      >
+        <form
+          id="password-form"
+          className={styles.form}
+          onSubmit={etapaSenha === "senha-atual" ? handlePedirCodigo : handlePassword}
+          noValidate
+        >
+          {etapaSenha === "senha-atual" ? (
+            <Input
+              label="Senha atual"
+              name="currentPassword"
+              revealable
+              autoComplete="current-password"
+              hint="Confirmada a senha, enviamos um código para o seu e-mail."
+              required
+              disabled={changingPassword}
+              error={passwordErrors.currentPassword?.[0]}
+            />
+          ) : (
+            <>
+              <Input
+                label="Código recebido por e-mail"
+                name="code"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="0000000"
+                maxLength={7}
+                required
+                disabled={changingPassword}
+                error={passwordErrors.code?.[0]}
+              />
 
-          <Input
-            label="Nova senha"
-            name="password"
-            revealable
-            autoComplete="new-password"
-            hint="Mínimo de 10 caracteres."
-            required
-            disabled={changingPassword}
-            error={passwordErrors.password?.[0]}
-          />
+              <Input
+                label="Nova senha"
+                name="password"
+                revealable
+                autoComplete="new-password"
+                hint="Mínimo de 7 caracteres, com maiúscula, minúscula, número e símbolo."
+                required
+                disabled={changingPassword}
+                error={passwordErrors.password?.[0]}
+              />
 
-          <Input
-            label="Confirmar nova senha"
-            name="password_confirmation"
-            revealable
-            autoComplete="new-password"
-            required
-            disabled={changingPassword}
-          />
+              <Input
+                label="Confirmar nova senha"
+                name="password_confirmation"
+                revealable
+                autoComplete="new-password"
+                required
+                disabled={changingPassword}
+              />
+            </>
+          )}
 
           {passwordError ? (
             <p className={styles.modalError} role="alert">
@@ -252,7 +318,13 @@ export default function PainelPage() {
               Cancelar
             </Button>
             <Button type="submit" loading={changingPassword}>
-              {changingPassword ? "Alterando" : "Alterar senha"}
+              {etapaSenha === "senha-atual"
+                ? changingPassword
+                  ? "Enviando código"
+                  : "Continuar"
+                : changingPassword
+                  ? "Alterando"
+                  : "Alterar senha"}
             </Button>
           </div>
         </form>

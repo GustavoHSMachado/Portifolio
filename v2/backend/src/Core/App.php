@@ -38,19 +38,33 @@ final class App
     }
 
     /**
-     * Ordem dos middlewares globais é intencional:
-     * RequestId primeiro (todo log precisa de correlação), ErrorHandler logo depois
-     * (para capturar falhas de todos os seguintes), CORS antes do rate limit
-     * (o preflight não deve consumir cota).
+     * Ordem dos middlewares globais é intencional.
+     *
+     * RequestId primeiro, porque todo log precisa de correlação. Cors logo
+     * depois, envolvendo o ErrorHandler. RateLimit por último, para o preflight
+     * não consumir cota.
+     *
+     * O Cors precisa vir ANTES do ErrorHandler, e não depois. Um middleware só
+     * enxerga a resposta que o seguinte devolve — e quando alguém lança
+     * exceção, quem a converte em resposta é o ErrorHandler. Com o Cors abaixo
+     * dele, essa resposta subia sem passar pelo Cors: 401, 404, 422 e 429 saíam
+     * todos sem Access-Control-Allow-Origin.
+     *
+     * O efeito era invisível no servidor e grave no navegador. Sem o cabeçalho,
+     * o navegador recusa entregar a resposta ao JavaScript e o fetch rejeita
+     * como falha de rede. Toda mensagem de erro da API — "senha incorreta",
+     * "muitas tentativas", "link expirado" — chegava ao usuário como "Não
+     * conseguimos falar com o servidor", que não ajuda a resolver nenhuma
+     * delas.
      */
     /** @return list<class-string> */
     private function globalMiddleware(): array
     {
         return [
             RequestId::class,
+            Cors::class,
             ErrorHandler::class,
             SecurityHeaders::class,
-            Cors::class,
             RateLimit::class,
         ];
     }
@@ -69,6 +83,8 @@ final class App
         // Autenticação pública
         $this->router->post('/api/v1/auth/register', [AuthController::class, 'register']);
         $this->router->post('/api/v1/auth/login', [AuthController::class, 'login']);
+        // Segundo passo do login: o código de 7 dígitos enviado por e-mail.
+        $this->router->post('/api/v1/auth/login/verify', [AuthController::class, 'verifyLoginCode']);
         $this->router->post('/api/v1/auth/refresh', [AuthController::class, 'refresh']);
         $this->router->post('/api/v1/auth/logout', [AuthController::class, 'logout']);
         $this->router->post('/api/v1/auth/verify-email', [AuthController::class, 'verifyEmail']);
@@ -77,6 +93,7 @@ final class App
         $this->router->post('/api/v1/auth/reset-password', [AuthController::class, 'resetPassword']);
 
         // Autenticado
+        $this->router->post('/api/v1/auth/change-password/request', [AuthController::class, 'requestPasswordChange'], $auth);
         $this->router->post('/api/v1/auth/change-password', [AuthController::class, 'changePassword'], $auth);
         $this->router->get('/api/v1/me', [UserController::class, 'me'], $auth);
         $this->router->put('/api/v1/me', [UserController::class, 'updateProfile'], $verified);

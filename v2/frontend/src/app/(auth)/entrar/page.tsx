@@ -27,11 +27,24 @@ import styles from "./page.module.css";
 export default function LoginPage() {
   const router = useRouter();
   const toast = useToast();
-  const { login } = useAuth();
+  const { login, verifyLoginCode } = useAuth();
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  /*
+   * Duas etapas na mesma rota, e não duas rotas.
+   *
+   * O segundo passo depende do e-mail digitado no primeiro. Numa rota separada
+   * esse dado teria de viajar pela URL — expondo o e-mail no histórico do
+   * navegador e nos logs de qualquer intermediário — ou por armazenamento
+   * local, que sobrevive ao fim do fluxo. Mantendo em estado, ele morre com a
+   * aba, e recarregar a página devolve ao começo, que é o certo: o código já
+   * foi enviado, mas a senha precisa ser conferida de novo.
+   */
+  const [etapa, setEtapa] = useState<"credenciais" | "codigo">("credenciais");
+  const [emailEmUso, setEmailEmUso] = useState("");
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -52,11 +65,11 @@ export default function LoginPage() {
       // API aqui, o token era guardado mas o contexto continuava sem usuário —
       // o /painel via "não autenticado" e devolvia para cá, com o login tendo
       // dado 200. E a sessão expirava em 15 minutos, sem renovar.
-      const user = await login(email, password);
+      await login(email, password);
 
-      toast.success(`Bem-vindo de volta, ${user.name.split(" ")[0]}.`);
-
-      router.push(user.role === "admin" ? "/admin" : "/painel");
+      setEmailEmUso(email);
+      setEtapa("codigo");
+      toast.success("Enviamos um código de 7 dígitos para o seu e-mail.");
     } catch (error) {
       if (!(error instanceof ApiError)) {
         setFormError("Ocorreu um erro inesperado. Tente novamente.");
@@ -83,6 +96,116 @@ export default function LoginPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  async function handleCodigo(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (submitting) return;
+
+    const code = String(new FormData(event.currentTarget).get("code") ?? "").trim();
+
+    setSubmitting(true);
+    setFormError(null);
+    setFieldErrors({});
+
+    try {
+      const user = await verifyLoginCode(emailEmUso, code);
+
+      toast.success(`Bem-vindo de volta, ${user.name.split(" ")[0]}.`);
+
+      router.push(user.role === "admin" ? "/admin" : "/painel");
+    } catch (error) {
+      if (!(error instanceof ApiError)) {
+        setFormError("Ocorreu um erro inesperado. Tente novamente.");
+        return;
+      }
+
+      if (error.isValidation) {
+        setFieldErrors(error.fieldErrors);
+        return;
+      }
+
+      const messages: Record<string, string> = {
+        rate_limited: error.message,
+        network_error: "Não conseguimos falar com o servidor. Verifique sua conexão.",
+        timeout: "A conexão está lenta. Tente novamente.",
+      };
+
+      setFormError(messages[error.code ?? ""] ?? error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function voltarParaCredenciais() {
+    setEtapa("credenciais");
+    setFormError(null);
+    setFieldErrors({});
+  }
+
+  if (etapa === "codigo") {
+    return (
+      <motion.div
+        className={styles.wrapper}
+        variants={staggerContainer(4)}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.header className={styles.header} variants={fadeInUp}>
+          <h1 className={styles.title}>Confirme que é você</h1>
+          <p className={styles.subtitle}>
+            Enviamos um código de 7 dígitos para <strong>{emailEmUso}</strong>. Ele vale por poucos
+            minutos e só pode ser usado uma vez.
+          </p>
+        </motion.header>
+
+        <form className={styles.form} onSubmit={handleCodigo} noValidate>
+          <motion.div variants={fadeInUp}>
+            <Input
+              label="Código"
+              name="code"
+              /*
+               * inputMode numérico levanta o teclado de números no celular, e
+               * autoComplete one-time-code deixa o iOS e o Android oferecerem
+               * o código direto da notificação do e-mail, sem copiar e colar.
+               */
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="0000000"
+              maxLength={7}
+              required
+              disabled={submitting}
+              error={fieldErrors.code?.[0]}
+            />
+          </motion.div>
+
+          {formError ? (
+            <motion.p
+              className={styles.formError}
+              variants={shake}
+              initial="hidden"
+              animate="visible"
+              role="alert"
+            >
+              {formError}
+            </motion.p>
+          ) : null}
+
+          <motion.div variants={fadeInUp}>
+            <Button type="submit" size="lg" fullWidth loading={submitting}>
+              {submitting ? "Confirmando" : "Confirmar e entrar"}
+            </Button>
+          </motion.div>
+        </form>
+
+        <motion.footer className={styles.footer} variants={fadeInUp}>
+          <button type="button" className={styles.linkButton} onClick={voltarParaCredenciais}>
+            Usar outro e-mail
+          </button>
+        </motion.footer>
+      </motion.div>
+    );
   }
 
   return (

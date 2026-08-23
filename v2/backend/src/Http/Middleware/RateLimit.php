@@ -32,6 +32,11 @@ final class RateLimit implements MiddlewareInterface
      */
     private const STRICT_RULES = [
         '/api/v1/auth/login'               => ['LOGIN', 5, 900],
+        // O segundo fator é o alvo mais óbvio de força bruta do sistema: são
+        // 7 dígitos, e quem chega aqui já acertou a senha. O contador por
+        // código (VerificationToken::MAX_ATTEMPTS) limita as tentativas contra
+        // uma conta; este limita as tentativas vindas de um mesmo endereço.
+        '/api/v1/auth/login/verify'        => ['LOGIN_VERIFY', 10, 900],
         '/api/v1/auth/register'            => ['REGISTER', 3, 3600],
         '/api/v1/auth/forgot-password'     => ['FORGOT_PASSWORD', 3, 3600],
         '/api/v1/auth/reset-password'      => ['RESET_PASSWORD', 5, 3600],

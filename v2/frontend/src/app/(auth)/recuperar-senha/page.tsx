@@ -2,10 +2,12 @@
 
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { useToast } from "@/components/ui/Toast";
 import { ApiError, api } from "@/lib/api";
 import { fadeInUp, shake, staggerContainer } from "@/lib/motion";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import styles from "../entrar/page.module.css";
@@ -19,10 +21,64 @@ import styles from "../entrar/page.module.css";
  * que o backend se esforça para não revelar.
  */
 export default function RecuperarSenhaPage() {
+  const router = useRouter();
+  const toast = useToast();
+
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
+
+  /*
+   * O fluxo inteiro cabe nesta rota, em duas etapas: pedir o código e usá-lo.
+   *
+   * Antes a segunda etapa vivia em /redefinir-senha e recebia um token de 64
+   * caracteres pela URL. Com um código de 7 dígitos, mandá-lo pela URL seria
+   * pior em tudo: ele apareceria no histórico do navegador, no Referer e em
+   * qualquer log de intermediário. Mantendo as duas etapas aqui, nem o e-mail
+   * nem o código saem do estado da página — e ninguém precisa digitar o
+   * endereço duas vezes.
+   */
+  async function handleCodigo(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submitting || sent === null) return;
+
+    const form = new FormData(event.currentTarget);
+
+    setSubmitting(true);
+    setFormError(null);
+    setFieldErrors({});
+
+    try {
+      await api.post(
+        "/api/v1/auth/reset-password",
+        {
+          email: sent,
+          code: String(form.get("code") ?? "").trim(),
+          password: String(form.get("password") ?? ""),
+          password_confirmation: String(form.get("password_confirmation") ?? ""),
+        },
+        { skipAuth: true },
+      );
+
+      toast.success("Senha redefinida. Entre com a nova senha.");
+      router.push("/entrar");
+    } catch (error) {
+      if (!(error instanceof ApiError)) {
+        setFormError("Ocorreu um erro inesperado. Tente novamente.");
+        return;
+      }
+
+      if (error.isValidation) {
+        setFieldErrors(error.fieldErrors);
+        return;
+      }
+
+      setFormError(error.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -80,10 +136,69 @@ export default function RecuperarSenhaPage() {
 
           <h1 className={styles.title}>Verifique seu e-mail</h1>
           <p className={styles.subtitle}>
-            Se <strong>{sent}</strong> estiver cadastrado, o link de redefinição chega em instantes.
-            Ele expira em 30 minutos e só pode ser usado uma vez.
+            Se <strong>{sent}</strong> estiver cadastrado, um código de 7 dígitos chega em
+            instantes. Ele expira em poucos minutos e só pode ser usado uma vez.
           </p>
         </motion.div>
+
+        <form className={styles.form} onSubmit={handleCodigo} noValidate>
+          <motion.div variants={fadeInUp}>
+            <Input
+              label="Código recebido"
+              name="code"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="0000000"
+              maxLength={7}
+              required
+              disabled={submitting}
+              error={fieldErrors.code?.[0]}
+            />
+          </motion.div>
+
+          <motion.div variants={fadeInUp}>
+            <Input
+              label="Nova senha"
+              name="password"
+              revealable
+              autoComplete="new-password"
+              hint="Mínimo de 7 caracteres, com maiúscula, minúscula, número e símbolo."
+              required
+              disabled={submitting}
+              error={fieldErrors.password?.[0]}
+            />
+          </motion.div>
+
+          <motion.div variants={fadeInUp}>
+            <Input
+              label="Confirmar nova senha"
+              name="password_confirmation"
+              revealable
+              autoComplete="new-password"
+              required
+              disabled={submitting}
+              error={fieldErrors.password_confirmation?.[0]}
+            />
+          </motion.div>
+
+          {formError ? (
+            <motion.p
+              className={styles.formError}
+              variants={shake}
+              initial="hidden"
+              animate="visible"
+              role="alert"
+            >
+              {formError}
+            </motion.p>
+          ) : null}
+
+          <motion.div variants={fadeInUp}>
+            <Button type="submit" size="lg" fullWidth loading={submitting}>
+              {submitting ? "Salvando" : "Salvar nova senha"}
+            </Button>
+          </motion.div>
+        </form>
 
         <motion.p variants={fadeInUp} className={styles.note}>
           Não recebeu? Confira a caixa de spam. Se ainda assim não chegar, pode ser que a conta não

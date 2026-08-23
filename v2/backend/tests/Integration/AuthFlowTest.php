@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tests\Integration;
 
 use App\Core\Config;
+use App\Models\PasswordHistory;
 use App\Models\RefreshToken;
 use App\Models\User;
 use App\Models\VerificationToken;
@@ -200,5 +201,105 @@ final class AuthFlowTest extends DatabaseTestCase
         self::assertArrayNotHasKey('password_hash', $public);
         self::assertArrayNotHasKey('failed_attempts', $public);
         self::assertArrayHasKey('email', $public);
+    }
+
+    #[Test]
+    public function senha_ja_usada_e_reconhecida(): void
+    {
+        $userId  = $this->seedUser(password: 'PrimeiraS1!');
+        $history = new PasswordHistory($this->db);
+
+        $history->recordCurrent($userId);
+
+        self::assertTrue(
+            $history->wasUsed($userId, 'PrimeiraS1!'),
+            'a senha em vigor precisa contar como já usada'
+        );
+        self::assertFalse(
+            $history->wasUsed($userId, 'NuncaUsada9#'),
+            'uma senha inédita não pode ser recusada'
+        );
+    }
+
+    #[Test]
+    public function historico_guarda_apenas_as_ultimas_senhas(): void
+    {
+        $userId  = $this->seedUser(password: 'Senha000!');
+        $history = new PasswordHistory($this->db);
+        $limite  = $history->size();
+
+        // Uma a mais que o limite: a primeira precisa cair fora.
+        $senhas = [];
+        for ($i = 0; $i <= $limite; $i++) {
+            $senha    = sprintf('Senha%03d!', $i);
+            $senhas[] = $senha;
+
+            $this->db->run(
+                'UPDATE users SET password_hash = ? WHERE id = ?',
+                [Hash::make($senha), $userId]
+            );
+            $history->recordCurrent($userId);
+        }
+
+        $total = $this->db->first(
+            'SELECT COUNT(*) AS total FROM password_history WHERE user_id = ?',
+            [$userId]
+        ) ?? self::fail('contagem do histórico falhou');
+
+        self::assertSame($limite, (int) $total['total']);
+
+        // A mais antiga saiu e pode voltar a ser usada; a mais recente, não.
+        self::assertFalse($history->wasUsed($userId, $senhas[0]));
+        self::assertTrue($history->wasUsed($userId, $senhas[count($senhas) - 1]));
+    }
+    #[Test]
+    public function excluir_a_conta_libera_o_e_mail_para_um_novo_cadastro(): void
+    {
+        $users  = new User($this->db);
+        $userId = $this->seedUser('quer-sair@example.com');
+
+        self::assertTrue($users->emailExists('quer-sair@example.com'));
+
+        $users->softDelete($userId);
+
+        // Sem a anonimização, uq_users_email seguraria o endereço para sempre e
+        // a pessoa nunca mais conseguiria voltar com o mesmo e-mail.
+        self::assertFalse(
+            $users->emailExists('quer-sair@example.com'),
+            'o e-mail deveria voltar a ficar disponível após a exclusão'
+        );
+
+        self::assertNull($users->findById($userId), 'conta excluída não pode ser encontrada');
+        self::assertNull(
+            $users->findByEmailWithSecret('quer-sair@example.com'),
+            'conta excluída não pode autenticar'
+        );
+
+        $row = $this->db->first('SELECT email, name, phone, deleted_at FROM users WHERE id = ?', [$userId])
+            ?? self::fail('a linha deveria continuar existindo, para preservar as chaves estrangeiras');
+
+        self::assertNotNull($row['deleted_at']);
+        self::assertStringNotContainsString('quer-sair', (string) $row['email']);
+        self::assertNull($row['phone'], 'o telefone é dado pessoal e sai junto');
+    }
+
+    #[Test]
+    public function excluir_duas_contas_com_o_mesmo_e_mail_nao_colide(): void
+    {
+        $users = new User($this->db);
+
+        // O caso que um indice unico composto com deleted_at nao resolveria.
+        $primeiro = $this->seedUser('reincidente@example.com');
+        $users->softDelete($primeiro);
+
+        $segundo = $this->seedUser('reincidente@example.com');
+        $users->softDelete($segundo);
+
+        $excluidos = $this->db->first(
+            'SELECT COUNT(*) AS total FROM users WHERE deleted_at IS NOT NULL'
+        ) ?? self::fail('consulta de contagem falhou');
+
+        self::assertSame(2, (int) $excluidos['total']);
+        self::assertFalse($users->emailExists('reincidente@example.com'));
     }
 }

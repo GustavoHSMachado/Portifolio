@@ -26,7 +26,10 @@ interface AuthState {
   user: User | null;
   /** true enquanto a sessão inicial ainda não foi resolvida. */
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  /** Primeiro passo: confere a senha e dispara o código. Não abre sessão. */
+  login: (email: string, password: string) => Promise<{ expiresIn: number }>;
+  /** Segundo passo: troca o código pela sessão. */
+  verifyLoginCode: (email: string, code: string) => Promise<User>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -95,11 +98,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return clearTimer;
   }, [silentRefresh, clearTimer]);
 
+  /**
+   * Primeiro passo do login. Não guarda token nem popula o usuário: com o
+   * segundo fator, senha correta ainda não é sessão. Devolve só quanto tempo o
+   * código dura, para a tela conseguir mostrar a contagem.
+   */
   const login = useCallback(
-    async (email: string, password: string): Promise<User> => {
-      const result = await api.post<{ user: User; accessToken: string; expiresIn: number }>(
+    async (email: string, password: string): Promise<{ expiresIn: number }> => {
+      const result = await api.post<{ challenge: string; expiresIn: number }>(
         "/api/v1/auth/login",
         { email, password },
+        { skipAuth: true },
+      );
+
+      return { expiresIn: result.data.expiresIn };
+    },
+    [],
+  );
+
+  /**
+   * Segundo passo. É aqui que a sessão nasce, e por isso é aqui que o contexto
+   * é populado e a renovação agendada — o mesmo cuidado que o login de um passo
+   * exigia antes.
+   */
+  const verifyLoginCode = useCallback(
+    async (email: string, code: string): Promise<User> => {
+      const result = await api.post<{ user: User; accessToken: string; expiresIn: number }>(
+        "/api/v1/auth/login/verify",
+        { email, code },
         { skipAuth: true },
       );
 
@@ -136,8 +162,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo<AuthState>(
-    () => ({ user, loading, login, logout, refreshUser }),
-    [user, loading, login, logout, refreshUser],
+    () => ({ user, loading, login, verifyLoginCode, logout, refreshUser }),
+    [user, loading, login, verifyLoginCode, logout, refreshUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

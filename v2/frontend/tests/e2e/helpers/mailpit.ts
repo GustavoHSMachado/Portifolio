@@ -1,4 +1,4 @@
-import type { APIRequestContext } from "@playwright/test";
+import { type APIRequestContext, type Page, expect } from "@playwright/test";
 
 /**
  * Leitura da caixa falsa do Mailpit.
@@ -69,4 +69,47 @@ export function extrairToken(corpo: string): string {
 /** Limpa a caixa entre cenários, para uma busca não achar e-mail de outro teste. */
 export async function limparCaixa(request: APIRequestContext): Promise<void> {
   await request.delete(`${MAILPIT_URL}/api/v1/messages`);
+}
+
+/**
+ * Extrai o código de 7 dígitos do e-mail de segundo fator.
+ *
+ * O código vai dentro do bloco destacado do e-mail, cercado por dígitos que
+ * podem aparecer em outros pontos da mensagem — o TTL em minutos, por exemplo.
+ * A âncora é o letter-spacing do bloco, que só existe ali.
+ */
+export function extrairCodigo(corpo: string): string {
+  const codigo = corpo.match(/letter-spacing:10px[^>]*>(\d{7})</)?.[1];
+
+  if (!codigo) {
+    throw new Error(`Nenhum código de 7 dígitos encontrado no e-mail:\n${corpo.slice(0, 400)}`);
+  }
+
+  return codigo;
+}
+
+/**
+ * Faz o login completo, com os dois passos.
+ *
+ * Desde 22/08/2026 senha correta não abre sessão: ela dispara um código por
+ * e-mail que precisa ser confirmado na tela. Todo teste que precisa de uma
+ * sessão passa por aqui.
+ */
+export async function entrar(
+  page: Page,
+  request: APIRequestContext,
+  email: string,
+  senha: string,
+): Promise<void> {
+  await page.goto("/entrar");
+  await page.getByLabel("E-mail").fill(email);
+  await page.getByLabel("Senha", { exact: true }).fill(senha);
+  await page.getByRole("button", { name: "Entrar" }).click();
+
+  await expect(page.getByRole("heading", { name: "Confirme que é você" })).toBeVisible();
+
+  const codigo = extrairCodigo(await aguardarEmail(request, email));
+
+  await page.getByLabel("Código").fill(codigo);
+  await page.getByRole("button", { name: "Confirmar e entrar" }).click();
 }

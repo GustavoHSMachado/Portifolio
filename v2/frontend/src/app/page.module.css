@@ -89,8 +89,8 @@
     var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
 }
 
-/* Tinta escura sobre o laranja: branco sobre #e8503a dá 3,7:1 e reprova no AA
-   para texto normal; a tinta escura sobe para 5,3:1 sem tocar na cor da marca. */
+/* Tinta escura sobre o azul: 8,0:1, contra os 4,5:1 que o AA pede. Com o laranja
+   anterior, branco dava 3,7:1 e reprovava — a tinta escura resolvia em 5,3:1. */
 .primary {
   color: var(--text-inverse);
   background-color: var(--accent);
@@ -576,4 +576,109 @@
 
 .videoLink:hover {
   text-decoration: underline;
+}
+
+/* ---------------- Projetos atrás do login ---------------- */
+
+/*
+ * O bloco é um convite, não um aviso de erro: fundo elevado e borda tracejada
+ * dizem "há conteúdo aqui" sem o vermelho que sinalizaria falha. A borda
+ * tracejada é o vocabulário visual de espaço a preencher, o mesmo do estado
+ * vazio do painel.
+ */
+.gated {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  max-width: 40rem;
+  padding: var(--space-6);
+  background-color: var(--surface-raised);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.gatedTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.gatedBody {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.gatedActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* ---------------- Acesso no topo ---------------- */
+
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+  width: min(var(--container-max), 100%);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) 0;
+}
+
+/* Alvo de toque de 44px, como os demais links do site. */
+.topLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  text-decoration: none;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration-fast) var(--ease-out), color var(--duration-fast)
+    var(--ease-out);
+}
+
+.topLink:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* ---------------- Nota de responsividade no rodapé ---------------- */
+
+/* Terceiro item do rodapé, entre o copyright e os links legais. */
+.footerNote {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-tertiary);
+}
+
+/* ---------------- Ícone da tecnologia ---------------- */
+
+/*
+ * O ícone usa a cor de destaque num fundo sutil da mesma cor: é o suficiente
+ * para dar identidade sem competir com o nome da tecnologia, que é o que a
+ * pessoa está lendo. O tamanho vem em rem para acompanhar quem aumenta a fonte
+ * do navegador.
+ */
+.cardIcon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: var(--space-1);
+  color: var(--accent);
+  background-color: var(--accent-subtle);
+  border-radius: var(--radius-md);
+}
+
+.cardIcon svg {
+  width: 1.375rem;
+  height: 1.375rem;
 }

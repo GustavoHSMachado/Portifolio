@@ -1,11 +1,11 @@
 import { Reveal, RevealItem, RevealList } from "@/components/motion/Reveal";
-import { siteNotes } from "@/lib/content";
+import { ContactForm } from "@/components/ui/ContactForm";
+import { SkillIcon } from "@/components/ui/SkillIcon";
 import {
   EDUCATION_LEVELS,
   type Education,
   type Experience,
   type Profile,
-  type Project,
   type Skill,
   fetchContentSafe,
   formatMonth,
@@ -47,7 +47,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const { profile, education, experiences, skills, projects } = await fetchContentSafe();
+  const { profile, education, experiences, skills, projectCount } = await fetchContentSafe();
 
   if (!profile) {
     return (
@@ -60,7 +60,9 @@ export default async function HomePage() {
   }
 
   const location = [profile.city, profile.state].filter(Boolean).join(", ");
-  const jsonLd = buildPersonJsonLd({ profile, education, experiences, skills, projects });
+  // Sem projetos: eles saíram do conteúdo público e não podem ser anunciados
+  // como dados estruturados de uma página onde não estão visíveis.
+  const jsonLd = buildPersonJsonLd({ profile, education, experiences, skills });
 
   return (
     <div className={styles.page}>
@@ -73,13 +75,32 @@ export default async function HomePage() {
         dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }}
       />
 
+      {/*
+        Antes não havia caminho nenhum para o login a partir do site: só quem
+        digitasse /entrar na barra de endereços chegava lá. Com os projetos
+        atrás da sessão, isso deixou de ser um detalhe.
+      */}
+      <nav className={styles.topBar} aria-label="Acesso">
+        <Link href="/entrar" className={styles.topLink}>
+          Entrar
+        </Link>
+      </nav>
+
       <header className={styles.hero}>
         <div className={styles.glow} aria-hidden="true" />
 
         <div className={styles.heroInner}>
           <div>
+            {/*
+              O nome é o h1, e não a frase de efeito que ficava aqui.
+              Toda página precisa de um título principal — é por ele que o
+              leitor de tela anuncia onde a pessoa está, e é o que o buscador
+              lê como assunto da página. Num portfólio pessoal, esse assunto é
+              a pessoa: quem procura por "Gustavo Henrique Santos Machado"
+              encontra o site pelo próprio nome.
+            */}
             <p className={styles.eyebrow}>{profile.role}</p>
-            <h1 className={styles.title}>{profile.headline}</h1>
+            <h1 className={styles.title}>{profile.fullName}</h1>
             <p className={styles.lead}>{profile.summary}</p>
 
             {location ? <p className={styles.location}>{location}</p> : null}
@@ -96,16 +117,16 @@ export default async function HomePage() {
                   <ExternalHint />
                 </a>
               ) : null}
-              <a href="#projetos" className={styles.secondary}>
-                Ver projetos
-              </a>
+              <Link href="/entrar" className={styles.secondary}>
+                Entrar para ver os projetos
+              </Link>
             </div>
           </div>
         </div>
       </header>
 
       <main className={styles.main} id="conteudo">
-        <ProjectsSection projects={projects} />
+        <ProjetosBloqueados quantidade={projectCount} />
 
         <ExperienceSection experiences={experiences} />
 
@@ -113,38 +134,17 @@ export default async function HomePage() {
 
         <SkillsSection skills={skills} />
 
-        <VideoSection profile={profile} />
-
-        {/* ---------------- Sobre este site ---------------- */}
-        <section className={styles.section} aria-labelledby="sobre-o-site">
-          <Reveal>
-            <h2 id="sobre-o-site" className={styles.sectionTitle}>
-              Sobre este site
-            </h2>
-            <p className={styles.sectionSubtitle}>
-              O que é autoral, o que não é, e por que escolhi assim.
-            </p>
-          </Reveal>
-
-          <RevealList itemCount={siteNotes.length} className={styles.notes}>
-            {siteNotes.map((note) => (
-              <RevealItem key={note.title}>
-                <article className={styles.note}>
-                  <h3 className={styles.noteTitle}>{note.title}</h3>
-                  <p className={styles.noteBody}>{note.body}</p>
-                </article>
-              </RevealItem>
-            ))}
-          </RevealList>
-        </section>
-
         <ContactSection profile={profile} />
+
+        <MensagemSection />
       </main>
 
       <footer className={styles.footer}>
         <p className={styles.copyright}>
           © {new Date().getFullYear()} {profile.fullName}
         </p>
+        {/* Curta de propósito: quem estreitar a janela confirma na hora. */}
+        <p className={styles.footerNote}>Este site se adapta a qualquer tamanho de tela.</p>
         <nav className={styles.footerNav} aria-label="Documentos legais">
           <Link href="/legal/termos-de-uso" className={styles.footerLink}>
             Termos de Uso
@@ -170,17 +170,22 @@ function ExternalHint() {
 }
 
 /* ------------------------------------------------------------------ */
-/* Projetos                                                            */
+/* Projetos — atrás do login                                           */
 /* ------------------------------------------------------------------ */
 
-function ProjectsSection({ projects }: { projects: Project[] }) {
-  if (projects.length === 0) {
-    return null;
-  }
-
+/**
+ * Convite para entrar, no lugar da lista de projetos.
+ *
+ * Os projetos passaram a exigir sessão (decisão de 23/08/2026). O que fica
+ * público é a existência deles e o convite — a lista, o estudo de caso e os
+ * links vivem na área autenticada.
+ *
+ * A contagem aparece de propósito: "três projetos" dá a quem chega uma razão
+ * concreta para criar a conta, enquanto uma porta fechada sem número nenhum
+ * não diz se vale a pena.
+ */
+function ProjetosBloqueados({ quantidade }: { quantidade: number }) {
   return (
-    /* O id da âncora fica na seção; o do título é outro, senão o aria-labelledby
-       aponta para a própria seção e ela perde o nome acessível. */
     <section className={styles.section} aria-labelledby="projetos-titulo" id="projetos">
       <Reveal>
         <h2 id="projetos-titulo" className={styles.sectionTitle}>
@@ -191,68 +196,33 @@ function ProjectsSection({ projects }: { projects: Project[] }) {
         </p>
       </Reveal>
 
-      <RevealList itemCount={projects.length} className={styles.projects}>
-        {projects.map((project) => (
-          <RevealItem key={project.id}>
-            <article className={styles.project}>
-              <header className={styles.projectHead}>
-                <h3 className={styles.projectTitle}>{project.title}</h3>
-                <p className={styles.projectSummary}>{project.summary}</p>
-              </header>
+      <Reveal>
+        <div className={styles.gated}>
+          <p className={styles.gatedTitle}>
+            {quantidade === 1
+              ? "Há 1 projeto detalhado aqui dentro."
+              : `Há ${quantidade} projetos detalhados aqui dentro.`}
+          </p>
 
-              {project.stack.length > 0 ? (
-                <ul className={styles.stack} aria-label="Tecnologias">
-                  {project.stack.map((tech) => (
-                    <li key={tech} className={styles.tech}>
-                      {tech}
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+          <p className={styles.gatedBody}>
+            Cada um traz o problema que apareceu, as decisões que tomei e o resultado, com link para
+            ver o projeto no ar. Para abrir, entre com sua conta — leva menos de um minuto criar
+            uma.
+          </p>
 
-              <dl className={styles.caseStudy}>
-                {project.problem ? (
-                  <div>
-                    <dt>Problema</dt>
-                    <dd>{project.problem}</dd>
-                  </div>
-                ) : null}
-                {project.decisions ? (
-                  <div>
-                    <dt>Decisões</dt>
-                    <dd>{project.decisions}</dd>
-                  </div>
-                ) : null}
-                {project.result ? (
-                  <div>
-                    <dt>Resultado</dt>
-                    <dd>{project.result}</dd>
-                  </div>
-                ) : null}
-              </dl>
-
-              <div className={styles.projectLinks}>
-                {project.repositoryUrl ? (
-                  <a href={project.repositoryUrl} target="_blank" rel="noopener noreferrer">
-                    Código
-                    <ExternalHint />
-                  </a>
-                ) : null}
-                {project.demoUrl ? (
-                  <a href={project.demoUrl} target="_blank" rel="noopener noreferrer">
-                    Demonstração
-                    <ExternalHint />
-                  </a>
-                ) : null}
-              </div>
-            </article>
-          </RevealItem>
-        ))}
-      </RevealList>
+          <div className={styles.gatedActions}>
+            <Link href="/entrar" className={styles.primary}>
+              Entrar
+            </Link>
+            <Link href="/criar-conta" className={styles.secondary}>
+              Criar conta
+            </Link>
+          </div>
+        </div>
+      </Reveal>
     </section>
   );
 }
-
 /* ------------------------------------------------------------------ */
 /* Experiência                                                         */
 /* ------------------------------------------------------------------ */
@@ -353,6 +323,14 @@ function SkillsSection({ skills }: { skills: Skill[] }) {
         {skills.map((skill) => (
           <RevealItem key={skill.id}>
             <article className={styles.card}>
+              {/*
+                O ícone herda a cor do texto por currentColor, então acompanha o
+                tema sem regra extra — e some para o leitor de tela, que já tem
+                o nome da tecnologia logo abaixo.
+              */}
+              <span className={styles.cardIcon}>
+                <SkillIcon name={skill.name} category={skill.category} />
+              </span>
               <p className={styles.cardCategory}>{skill.category}</p>
               <h3 className={styles.cardTitle}>{skill.name}</h3>
               {skill.evidence ? <p className={styles.cardEvidence}>{skill.evidence}</p> : null}
@@ -365,45 +343,32 @@ function SkillsSection({ skills }: { skills: Skill[] }) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Vídeo                                                               */
+/* Sugestões, dúvidas ou orçamentos                                    */
 /* ------------------------------------------------------------------ */
 
-function VideoSection({ profile }: { profile: Profile }) {
-  if (!profile.introVideoId) {
-    return null;
-  }
-
+/**
+ * O formulário é um Client Component dentro de uma página de servidor: ele
+ * precisa de estado e de envio, e o resto da home continua sendo HTML pronto.
+ */
+function MensagemSection() {
   return (
-    <section className={styles.section} aria-labelledby="apresentacao">
+    <section className={styles.section} aria-labelledby="mensagem-titulo">
       <Reveal>
-        <h2 id="apresentacao" className={styles.sectionTitle}>
-          Apresentação
+        <h2 id="mensagem-titulo" className={styles.sectionTitle}>
+          Sugestões, dúvidas ou orçamentos
         </h2>
-        {profile.introVideoCaption ? (
-          <p className={styles.sectionSubtitle}>{profile.introVideoCaption}</p>
-        ) : null}
+        <p className={styles.sectionSubtitle}>
+          Tem uma pergunta sobre o meu trabalho, uma sugestão para este site, uma vaga em mente ou
+          um projeto para orçar? Escreva aqui — respondo no e-mail que você informar.
+        </p>
+      </Reveal>
 
-        {/*
-          Link em vez de iframe: o embed do YouTube carrega centenas de
-          kilobytes de script e rastreadores em toda visita, mesmo de quem
-          nunca aperta play. O custo cairia sobre o orçamento de performance
-          da página inteira, por um vídeo que poucos vão assistir.
-        */}
-        <a
-          className={styles.videoLink}
-          href={`https://www.youtube.com/watch?v=${profile.introVideoId}`}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Assistir no YouTube
-          <span aria-hidden="true"> ↗</span>
-          <ExternalHint />
-        </a>
+      <Reveal>
+        <ContactForm />
       </Reveal>
     </section>
   );
 }
-
 /* ------------------------------------------------------------------ */
 /* Contato                                                             */
 /* ------------------------------------------------------------------ */

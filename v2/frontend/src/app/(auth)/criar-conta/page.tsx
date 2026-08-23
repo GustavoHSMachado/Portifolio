@@ -169,7 +169,7 @@ export default function CriarContaPage() {
 
         <motion.div variants={fadeInUp}>
           <Input
-            label="Telefone"
+            label="Telefone com DDD"
             name="phone"
             type="tel"
             inputMode="numeric"

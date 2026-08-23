@@ -1,6 +1,6 @@
 # Estado atual — Portifolio
 
-**Última atualização:** 22 de agosto de 2026
+**Última atualização:** 23 de agosto de 2026
 **Branch de trabalho:** `dev` · **Produção:** `master`, intocada
 
 Este documento descreve o projeto **como ele está hoje**. Para saber como ele
@@ -23,6 +23,7 @@ segurança, validação dos quatro critérios e o PR para a `master`.
 | 3 | Responsividade, acessibilidade, SEO, performance, assets | ✅ |
 | 4 | Dívida técnica | ✅ |
 | 5 | Revisão de segurança, validação final, PR | ▶ B26 e B27 feitos; falta o PR |
+| 6 | Área administrativa: contas, registros e aparência | ✅ |
 
 ### Os quatro critérios
 
@@ -45,12 +46,12 @@ orçamento de bytes, o CLS zero e o build de produção completo.
 
 | Métrica | Valor |
 |---|---|
-| Migrações | 11 |
-| Rotas da API | 28 |
-| Telas do frontend | 10 |
-| Componentes de UI | 6 |
+| Migrações | 15 |
+| Rotas da API | 39 |
+| Telas do frontend | 13 |
+| Componentes de UI | 10 |
 | Testes de backend (PHPUnit) | 48 |
-| Testes de frontend (Vitest) | 42 |
+| Testes de frontend (Vitest) | 60 |
 | Cenários E2E (Playwright) | 80 (16 × 5 navegadores) |
 | Erros do PHPStan nível 8 | 0 |
 
@@ -167,11 +168,54 @@ registrado. Removido em 22/08/2026, com dump guardado em
 
 ---
 
+## O que entrou em 23 de agosto de 2026
+
+**Área administrativa (Fase 6).** Três telas atrás do `RequireAdmin`:
+`/admin` para o conteúdo, `/admin/usuarios` para as contas e `/admin/acessos`
+para os registros do sistema.
+
+- **Auditoria.** O `AuditLog` registra 18 eventos — entrada, senha errada,
+  código errado, cadastro, confirmação de e-mail, troca e redefinição de senha,
+  reuso de sessão, conteúdo salvo e excluído, mensagem recebida e as ações de
+  gestão. Guarda o que aconteceu, nunca o segredo envolvido, e o expurgo apaga o
+  que passa de 180 dias.
+- **Gestão de contas.** Bloquear, liberar e excluir. O servidor recusa a própria
+  conta e a do `ADMIN_EMAIL`. Excluir anonimiza em vez de apagar a linha, para o
+  histórico de auditoria não ficar órfão.
+- **Aparência e textos.** A cor de destaque e os títulos das seções saíram do
+  código e viraram ajustes editáveis. As outras quatro cores do tema derivam da
+  escolhida, e o contraste é medido antes de salvar. A cor aceita apenas
+  `#rrggbb`, no servidor e no cliente, porque é o único ajuste que termina dentro
+  de uma folha de estilo.
+
+**Dois defeitos reais, encontrados ao verificar o que estava sendo construído:**
+
+- **A sessão caía a cada F5.** O `silentRefresh` passava por fora da
+  deduplicação do `api.ts`, e com o StrictMode as duas montagens do efeito
+  disparavam refresh com o mesmo cookie rotativo — que o servidor lê, com razão,
+  como token roubado. Corrigido com uma promessa compartilhada. **Continua em
+  aberto para duas abas simultâneas**, o que exigiria janela de tolerância na
+  rotação, do lado do servidor.
+- **A suíte E2E ficou cega com o SMTP real.** Mensagem para domínio reservado
+  era descartada, e os testes leem exatamente essas mensagens no Mailpit. Passou
+  a ser desviada para a captura. A intermitência que sobrou tinha outra causa: o
+  `limparCaixa` apagava a caixa inteira, e com dois workers um cenário apagava o
+  e-mail que o outro esperava.
+
+**Verificação do dia:** PHPStan limpo, PHPUnit 48/48, Vitest 60/60, Knip limpo,
+Playwright 80/80. O controle de acesso foi testado com conta comum de verdade,
+inclusive com `role = 'admin'` forjado no banco e nas claims do token — 403 em
+todas as rotas administrativas, nos dois casos.
+
+---
+
 ## O que depende do Gustavo
 
-1. **Revogar a senha de aplicativo do Gmail.** Está no histórico público do Git,
-   no commit `aba029d`, e continua válida. Depois, preencher `MAIL_PASS` no
-   `v1/.env`. É a pendência mais antiga do projeto.
+1. **Limpar a senha de aplicativo do histórico.** A senha foi **revogada em
+   23/08/2026** — o risco acabou ali. O que resta é higiene: o commit `aba029d`
+   ainda a contém, e ela também está no conteúdo atual da `master`, não só no
+   histórico. O script `limpar-senha-do-historico.sh` faz a reescrita e a
+   conferência; o push com `--force-with-lease` fica por conta do Gustavo.
 2. **Autorizar o PR da `dev` para a `master`**, ao final.
 
 ---
@@ -181,8 +225,11 @@ registrado. Removido em 22/08/2026, com dump guardado em
 | ID | Fase | Tarefa | Pri |
 |---|---|---|---|
 | B28 | 5 | PR da `dev` para a `master` | P1 · com o Gustavo |
+| B50 | 6 | Limpar a senha do histórico público (script pronto) | P2 · com o Gustavo |
+| B51 | 6 | Reuso de refresh token com duas abas abertas ao mesmo tempo | P3 |
 
-Concluídos: B01–B27, B29–B49 — 48 itens. Falta apenas o PR para a `master`.
+Concluídos: B01–B27, B29–B49 — 48 itens, mais a Fase 6 inteira. Em aberto: o PR
+para a `master`, a limpeza do histórico e a corrida de refresh entre abas.
 
 ## O que a revisão de segurança encontrou (B26)
 

@@ -1,8 +1,8 @@
 /**
  * Design tokens — fonte única de verdade da interface.
  *
- * Herdado da v1 (decisão do Gustavo): a família tipográfica Open Sans e o
- * laranja de destaque do tema Namari. Todo o resto foi redesenhado.
+ * Herdado da v1 (decisão do Gustavo): a família tipográfica Open Sans. A cor de
+ * destaque era o laranja do tema Namari e passou a ser azul em 23/08/2026.
  *
  * Nada de valor mágico em componente: cor, espaço, raio, sombra, duração e
  * curva de animação saem daqui. Isso é o que impede a interface de virar
@@ -58,7 +58,7 @@
 
   --border-subtle: #26262f;
   --border-strong: #3a3a47;
-  --border-focus: #e8503a;
+  --border-focus: #5aa9ff;
 
   --text-primary: #f5f5f7;
   --text-secondary: #c9c9d1;
@@ -71,12 +71,24 @@
   --text-disabled: #5a5a66;
   --text-inverse: #0b0b0f;
 
-  /* Laranja Namari, preservado da v1 */
-  --accent: #e8503a;
-  --accent-hover: #f26550;
-  --accent-active: #d1442f;
-  --accent-subtle: rgba(232, 80, 58, 0.12);
-  --accent-ring: rgba(232, 80, 58, 0.4);
+  /*
+   * Azul de destaque, adotado em 23/08/2026 no lugar do laranja Namari herdado
+   * da v1. Decisão do dono do produto.
+   *
+   * O tom foi escolhido pela medição, não pelo gosto: 8,0:1 sobre a superfície
+   * base e 7,5:1 sobre a elevada, bem acima dos 4,5:1 que o AA exige — e a cor
+   * é usada como texto em 32 lugares, de link a rótulo de seção. Tons mais
+   * escuros de azul (o #3b82f6, por exemplo) ficam em 5,3:1: passam, mas com
+   * pouca folga sobre um fundo quase preto.
+   *
+   * O texto que vai *sobre* o azul continua sendo --text-inverse, e ali o
+   * contraste subiu de 5,3:1 (com o laranja) para 8,0:1.
+   */
+  --accent: #5aa9ff;
+  --accent-hover: #7cbcff;
+  --accent-active: #3d8fe0;
+  --accent-subtle: rgba(90, 169, 255, 0.12);
+  --accent-ring: rgba(90, 169, 255, 0.4);
 
   --success: #3ecf8e;
   --success-subtle: rgba(62, 207, 142, 0.12);
@@ -84,8 +96,13 @@
   --warning-subtle: rgba(245, 185, 66, 0.12);
   --danger: #f04b4b;
   --danger-subtle: rgba(240, 75, 75, 0.12);
-  --info: #4b9df0;
-  --info-subtle: rgba(75, 157, 240, 0.12);
+  /*
+   * Roxo, e não azul, desde que o destaque virou azul: o #4b9df0 anterior ficava
+   * a 24 unidades de distância do --accent, o que os torna indistinguíveis lado
+   * a lado. Um aviso informativo precisa parecer diferente de um destaque.
+   */
+  --info: #8b7cf6;
+  --info-subtle: rgba(139, 124, 246, 0.12);
 
   /* ---------- Espaçamento (base 4px) ---------- */
   --space-1: 0.25rem;

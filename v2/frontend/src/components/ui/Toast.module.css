@@ -39,17 +39,36 @@
   border-left-color: var(--info);
 }
 
+/*
+ * min-width: 0 é o que impede o toast de vazar a tela.
+ *
+ * O padrão de um item flex é não encolher abaixo do próprio min-content — e
+ * uma frase sem espaços curtos empurra o contêiner para fora da viewport. Em
+ * 320px isso fazia o toast ultrapassar a borda direita, achado na auditoria de
+ * 23/08/2026. O overflow-wrap cuida do caso extremo: uma URL ou palavra única
+ * mais larga que a tela.
+ */
 .message {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
   color: var(--text-primary);
 }
 
+/*
+ * O alvo tem 44px; o desenho continua com 24.
+ *
+ * A margem negativa devolve ao layout o espaço que o alvo maior ocuparia, então
+ * o botão continua parecendo do mesmo tamanho e alinhado ao texto — só a área
+ * que responde ao toque cresce.
+ */
 .close {
   flex-shrink: 0;
-  width: 24px;
-  height: 24px;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px -10px 0;
   display: grid;
   place-items: center;
 

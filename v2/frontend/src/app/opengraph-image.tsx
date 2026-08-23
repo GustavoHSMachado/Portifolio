@@ -44,7 +44,7 @@ export default async function OpengraphImage() {
           fontSize: 28,
           letterSpacing: 4,
           textTransform: "uppercase",
-          color: "#e8503a",
+          color: "#5aa9ff",
         }}
       >
         {role}
@@ -60,7 +60,7 @@ export default async function OpengraphImage() {
         style={{
           width: 120,
           height: 6,
-          background: "#e8503a",
+          background: "#5aa9ff",
           borderRadius: 999,
           marginTop: 40,
         }}

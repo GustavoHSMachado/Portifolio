@@ -41,6 +41,9 @@ final class RateLimit implements MiddlewareInterface
         '/api/v1/auth/forgot-password'     => ['FORGOT_PASSWORD', 3, 3600],
         '/api/v1/auth/reset-password'      => ['RESET_PASSWORD', 5, 3600],
         '/api/v1/auth/resend-verification' => ['RESEND_VERIFICATION', 3, 3600],
+        // Formulário público de contato: alvo de robô de spam. Cinco por hora
+        // é folgado para quem escreve de verdade e apertado para quem automatiza.
+        '/api/v1/messages'                 => ['MESSAGES', 5, 3600],
     ];
 
     public function __construct(private readonly RateLimiter $limiter)

@@ -29,6 +29,7 @@ declare(strict_types=1);
 
 use App\Core\Config;
 use App\Database\Connection;
+use App\Models\Message;
 use App\Models\RefreshToken;
 use App\Models\VerificationToken;
 use App\Services\RateLimiter;
@@ -73,6 +74,7 @@ $contar = static function (string $sql, array $params) use ($db): int {
 $refreshDays      = Config::int('PURGE_REFRESH_TOKENS_DAYS', 30);
 $verificationDays = Config::int('PURGE_VERIFICATION_TOKENS_DAYS', 7);
 $rateLimitSeconds = Config::int('PURGE_RATE_LIMITS_SECONDS', 86400);
+$messageDays      = Config::int('PURGE_MESSAGES_DAYS', 365);
 
 $alvos = [
     'refresh_tokens' => [
@@ -90,6 +92,14 @@ $alvos = [
         ),
         'apagar' => static fn (): int => (new VerificationToken($db))->purgeExpired($verificationDays),
         'criterio' => sprintf('expirados há mais de %d dia(s)', $verificationDays),
+    ],
+    'messages' => [
+        'contar' => static fn (): int => $contar(
+            'SELECT COUNT(*) AS total FROM messages WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)',
+            [$messageDays]
+        ),
+        'apagar' => static fn (): int => (new Message($db))->purgeOld($messageDays),
+        'criterio' => sprintf('recebidas há mais de %d dia(s)', $messageDays),
     ],
     'rate_limits' => [
         'contar' => static fn (): int => $contar(

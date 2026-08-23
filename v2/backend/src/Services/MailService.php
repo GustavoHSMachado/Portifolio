@@ -52,6 +52,52 @@ final class MailService
         );
     }
 
+    /**
+     * Avisa o dono que chegou mensagem pelo site.
+     *
+     * O conteúdo escrito por terceiro passa por esc() antes de entrar no HTML:
+     * é texto de origem desconhecida indo para um documento, e sem escapar
+     * bastaria alguém enviar marcação no corpo para que ela fosse interpretada
+     * no cliente de e-mail de quem lê.
+     */
+    public function sendContactNotice(
+        string $to,
+        string $fromName,
+        string $fromEmail,
+        ?string $subject,
+        string $body,
+    ): bool {
+        $assunto = $subject === null || trim($subject) === ''
+            ? 'Sugestão, dúvida ou orçamento'
+            : trim($subject);
+
+        /*
+         * O sufixo "- portifolio" entra no assunto para o e-mail ser
+         * reconhecível e filtrável na caixa de entrada: quem recebe mensagem de
+         * várias origens precisa saber de onde veio antes de abrir, e uma regra
+         * de filtro por esse sufixo separa tudo o que chega pelo site.
+         *
+         * O assunto vem de quem escreveu, então passa por esc() como o resto —
+         * cabeçalho de e-mail com conteúdo de terceiro é vetor de injeção de
+         * cabeçalho, e o PHPMailer já recusa quebra de linha aqui.
+         */
+        return $this->send(
+            $to,
+            sprintf('%s - portifolio', $this->esc($assunto)),
+            $this->layout(
+                'Nova mensagem pelo site',
+                sprintf('De %s (%s)', $this->esc($fromName), $this->esc($fromEmail)),
+                sprintf(
+                    'Assunto: %s<br><br>%s',
+                    $this->esc($assunto),
+                    nl2br($this->esc($body)),
+                ),
+                rtrim((string) Config::get('FRONTEND_URL'), '/') . '/admin',
+                'Abrir o painel'
+            )
+        );
+    }
+
     /** Código do segundo fator do login. */
     public function sendLoginCode(string $to, string $name, string $code, int $ttlMinutes): bool
     {

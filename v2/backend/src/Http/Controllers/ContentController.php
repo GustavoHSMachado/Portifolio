@@ -7,6 +7,7 @@ namespace App\Http\Controllers;
 use App\Core\HttpException;
 use App\Core\Request;
 use App\Core\Response;
+use App\Models\AuditLog;
 use App\Models\Content;
 use App\Support\Validator;
 
@@ -19,8 +20,10 @@ use App\Support\Validator;
  */
 final class ContentController
 {
-    public function __construct(private readonly Content $content)
-    {
+    public function __construct(
+        private readonly Content $content,
+        private readonly AuditLog $audit,
+    ) {
     }
 
     /* ------------------------------------------------------------------ */
@@ -109,11 +112,18 @@ final class ContentController
             'githubUrl'         => 'url|max:255',
             'linkedinUrl'       => 'url|max:255',
             'whatsappUrl'       => 'url|max:255',
-            'introVideoId'      => 'alpha_dash|max:32',
-            'introVideoCaption' => 'max:255',
+
         ])->validated();
 
         $this->content->updateProfile($data);
+
+        $this->audit->record(
+            AuditLog::CONTEUDO_SALVO,
+            $request->userId(),
+            $request->ip,
+            $request->header('user-agent'),
+            ['colecao' => 'profile'],
+        );
 
         $profile = $this->content->profile();
 
@@ -129,6 +139,7 @@ final class ContentController
             'status'      => 'required|max:20',
         ])->validated();
 
+        $colecaoAuditada = 'education';
         $id = $this->content->save('education', [
             'course'       => $data['course'],
             'institution'  => $data['institution'],
@@ -138,7 +149,15 @@ final class ContentController
             'position'     => (int) ($request->body['position'] ?? 0),
         ], $this->idFrom($request));
 
-        return Response::ok(['id' => $id]);
+        $this->audit->record(
+            AuditLog::CONTEUDO_SALVO,
+            $request->userId(),
+            $request->ip,
+            $request->header("user-agent"),
+            ["colecao" => $colecaoAuditada, "id" => $id],
+        );
+
+        return Response::ok(["id" => $id]);
     }
 
     public function saveExperience(Request $request): Response
@@ -164,6 +183,7 @@ final class ContentController
             throw HttpException::validation(['endedAt' => ['A saída não pode ser anterior à entrada.']]);
         }
 
+        $colecaoAuditada = 'experiences';
         $id = $this->content->save('experiences', [
             'company'     => $data['company'],
             'role'        => $data['role'],
@@ -173,7 +193,15 @@ final class ContentController
             'position'    => (int) ($request->body['position'] ?? 0),
         ], $this->idFrom($request));
 
-        return Response::ok(['id' => $id]);
+        $this->audit->record(
+            AuditLog::CONTEUDO_SALVO,
+            $request->userId(),
+            $request->ip,
+            $request->header("user-agent"),
+            ["colecao" => $colecaoAuditada, "id" => $id],
+        );
+
+        return Response::ok(["id" => $id]);
     }
 
     public function saveSkill(Request $request): Response
@@ -184,6 +212,7 @@ final class ContentController
             'evidence' => 'max:400',
         ])->validated();
 
+        $colecaoAuditada = 'skills';
         $id = $this->content->save('skills', [
             'name'     => $data['name'],
             'category' => $data['category'],
@@ -191,7 +220,15 @@ final class ContentController
             'position' => (int) ($request->body['position'] ?? 0),
         ], $this->idFrom($request));
 
-        return Response::ok(['id' => $id]);
+        $this->audit->record(
+            AuditLog::CONTEUDO_SALVO,
+            $request->userId(),
+            $request->ip,
+            $request->header("user-agent"),
+            ["colecao" => $colecaoAuditada, "id" => $id],
+        );
+
+        return Response::ok(["id" => $id]);
     }
 
     public function saveProject(Request $request): Response
@@ -206,6 +243,7 @@ final class ContentController
 
         $stack = $request->body['stack'] ?? [];
 
+        $colecaoAuditada = 'projects';
         $id = $this->content->save('projects', [
             'slug'      => $data['slug'],
             'title'     => $data['title'],
@@ -222,7 +260,15 @@ final class ContentController
             'position'       => (int) ($request->body['position'] ?? 0),
         ], $this->idFrom($request));
 
-        return Response::ok(['id' => $id]);
+        $this->audit->record(
+            AuditLog::CONTEUDO_SALVO,
+            $request->userId(),
+            $request->ip,
+            $request->header("user-agent"),
+            ["colecao" => $colecaoAuditada, "id" => $id],
+        );
+
+        return Response::ok(["id" => $id]);
     }
 
     public function destroy(Request $request): Response
@@ -237,6 +283,14 @@ final class ContentController
         if (!$this->content->delete($collection, $id)) {
             throw HttpException::notFound('Registro não encontrado.');
         }
+
+        $this->audit->record(
+            AuditLog::CONTEUDO_EXCLUIDO,
+            $request->userId(),
+            $request->ip,
+            $request->header('user-agent'),
+            ['colecao' => $collection, 'id' => $id],
+        );
 
         return Response::noContent();
     }
@@ -265,8 +319,7 @@ final class ContentController
             'linkedinUrl'       => $row['linkedin_url'],
             'whatsappUrl'       => $row['whatsapp_url'],
             'resumePath'        => $row['resume_path'],
-            'introVideoId'      => $row['intro_video_id'],
-            'introVideoCaption' => $row['intro_video_caption'],
+
         ];
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Core;
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\HealthController;
@@ -115,6 +116,16 @@ final class App
         $admin = [Authenticate::class, RequireAdmin::class];
 
         $this->router->get('/api/v1/admin/content', [ContentController::class, 'adminIndex'], $admin);
+
+        // Acompanhamento: contas cadastradas e o que aconteceu no sistema.
+        $this->router->get('/api/v1/admin/users', [AdminController::class, 'users'], $admin);
+        $this->router->get('/api/v1/admin/audit', [AdminController::class, 'auditLog'], $admin);
+
+        // Gestão de contas. Precisa vir antes do delete curinga logo abaixo,
+        // que casaria /admin/users/{id} e devolveria "coleção desconhecida".
+        $this->router->post('/api/v1/admin/users/{id}/lock', [AdminController::class, 'lockUser'], $admin);
+        $this->router->post('/api/v1/admin/users/{id}/unlock', [AdminController::class, 'unlockUser'], $admin);
+        $this->router->delete('/api/v1/admin/users/{id}', [AdminController::class, 'deleteUser'], $admin);
 
         // Caixa de entrada das mensagens do site.
         $this->router->get('/api/v1/admin/messages', [MessageController::class, 'index'], $admin);

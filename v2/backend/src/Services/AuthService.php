@@ -8,6 +8,7 @@ use App\Core\Config;
 use App\Core\HttpException;
 use App\Database\Connection;
 use App\Models\LegalAcceptance;
+use App\Models\AuditLog;
 use App\Models\PasswordHistory;
 use App\Models\RefreshToken;
 use App\Models\User;
@@ -33,6 +34,7 @@ final class AuthService
         private readonly VerificationToken $verificationTokens,
         private readonly RefreshToken $refreshTokens,
         private readonly PasswordHistory $passwordHistory,
+        private readonly AuditLog $audit,
         private readonly LegalAcceptance $legal,
         private readonly TokenService $tokens,
         private readonly MailService $mail,
@@ -114,6 +116,12 @@ final class AuthService
         $this->mail->sendVerification($email, $name, $this->verificationLink($result['token']));
 
         $this->logger->info('Usuário registrado', ['user_id' => $userId]);
+        $this->audit->record(
+            AuditLog::CADASTRO,
+            $userId,
+            $context['ip'] ?? null,
+            $context['userAgent'] ?? null,
+        );
 
         return ['user' => User::toPublic($this->users->findById($userId) ?? [])];
     }
@@ -163,6 +171,7 @@ final class AuthService
         });
 
         $this->logger->info('E-mail confirmado', ['user_id' => $row['user_id']]);
+        $this->audit->record(AuditLog::EMAIL_CONFIRMADO, (int) $row['user_id']);
     }
 
     /** Resposta sempre genérica — não confirma se o e-mail existe. */
@@ -199,9 +208,17 @@ final class AuthService
 
         if ($this->users->isLocked($user)) {
             $this->logger->warning('Login em conta travada', ['user_id' => $user['id'], 'ip' => $ip]);
+            $this->audit->record(AuditLog::CONTA_BLOQUEADA, (int) $user['id'], $ip, $userAgent);
 
+            /*
+             * A mensagem não diz "por excesso de tentativas" nem "temporário":
+             * o mesmo campo guarda o bloqueio automático, que passa em minutos,
+             * e o aplicado pelo painel, que não passa sozinho. Prometer que é
+             * só esperar mandaria a pessoa esperar para sempre.
+             */
             throw new HttpException(
-                'Conta temporariamente bloqueada por excesso de tentativas. Tente novamente mais tarde.',
+                'Esta conta está bloqueada no momento. Se o bloqueio foi por erro de senha, '
+                . 'tente de novo em alguns minutos; caso contrário, entre em contato pelo site.',
                 423,
                 errorCode: 'account_locked'
             );
@@ -210,6 +227,7 @@ final class AuthService
         if (!Hash::verify($password, $user['password_hash'])) {
             $this->users->registerFailedAttempt((int) $user['id']);
             $this->logger->warning('Senha incorreta', ['user_id' => $user['id'], 'ip' => $ip]);
+            $this->audit->record(AuditLog::LOGIN_SENHA_FALHOU, (int) $user['id'], $ip, $userAgent);
 
             throw HttpException::unauthorized('E-mail ou senha incorretos.');
         }
@@ -242,6 +260,7 @@ final class AuthService
             'user_id' => $user['id'],
             'ip'      => $ip,
         ]);
+        $this->audit->record(AuditLog::LOGIN_SENHA_OK, (int) $user['id'], $ip, $userAgent);
 
         return [
             'challenge' => 'login_2fa',
@@ -282,6 +301,7 @@ final class AuthService
                 'user_id' => $user['id'],
                 'ip'      => $ip,
             ]);
+            $this->audit->record(AuditLog::LOGIN_CODIGO_FALHOU, (int) $user['id'], $ip, $userAgent);
 
             throw HttpException::unauthorized('Código inválido ou expirado. Entre novamente.');
         }
@@ -301,6 +321,7 @@ final class AuthService
         });
 
         $this->logger->info('Login efetuado', ['user_id' => $user['id'], 'ip' => $ip]);
+        $this->audit->record(AuditLog::LOGIN_CONCLUIDO, (int) $user['id'], $ip, $userAgent);
 
         return [
             'user'         => User::toPublic($user),
@@ -331,6 +352,7 @@ final class AuthService
                 'family_id' => $row['family_id'],
                 'ip'        => $ip,
             ]);
+            $this->audit->record(AuditLog::SESSAO_COMPROMETIDA, (int) $row['user_id'], $ip, $userAgent);
 
             throw HttpException::unauthorized('Sessão comprometida. Faça login novamente.');
         }
@@ -408,6 +430,7 @@ final class AuthService
 
         $this->mail->sendPasswordResetCode($user['email'], $user['name'], $code, $ttl);
         $this->logger->info('Código de reset enviado', ['user_id' => $user['id']]);
+        $this->audit->record(AuditLog::RESET_SOLICITADO, (int) $user['id']);
     }
 
     /** Consome o código, troca a senha e encerra todas as sessões ativas. */
@@ -446,6 +469,7 @@ final class AuthService
 
         $this->mail->sendPasswordChangedNotice($user['email'], $user['name']);
         $this->logger->info('Senha redefinida via token', ['user_id' => $userId]);
+        $this->audit->record(AuditLog::SENHA_REDEFINIDA, $userId);
     }
 
     /**
@@ -549,5 +573,6 @@ final class AuthService
 
         $this->mail->sendPasswordChangedNotice($user['email'], $user['name']);
         $this->logger->info('Senha alterada pelo próprio usuário', ['user_id' => $userId]);
+        $this->audit->record(AuditLog::SENHA_ALTERADA, $userId);
     }
 }

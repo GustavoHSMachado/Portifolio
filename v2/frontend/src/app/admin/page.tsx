@@ -37,7 +37,7 @@ import styles from "./page.module.css";
  * front nunca protegeu endpoint nenhum.
  */
 export default function AdminPage() {
-  const { loading: checkingSession } = useRequireAuth({ adminOnly: true });
+  const { loading: checkingSession, sairSeBarrado } = useRequireAuth({ adminOnly: true });
   const toast = useToast();
 
   const [content, setContent] = useState<AdminContent | null>(null);
@@ -48,15 +48,14 @@ export default function AdminPage() {
       const result = await fetchAdminContent();
       setContent(result.data);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 403) {
-        // O servidor já barrou. Nada a fazer além de informar.
+      if (sairSeBarrado(error)) {
         return;
       }
       toast.error("Não foi possível carregar o conteúdo.");
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [toast, sairSeBarrado]);
 
   useEffect(() => {
     if (checkingSession) return;
@@ -105,9 +104,20 @@ export default function AdminPage() {
               O que você editar aqui aparece no site imediatamente, sem novo deploy.
             </p>
           </div>
-          <Link href="/painel" className={styles.backLink}>
-            Voltar ao painel
-          </Link>
+          <div className={styles.headerLinks}>
+            <Link href="/admin/usuarios" className={styles.backLink}>
+              Usuários
+            </Link>
+            <Link href="/admin/acessos" className={styles.backLink}>
+              Registros
+            </Link>
+            <Link href="/painel" className={styles.backLink}>
+              Voltar ao painel
+            </Link>
+            <Link href="/" className={styles.backLink}>
+              Home
+            </Link>
+          </div>
         </motion.header>
 
         <ProfileSection profile={content.profile} onSaved={reload} />
@@ -218,8 +228,6 @@ function ProfileSection({
           githubUrl: value("githubUrl") || null,
           linkedinUrl: value("linkedinUrl") || null,
           whatsappUrl: value("whatsappUrl") || null,
-          introVideoId: value("introVideoId") || null,
-          introVideoCaption: value("introVideoCaption") || null,
         }),
       "Perfil atualizado.",
     );
@@ -317,18 +325,6 @@ function ProfileSection({
             defaultValue={profile?.whatsappUrl ?? ""}
             error={fieldErrors.whatsappUrl?.[0]}
             hint="Link wa.me — o número não aparece escrito na página."
-          />
-          <Input
-            label="Vídeo de apresentação"
-            name="introVideoId"
-            defaultValue={profile?.introVideoId ?? ""}
-            error={fieldErrors.introVideoId?.[0]}
-            hint="Só o identificador do YouTube, não a URL inteira."
-          />
-          <Input
-            label="Legenda do vídeo"
-            name="introVideoCaption"
-            defaultValue={profile?.introVideoCaption ?? ""}
           />
         </div>
 

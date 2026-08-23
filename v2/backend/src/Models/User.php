@@ -156,6 +156,40 @@ final class User
         );
     }
 
+    /**
+     * Bloqueio administrativo: a conta existe, mas ninguém entra nela.
+     *
+     * Reaproveita locked_until em vez de ganhar coluna própria porque o login
+     * já consulta esse campo — nada no fluxo de autenticação precisa mudar para
+     * a trava valer. O preço é representar "indefinido" com uma data distante,
+     * que é o que releaseAccess desfaz.
+     */
+    public function blockAccess(int $id): void
+    {
+        $this->db->run(
+            'UPDATE users
+                SET locked_until = DATE_ADD(NOW(), INTERVAL 100 YEAR)
+              WHERE id = ? AND deleted_at IS NULL',
+            [$id]
+        );
+    }
+
+    /**
+     * Libera a conta, seja do bloqueio administrativo ou do automático por
+     * tentativas erradas.
+     *
+     * Não é clearFailedAttempts: aquele marca last_login_at, porque nasceu para
+     * o login bem-sucedido. Usá-lo aqui inventaria um acesso que não houve, e
+     * quem lê o painel confiaria nessa data.
+     */
+    public function releaseAccess(int $id): void
+    {
+        $this->db->run(
+            'UPDATE users SET failed_attempts = 0, locked_until = NULL WHERE id = ?',
+            [$id]
+        );
+    }
+
     /** @param array<string, mixed> $user */
     public function isLocked(array $user): bool
     {

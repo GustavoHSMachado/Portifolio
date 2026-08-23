@@ -32,8 +32,6 @@ export interface Profile {
   linkedinUrl: string | null;
   whatsappUrl: string | null;
   resumePath: string | null;
-  introVideoId: string | null;
-  introVideoCaption: string | null;
 }
 
 export interface Education {
@@ -238,4 +236,65 @@ export async function fetchProjects(): Promise<Project[]> {
   const result = await api.get<{ projects: Project[] }>("/api/v1/projects");
 
   return result.data.projects;
+}
+
+/* ------------------------------------------------------------------ */
+/* Acompanhamento — só para o administrador                            */
+/* ------------------------------------------------------------------ */
+
+export interface ContaCadastrada {
+  id: number;
+  name: string;
+  email: string;
+  phone: string | null;
+  role: "user" | "admin";
+  emailVerified: boolean;
+  lastLoginAt: string | null;
+  locked: boolean;
+  createdAt: string;
+  deleted: boolean;
+}
+
+export interface EventoAuditoria {
+  id: number;
+  event: string;
+  userId: number | null;
+  userName: string | null;
+  userEmail: string | null;
+  ip: string | null;
+  userAgent: string | null;
+  metadata: Record<string, unknown> | null;
+  createdAt: string;
+}
+
+export interface ResumoEvento {
+  event: string;
+  total: number;
+  ultimo: string;
+}
+
+export function fetchUsuarios() {
+  return api.get<{ users: ContaCadastrada[] }>("/api/v1/admin/users");
+}
+
+/** Impede a conta de entrar. Não apaga nada e é reversível por liberarConta. */
+export function bloquearConta(id: number) {
+  return api.post<{ id: number }>(`/api/v1/admin/users/${id}/lock`);
+}
+
+export function liberarConta(id: number) {
+  return api.post<{ id: number }>(`/api/v1/admin/users/${id}/unlock`);
+}
+
+/** Anonimiza os dados pessoais e mantém a linha, para o histórico não ficar órfão. */
+export function excluirConta(id: number) {
+  return api.delete<{ id: number }>(`/api/v1/admin/users/${id}`);
+}
+
+export function fetchAuditoria(evento?: string) {
+  const query = evento ? `?event=${encodeURIComponent(evento)}` : "";
+
+  return api.get<{ events: EventoAuditoria[]; summary: ResumoEvento[] }>(
+    `/api/v1/admin/audit${query}`,
+  );
 }

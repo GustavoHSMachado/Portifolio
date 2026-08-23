@@ -85,8 +85,7 @@ export default function LoginPage() {
       const messages: Record<string, string> = {
         email_not_verified:
           "Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada e o spam.",
-        account_locked:
-          "Conta temporariamente bloqueada por excesso de tentativas. Aguarde alguns minutos.",
+        account_locked: error.message,
         rate_limited: error.message,
         network_error: "Não conseguimos falar com o servidor. Verifique sua conexão.",
         timeout: "A conexão está lenta. Tente novamente.",

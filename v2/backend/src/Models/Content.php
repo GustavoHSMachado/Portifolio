@@ -32,7 +32,7 @@ final class Content
         return $this->db->first(
             'SELECT full_name, short_name, role, headline, objective, summary,
                     city, state, website_url, github_url, linkedin_url, whatsapp_url,
-                    resume_path, intro_video_id, intro_video_caption
+                    resume_path
                FROM profile WHERE id = 1'
         );
     }
@@ -115,7 +115,7 @@ final class Content
                 SET full_name = ?, short_name = ?, role = ?, headline = ?,
                     objective = ?, summary = ?, city = ?, state = ?,
                     website_url = ?, github_url = ?, linkedin_url = ?, whatsapp_url = ?,
-                    intro_video_id = ?, intro_video_caption = ?
+                    updated_at = NOW()
               WHERE id = 1',
             [
                 $data['fullName'], $data['shortName'], $data['role'], $data['headline'],
@@ -123,7 +123,6 @@ final class Content
                 $data['city'] ?? null, $data['state'] ?? null,
                 $data['websiteUrl'] ?? null, $data['githubUrl'] ?? null,
                 $data['linkedinUrl'] ?? null, $data['whatsappUrl'] ?? null,
-                $data['introVideoId'] ?? null, $data['introVideoCaption'] ?? null,
             ]
         );
     }

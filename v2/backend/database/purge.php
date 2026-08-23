@@ -29,6 +29,7 @@ declare(strict_types=1);
 
 use App\Core\Config;
 use App\Database\Connection;
+use App\Models\AuditLog;
 use App\Models\Message;
 use App\Models\RefreshToken;
 use App\Models\VerificationToken;
@@ -75,6 +76,7 @@ $refreshDays      = Config::int('PURGE_REFRESH_TOKENS_DAYS', 30);
 $verificationDays = Config::int('PURGE_VERIFICATION_TOKENS_DAYS', 7);
 $rateLimitSeconds = Config::int('PURGE_RATE_LIMITS_SECONDS', 86400);
 $messageDays      = Config::int('PURGE_MESSAGES_DAYS', 365);
+$auditDays        = Config::int('PURGE_AUDIT_DAYS', 180);
 
 $alvos = [
     'refresh_tokens' => [
@@ -100,6 +102,14 @@ $alvos = [
         ),
         'apagar' => static fn (): int => (new Message($db))->purgeOld($messageDays),
         'criterio' => sprintf('recebidas há mais de %d dia(s)', $messageDays),
+    ],
+    'audit_log' => [
+        'contar' => static fn (): int => $contar(
+            'SELECT COUNT(*) AS total FROM audit_log WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)',
+            [$auditDays]
+        ),
+        'apagar' => static fn (): int => (new AuditLog($db))->purgeOld($auditDays),
+        'criterio' => sprintf('eventos anteriores a %d dia(s)', $auditDays),
     ],
     'rate_limits' => [
         'contar' => static fn (): int => $contar(

@@ -1,0 +1,125 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.bloco {
+  min-width: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+
+.legenda {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+.ajuda {
+  margin: 0 0 var(--space-4);
+  max-width: 62ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Escolha da cor                                                   */
+/* ---------------------------------------------------------------- */
+
+.corLinha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+/*
+ * O seletor nativo do navegador desenha a si mesmo e ignora quase toda
+ * estilização — o que dá para fazer é remover o padding e a borda padrão para
+ * ele virar um quadrado de cor limpo, do tamanho de um alvo de toque.
+ */
+.corSeletor {
+  width: 56px;
+  height: 44px;
+  padding: 0;
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.corSeletor::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+
+.corSeletor::-webkit-color-swatch {
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+}
+
+.corSeletor::-moz-color-swatch {
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Medição de contraste                                             */
+/* ---------------------------------------------------------------- */
+
+/*
+ * Três estados, e a cor da borda os separa sem depender só do texto. O fundo
+ * é o da superfície elevada, que é onde a amostra precisa ser julgada — é lá
+ * que o contraste é pior, e é o que a medição reporta.
+ */
+.medicaoBoa,
+.medicaoOk,
+.medicaoRuim {
+  padding: var(--space-4);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+}
+
+.medicaoBoa {
+  border-left-color: var(--success);
+}
+
+.medicaoOk {
+  border-left-color: var(--info);
+}
+
+.medicaoRuim {
+  border-left-color: var(--danger);
+}
+
+.amostra {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+}
+
+.medicaoTexto {
+  margin: 0;
+  max-width: 62ch;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Textos                                                           */
+/* ---------------------------------------------------------------- */
+
+.grade {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+}

@@ -1,4 +1,4 @@
-import { api } from "@/lib/api";
+import { api, getAccessToken } from "@/lib/api";
 
 /**
  * Conteúdo do portfólio.
@@ -88,7 +88,57 @@ export interface PortfolioContent {
    * exigem sessão. O número é o que a home usa para convidar quem chega.
    */
   projectCount: number;
+  /** Aparência e textos editáveis pelo painel. Sempre completo — ver AjustesDoSite. */
+  settings: AjustesDoSite;
 }
+
+/**
+ * Os ajustes da home, com o mesmo formato que o servidor devolve.
+ *
+ * O servidor sempre manda o conjunto inteiro, preenchendo com o padrão o que
+ * ainda não foi salvo. Por isso os campos não são opcionais: a home lê direto,
+ * sem precisar decidir o que fazer quando falta.
+ */
+export interface AjustesDoSite {
+  cor_destaque: string;
+  lema: string;
+  projetos_titulo: string;
+  projetos_subtitulo: string;
+  experiencia_titulo: string;
+  experiencia_subtitulo: string;
+  formacao_titulo: string;
+  formacao_subtitulo: string;
+  tecnologias_titulo: string;
+  tecnologias_subtitulo: string;
+  mensagem_titulo: string;
+  mensagem_subtitulo: string;
+  contato_titulo: string;
+}
+
+/**
+ * Os mesmos padrões do servidor (SiteSettings::PADROES).
+ *
+ * Duplicar não é ideal, mas a alternativa é pior: sem isto, a home renderizada
+ * com a API fora do ar ficaria com as seções sem título nenhum. Um texto
+ * desatualizado aqui é um texto errado numa página que já está degradada; a
+ * ausência dele é uma página quebrada.
+ */
+export const AJUSTES_PADRAO: AjustesDoSite = {
+  cor_destaque: "#5aa9ff",
+  lema: "Que Eu Seja Melhor Que Ontem, Mas Não Tão Bom Quanto Amanhã!",
+  projetos_titulo: "Projetos",
+  projetos_subtitulo: "O problema, as decisões e o resultado — não apenas o link.",
+  experiencia_titulo: "Experiência",
+  experiencia_subtitulo: "",
+  formacao_titulo: "Formação",
+  formacao_subtitulo: "",
+  tecnologias_titulo: "Tecnologias",
+  tecnologias_subtitulo: "Com o que trabalho no dia a dia.",
+  mensagem_titulo: "Sugestões, dúvidas ou orçamentos",
+  mensagem_subtitulo:
+    "Tem uma pergunta sobre o meu trabalho, uma sugestão para este site, uma vaga em mente ou um projeto para orçar? Escreva aqui — respondo no e-mail que você informar.",
+  contato_titulo: "Onde me encontrar",
+};
 
 /**
  * Conteúdo público, buscado durante a renderização no servidor.
@@ -126,6 +176,7 @@ const EMPTY_CONTENT: PortfolioContent = {
   experiences: [],
   skills: [],
   projectCount: 0,
+  settings: AJUSTES_PADRAO,
 };
 
 /**
@@ -278,6 +329,39 @@ export function fetchUsuarios() {
 }
 
 /** Impede a conta de entrar. Não apaga nada e é reversível por liberarConta. */
+export function fetchAjustes() {
+  return api.get<{ settings: AjustesDoSite }>("/api/v1/admin/settings");
+}
+
+export function salvarAjustes(valores: Partial<AjustesDoSite>) {
+  return api.put<{ settings: AjustesDoSite }>("/api/v1/admin/settings", valores);
+}
+
+/**
+ * Pede ao Next para descartar o cache da home.
+ *
+ * A home revalida sozinha a cada minuto; sem isto, quem acabou de escolher uma
+ * cor veria a antiga e concluiria que não salvou. Falhar aqui não é erro de
+ * verdade — o ajuste já está no banco e aparece no próximo ciclo —, então o
+ * chamador não precisa tratar.
+ */
+export async function revalidarHome(): Promise<void> {
+  const token = getAccessToken();
+
+  if (!token) {
+    return;
+  }
+
+  try {
+    await fetch("/api/revalidar", {
+      method: "POST",
+      headers: { authorization: `Bearer ${token}` },
+    });
+  } catch {
+    // Sem sorte: a home se atualiza sozinha no próximo ciclo de revalidação.
+  }
+}
+
 export function bloquearConta(id: number) {
   return api.post<{ id: number }>(`/api/v1/admin/users/${id}/lock`);
 }

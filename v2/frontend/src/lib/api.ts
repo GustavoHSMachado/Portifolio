@@ -52,6 +52,17 @@ export function setAccessToken(token: string | null): void {
   accessToken = token;
 }
 
+/**
+ * O token atual, para quem precisa falar com um endpoint que não é o da API.
+ *
+ * Hoje só o /api/revalidar do próprio Next, que repassa este token para a API
+ * confirmar que quem pediu é admin. Continua em memória e fora do alcance de
+ * script de terceiro pelas mesmas razões de sempre — isto apenas o lê.
+ */
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
 /* ------------------------------------------------------------------ */
 /* Núcleo                                                              */
 /* ------------------------------------------------------------------ */

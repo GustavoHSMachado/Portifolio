@@ -3,7 +3,9 @@ import { AcaoProjetos, TextoProjetos } from "@/components/ui/AcaoProjetos";
 import { ContactForm } from "@/components/ui/ContactForm";
 import { LinkDeAcesso } from "@/components/ui/LinkDeAcesso";
 import { SkillIcon } from "@/components/ui/SkillIcon";
+import { paletaDeDestaque } from "@/lib/cores";
 import {
+  type AjustesDoSite,
   EDUCATION_LEVELS,
   type Education,
   type Experience,
@@ -16,6 +18,7 @@ import {
 import { buildPersonJsonLd, serializeJsonLd } from "@/lib/structured-data";
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import styles from "./page.module.css";
 
 /**
@@ -25,9 +28,6 @@ import styles from "./page.module.css";
  * não aparecer depois que o JavaScript rodar. É o que permite a um buscador
  * ler o portfólio e o que encurta o tempo até a primeira pintura.
  */
-
-/** Lema do rodape, na faixa que atravessa a tela. */
-const LEMA = "Que Eu Seja Melhor Que Ontem, Mas Não Tão Bom Quanto Amanhã!";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { profile } = await fetchContentSafe();
@@ -52,7 +52,8 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function HomePage() {
-  const { profile, education, experiences, skills, projectCount } = await fetchContentSafe();
+  const { profile, education, experiences, skills, projectCount, settings } =
+    await fetchContentSafe();
 
   if (!profile) {
     return (
@@ -69,8 +70,27 @@ export default async function HomePage() {
   // como dados estruturados de uma página onde não estão visíveis.
   const jsonLd = buildPersonJsonLd({ profile, education, experiences, skills });
 
+  /*
+   * A cor escolhida no painel entra como variável de CSS no container da home,
+   * de onde desce para tudo que está dentro. Vai por style do React, e não por
+   * uma tag <style> montada com string: aqui o valor é uma propriedade de
+   * objeto, não texto que vira folha de estilo — mesmo que a validação do
+   * servidor falhasse, não haveria onde encaixar uma declaração a mais.
+   *
+   * As outras quatro variáveis saem desta: pedir cinco cores no painel seria
+   * transferir aritmética para quem edita, com boa chance de sair incoerente.
+   */
+  const paleta = paletaDeDestaque(settings.cor_destaque);
+  const tema = {
+    "--accent": paleta.accent,
+    "--accent-hover": paleta.accentHover,
+    "--accent-active": paleta.accentActive,
+    "--accent-subtle": paleta.accentSubtle,
+    "--accent-ring": paleta.accentRing,
+  } as CSSProperties;
+
   return (
-    <div className={styles.page}>
+    <div className={styles.page} style={tema}>
       {/* JSON-LD no corpo, e não no <head>: o Next só aceita metadata declarada em
           `metadata`, e dados estruturados são válidos em qualquer ponto do
           documento. Ver serializeJsonLd para o tratamento do "<" no conteúdo. */}
@@ -127,17 +147,17 @@ export default async function HomePage() {
       </header>
 
       <main className={styles.main} id="conteudo">
-        <ProjetosBloqueados quantidade={projectCount} />
+        <ProjetosBloqueados quantidade={projectCount} ajustes={settings} />
 
-        <ExperienceSection experiences={experiences} />
+        <ExperienceSection experiences={experiences} ajustes={settings} />
 
-        <EducationSection education={education} />
+        <EducationSection education={education} ajustes={settings} />
 
-        <SkillsSection skills={skills} />
+        <SkillsSection skills={skills} ajustes={settings} />
 
-        <ContactSection profile={profile} />
+        <ContactSection profile={profile} ajustes={settings} />
 
-        <MensagemSection />
+        <MensagemSection ajustes={settings} />
       </main>
 
       {/*
@@ -146,7 +166,7 @@ export default async function HomePage() {
         que o leitor de tela anuncia — nao precisa de legenda separada.
       */}
       <div className={styles.faixa}>
-        <p className={styles.faixaTexto}>{LEMA}</p>
+        <p className={styles.faixaTexto}>{settings.lema}</p>
       </div>
 
       <footer className={styles.footer}>
@@ -192,16 +212,19 @@ function ExternalHint() {
  * concreta para criar a conta, enquanto uma porta fechada sem número nenhum
  * não diz se vale a pena.
  */
-function ProjetosBloqueados({ quantidade }: { quantidade: number }) {
+function ProjetosBloqueados({
+  quantidade,
+  ajustes,
+}: { quantidade: number; ajustes: AjustesDoSite }) {
   return (
     <section className={styles.section} aria-labelledby="projetos-titulo" id="projetos">
       <Reveal>
         <h2 id="projetos-titulo" className={styles.sectionTitle}>
-          Projetos
+          {ajustes.projetos_titulo}
         </h2>
-        <p className={styles.sectionSubtitle}>
-          O problema, as decisões e o resultado — não apenas o link.
-        </p>
+        {ajustes.projetos_subtitulo ? (
+          <p className={styles.sectionSubtitle}>{ajustes.projetos_subtitulo}</p>
+        ) : null}
       </Reveal>
 
       <Reveal>
@@ -226,7 +249,10 @@ function ProjetosBloqueados({ quantidade }: { quantidade: number }) {
 /* Experiência                                                         */
 /* ------------------------------------------------------------------ */
 
-function ExperienceSection({ experiences }: { experiences: Experience[] }) {
+function ExperienceSection({
+  experiences,
+  ajustes,
+}: { experiences: Experience[]; ajustes: AjustesDoSite }) {
   if (experiences.length === 0) {
     return null;
   }
@@ -235,8 +261,11 @@ function ExperienceSection({ experiences }: { experiences: Experience[] }) {
     <section className={styles.section} aria-labelledby="experiencia">
       <Reveal>
         <h2 id="experiencia" className={styles.sectionTitle}>
-          Experiência
+          {ajustes.experiencia_titulo}
         </h2>
+        {ajustes.experiencia_subtitulo ? (
+          <p className={styles.sectionSubtitle}>{ajustes.experiencia_subtitulo}</p>
+        ) : null}
       </Reveal>
 
       <RevealList itemCount={experiences.length} className={styles.timeline}>
@@ -264,7 +293,10 @@ function ExperienceSection({ experiences }: { experiences: Experience[] }) {
 /* Formação                                                            */
 /* ------------------------------------------------------------------ */
 
-function EducationSection({ education }: { education: Education[] }) {
+function EducationSection({
+  education,
+  ajustes,
+}: { education: Education[]; ajustes: AjustesDoSite }) {
   if (education.length === 0) {
     return null;
   }
@@ -273,8 +305,11 @@ function EducationSection({ education }: { education: Education[] }) {
     <section className={styles.section} aria-labelledby="formacao">
       <Reveal>
         <h2 id="formacao" className={styles.sectionTitle}>
-          Formação
+          {ajustes.formacao_titulo}
         </h2>
+        {ajustes.formacao_subtitulo ? (
+          <p className={styles.sectionSubtitle}>{ajustes.formacao_subtitulo}</p>
+        ) : null}
       </Reveal>
 
       <RevealList itemCount={education.length} className={styles.timeline}>
@@ -304,7 +339,7 @@ function EducationSection({ education }: { education: Education[] }) {
 /* Habilidades                                                         */
 /* ------------------------------------------------------------------ */
 
-function SkillsSection({ skills }: { skills: Skill[] }) {
+function SkillsSection({ skills, ajustes }: { skills: Skill[]; ajustes: AjustesDoSite }) {
   if (skills.length === 0) {
     return null;
   }
@@ -313,9 +348,11 @@ function SkillsSection({ skills }: { skills: Skill[] }) {
     <section className={styles.section} aria-labelledby="tecnologias">
       <Reveal>
         <h2 id="tecnologias" className={styles.sectionTitle}>
-          Tecnologias
+          {ajustes.tecnologias_titulo}
         </h2>
-        <p className={styles.sectionSubtitle}>Com o que trabalho no dia a dia.</p>
+        {ajustes.tecnologias_subtitulo ? (
+          <p className={styles.sectionSubtitle}>{ajustes.tecnologias_subtitulo}</p>
+        ) : null}
       </Reveal>
 
       <RevealList itemCount={skills.length} className={styles.grid}>
@@ -349,17 +386,16 @@ function SkillsSection({ skills }: { skills: Skill[] }) {
  * O formulário é um Client Component dentro de uma página de servidor: ele
  * precisa de estado e de envio, e o resto da home continua sendo HTML pronto.
  */
-function MensagemSection() {
+function MensagemSection({ ajustes }: { ajustes: AjustesDoSite }) {
   return (
     <section className={styles.section} aria-labelledby="mensagem-titulo">
       <Reveal>
         <h2 id="mensagem-titulo" className={styles.sectionTitle}>
-          Sugestões, dúvidas ou orçamentos
+          {ajustes.mensagem_titulo}
         </h2>
-        <p className={styles.sectionSubtitle}>
-          Tem uma pergunta sobre o meu trabalho, uma sugestão para este site, uma vaga em mente ou
-          um projeto para orçar? Escreva aqui — respondo no e-mail que você informar.
-        </p>
+        {ajustes.mensagem_subtitulo ? (
+          <p className={styles.sectionSubtitle}>{ajustes.mensagem_subtitulo}</p>
+        ) : null}
       </Reveal>
 
       <Reveal>
@@ -372,7 +408,7 @@ function MensagemSection() {
 /* Contato                                                             */
 /* ------------------------------------------------------------------ */
 
-function ContactSection({ profile }: { profile: Profile }) {
+function ContactSection({ profile, ajustes }: { profile: Profile; ajustes: AjustesDoSite }) {
   const links = [
     { label: "GitHub", href: profile.githubUrl },
     { label: "LinkedIn", href: profile.linkedinUrl },
@@ -388,7 +424,7 @@ function ContactSection({ profile }: { profile: Profile }) {
     <section className={styles.section} aria-labelledby="contato">
       <Reveal>
         <h2 id="contato" className={styles.sectionTitle}>
-          Onde me encontrar
+          {ajustes.contato_titulo}
         </h2>
       </Reveal>
 

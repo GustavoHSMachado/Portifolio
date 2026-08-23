@@ -46,6 +46,7 @@ final class AuditLog
     // Conteúdo e contato
     public const CONTEUDO_SALVO = 'conteudo.salvo';
     public const CONTEUDO_EXCLUIDO = 'conteudo.excluido';
+    public const AJUSTES_SALVOS = 'aparencia.ajustada';
     public const MENSAGEM_RECEBIDA = 'mensagem.recebida';
 
     public function __construct(private readonly Connection $db)

@@ -9,6 +9,7 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Models\AuditLog;
 use App\Models\Content;
+use App\Models\SiteSettings;
 use App\Support\Validator;
 
 /**
@@ -22,6 +23,7 @@ final class ContentController
 {
     public function __construct(
         private readonly Content $content,
+        private readonly SiteSettings $settings,
         private readonly AuditLog $audit,
     ) {
     }
@@ -56,6 +58,10 @@ final class ContentController
             'experiences'  => array_map($this->presentExperience(...), $this->content->experiences()),
             'skills'       => array_map($this->presentSkill(...), $this->content->skills()),
             'projectCount' => count($this->content->publishedProjects()),
+            // A home renderiza no servidor e precisa dos ajustes junto do resto:
+            // buscá-los depois faria a cor e os títulos chegarem em um segundo
+            // render, com a página trocando de aparência na frente de quem lê.
+            'settings'     => $this->settings->all(),
         ]);
     }
 

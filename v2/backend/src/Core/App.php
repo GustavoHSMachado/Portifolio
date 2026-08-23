@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\Authenticate;
 use App\Http\Middleware\Cors;
@@ -116,6 +117,10 @@ final class App
         $admin = [Authenticate::class, RequireAdmin::class];
 
         $this->router->get('/api/v1/admin/content', [ContentController::class, 'adminIndex'], $admin);
+
+        // Aparência e textos da home.
+        $this->router->get('/api/v1/admin/settings', [SettingsController::class, 'index'], $admin);
+        $this->router->put('/api/v1/admin/settings', [SettingsController::class, 'update'], $admin);
 
         // Acompanhamento: contas cadastradas e o que aconteceu no sistema.
         $this->router->get('/api/v1/admin/users', [AdminController::class, 'users'], $admin);

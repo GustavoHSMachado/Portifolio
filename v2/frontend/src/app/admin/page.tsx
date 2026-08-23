@@ -1,5 +1,6 @@
 "use client";
 
+import { AparenciaSection } from "@/components/admin/AparenciaSection";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { LoadingRegion, Skeleton } from "@/components/ui/Skeleton";
@@ -8,7 +9,9 @@ import { useRequireAuth } from "@/hooks/useAuth";
 import { ApiError } from "@/lib/api";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
 import {
+  AJUSTES_PADRAO,
   type AdminContent,
+  type AjustesDoSite,
   type Collection,
   EDUCATION_LEVELS,
   type Education,
@@ -18,6 +21,7 @@ import {
   type Skill,
   deleteItem,
   fetchAdminContent,
+  fetchAjustes,
   formatPeriod,
   saveItem,
   saveProfile,
@@ -41,12 +45,17 @@ export default function AdminPage() {
   const toast = useToast();
 
   const [content, setContent] = useState<AdminContent | null>(null);
+  const [ajustes, setAjustes] = useState<AjustesDoSite>(AJUSTES_PADRAO);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
     try {
-      const result = await fetchAdminContent();
-      setContent(result.data);
+      // As duas juntas: a tela só serve completa, e duas esperas em sequência
+      // dobrariam o tempo de esqueleto na frente de quem abriu o painel.
+      const [conteudo, aparencia] = await Promise.all([fetchAdminContent(), fetchAjustes()]);
+
+      setContent(conteudo.data);
+      setAjustes(aparencia.data.settings);
     } catch (error) {
       if (sairSeBarrado(error)) {
         return;
@@ -129,6 +138,13 @@ export default function AdminPage() {
         <SkillSection items={content.skills} onChanged={reload} />
 
         <ProjectSection items={content.projects} onChanged={reload} />
+
+        <Section
+          title="Aparência e textos"
+          description="A cor de destaque e os títulos das seções da home. O que você salvar aqui vale para quem visita o site."
+        >
+          <AparenciaSection ajustes={ajustes} onSaved={setAjustes} />
+        </Section>
       </motion.div>
     </main>
   );

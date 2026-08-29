@@ -168,9 +168,17 @@ export default function LoginPage() {
                * inputMode numérico levanta o teclado de números no celular, e
                * autoComplete one-time-code deixa o iOS e o Android oferecerem
                * o código direto da notificação do e-mail, sem copiar e colar.
+               *
+               * Os data-*ignore são para os gerenciadores de senha, que não
+               * olham o autocomplete: eles viam um campo de texto numa tela de
+               * login e enfiavam o e-mail salvo dentro dele. Cada um tem o seu
+               * atributo, daí os três — 1Password, LastPass e Bitwarden.
                */
               inputMode="numeric"
               autoComplete="one-time-code"
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-bwignore="true"
               placeholder="0000000"
               maxLength={7}
               required

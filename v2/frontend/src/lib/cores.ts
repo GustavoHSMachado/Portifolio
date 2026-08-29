@@ -18,6 +18,13 @@ const FUNDO_BASE = "#0b0b0f";
 /** Fundo das superfícies elevadas (--surface-raised), onde o azul também aparece. */
 const FUNDO_ELEVADO = "#14141a";
 
+/** Os mesmos dois fundos, no tema claro. */
+const FUNDO_BASE_CLARO = "#ffffff";
+const FUNDO_ELEVADO_CLARO = "#f4f4f6";
+
+/** O mínimo da WCAG para texto normal. */
+const ALVO_AA = 4.5;
+
 export interface PaletaDeDestaque {
   accent: string;
   accentHover: string;
@@ -51,6 +58,48 @@ export function paletaDeDestaque(cor: string): PaletaDeDestaque {
  */
 export function contrasteDoDestaque(cor: string): number {
   return Math.min(contraste(cor, FUNDO_BASE), contraste(cor, FUNDO_ELEVADO));
+}
+
+/** O mesmo, contra os fundos do tema claro. */
+export function contrasteDoDestaqueClaro(cor: string): number {
+  return Math.min(contraste(cor, FUNDO_BASE_CLARO), contraste(cor, FUNDO_ELEVADO_CLARO));
+}
+
+/**
+ * A mesma cor, escurecida o quanto for preciso para servir sobre fundo claro.
+ *
+ * Um tom escolhido para brilhar sobre quase preto costuma reprovar sobre branco
+ * — o azul padrão do tema fica em 2,1:1 ali, contra 8:1 no escuro. Sem este
+ * ajuste, trocar para o tema claro deixaria todo link do site ilegível, e a
+ * medição feita no painel estaria dizendo a verdade sobre metade do site.
+ *
+ * O escurecimento acontece em HSL, mexendo só na luminosidade. A primeira
+ * versão multiplicava os canais RGB, o que preserva o matiz mas derruba a
+ * saturação junto — o azul de 100% caía para 48% e chegava no tema claro como
+ * um cinza-azulado sem vida. Mantendo H e S intactos, o que sai é o mesmo azul,
+ * mais escuro.
+ *
+ * Desce em passos pequenos e para no primeiro que alcança o AA, para mudar o
+ * mínimo necessário. Preto não é alcançável pela via da luminosidade sozinha em
+ * matizes muito saturados, então o laço termina em L = 0, que é preto e dá 21:1
+ * sobre branco.
+ */
+export function paraFundoClaro(cor: string): string {
+  if (contrasteDoDestaqueClaro(cor) >= ALVO_AA) {
+    return cor.toLowerCase();
+  }
+
+  const { h, s, l } = paraHsl(cor);
+
+  for (let passo = 1; passo <= 100; passo++) {
+    const candidata = deHsl(h, s, Math.max(0, l - passo * 0.01));
+
+    if (contrasteDoDestaqueClaro(candidata) >= ALVO_AA) {
+      return candidata;
+    }
+  }
+
+  return "#000000";
 }
 
 /**
@@ -93,6 +142,58 @@ function paraHex(r: number, g: number, b: number): string {
       .padStart(2, "0");
 
   return `#${parte(r)}${parte(g)}${parte(b)}`;
+}
+
+/** RGB para HSL, com h em graus e s/l entre 0 e 1. */
+function paraHsl(cor: string): { h: number; s: number; l: number } {
+  const { r, g, b } = paraRgb(cor);
+  const vr = r / 255;
+  const vg = g / 255;
+  const vb = b / 255;
+
+  const max = Math.max(vr, vg, vb);
+  const min = Math.min(vr, vg, vb);
+  const delta = max - min;
+  const l = (max + min) / 2;
+
+  if (delta === 0) {
+    return { h: 0, s: 0, l };
+  }
+
+  const s = delta / (1 - Math.abs(2 * l - 1));
+
+  let h: number;
+
+  if (max === vr) {
+    h = ((vg - vb) / delta) % 6;
+  } else if (max === vg) {
+    h = (vb - vr) / delta + 2;
+  } else {
+    h = (vr - vg) / delta + 4;
+  }
+
+  return { h: (h * 60 + 360) % 360, s, l };
+}
+
+function deHsl(h: number, s: number, l: number): string {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+  const m = l - c / 2;
+
+  const [r, g, b] =
+    h < 60
+      ? [c, x, 0]
+      : h < 120
+        ? [x, c, 0]
+        : h < 180
+          ? [0, c, x]
+          : h < 240
+            ? [0, x, c]
+            : h < 300
+              ? [x, 0, c]
+              : [c, 0, x];
+
+  return paraHex((r + m) * 255, (g + m) * 255, (b + m) * 255);
 }
 
 function clarear(r: number, g: number, b: number, fator: number): string {

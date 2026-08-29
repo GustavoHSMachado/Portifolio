@@ -277,6 +277,11 @@ export default function PainelPage() {
                 name="code"
                 inputMode="numeric"
                 autoComplete="one-time-code"
+                // Mesmo motivo dos outros campos de código: gerenciador de
+                // senha ignora o autocomplete e preenche com o e-mail salvo.
+                data-1p-ignore="true"
+                data-lpignore="true"
+                data-bwignore="true"
                 placeholder="0000000"
                 maxLength={7}
                 required

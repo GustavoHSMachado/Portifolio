@@ -146,3 +146,32 @@ a {
   white-space: nowrap;
   border-width: 0;
 }
+
+/* ------------------------------------------------------------------ */
+/*  Escolha da paleta de destaque                                      */
+/* ------------------------------------------------------------------ */
+
+/*
+ * A cor salva no painel chega como variável no <body>, injetada pelo layout
+ * raiz. A troca entre a versão para fundo escuro e a para fundo claro acontece
+ * aqui, no mesmo elemento que recebe os valores.
+ *
+ * Não dá para fazer isso no :root do tokens.css: `--accent: var(--accent-claro)`
+ * declarado lá seria resolvido lá, contra o valor padrão, e a cor escolhida
+ * nunca chegaria ao tema claro.
+ */
+body {
+  --accent: var(--accent-escuro);
+  --accent-hover: var(--accent-escuro-hover);
+  --accent-active: var(--accent-escuro-active);
+  --accent-subtle: var(--accent-escuro-subtle);
+  --accent-ring: var(--accent-escuro-ring);
+}
+
+[data-theme="light"] body {
+  --accent: var(--accent-claro);
+  --accent-hover: var(--accent-claro-hover);
+  --accent-active: var(--accent-claro-active);
+  --accent-subtle: var(--accent-claro-subtle);
+  --accent-ring: var(--accent-claro-ring);
+}

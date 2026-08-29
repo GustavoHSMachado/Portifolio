@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { contraste, contrasteDoDestaque, corValida, nivelWcag, paletaDeDestaque } from "./cores";
+import {
+  contraste,
+  contrasteDoDestaque,
+  contrasteDoDestaqueClaro,
+  corValida,
+  nivelWcag,
+  paletaDeDestaque,
+  paraFundoClaro,
+} from "./cores";
 
 describe("corValida", () => {
   it("aceita #rrggbb em qualquer caixa", () => {
@@ -90,5 +98,75 @@ describe("paletaDeDestaque", () => {
     // Branco não tem como clarear mais; preto não tem como escurecer.
     expect(paletaDeDestaque("#ffffff").accentHover).toBe("#ffffff");
     expect(paletaDeDestaque("#000000").accentActive).toBe("#000000");
+  });
+});
+
+describe("paraFundoClaro", () => {
+  it("escurece o azul do tema até ele servir sobre branco", () => {
+    // O tom claro foi escolhido para fundo quase preto e reprova sobre branco.
+    expect(contrasteDoDestaqueClaro("#5aa9ff")).toBeLessThan(4.5);
+    expect(contrasteDoDestaqueClaro(paraFundoClaro("#5aa9ff"))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("deixa em paz a cor que já passa", () => {
+    // Um azul escuro já serve sobre branco: mexer nele seria mudar a escolha
+    // de quem editou sem necessidade.
+    const jaEscura = "#1a3d6b";
+    expect(contrasteDoDestaqueClaro(jaEscura)).toBeGreaterThanOrEqual(4.5);
+    expect(paraFundoClaro(jaEscura)).toBe(jaEscura);
+  });
+
+  it("muda o mínimo necessário", () => {
+    // Para no primeiro passo que alcança o AA, então o resultado não deve estar
+    // muito além do alvo — se estivesse, a cor teria deixado de ser reconhecível.
+    expect(contrasteDoDestaqueClaro(paraFundoClaro("#5aa9ff"))).toBeLessThan(9);
+  });
+
+  it("resolve o caso extremo do branco", () => {
+    // Branco sobre branco é o pior ponto de partida possível.
+    expect(contrasteDoDestaqueClaro(paraFundoClaro("#ffffff"))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("devolve sempre um #rrggbb válido", () => {
+    for (const cor of ["#5aa9ff", "#ffffff", "#22c55e", "#f5b942", "#000000"]) {
+      expect(corValida(paraFundoClaro(cor))).toBe(true);
+    }
+  });
+});
+
+describe("paraFundoClaro preserva a identidade da cor", () => {
+  function hsl(c: string) {
+    const n = (i: number) => Number.parseInt(c.slice(i, i + 2), 16) / 255;
+    const [r, g, b] = [n(1), n(3), n(5)];
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const d = max - min;
+    const l = (max + min) / 2;
+    if (d === 0) return { h: 0, s: 0, l };
+    let h: number;
+    if (max === r) h = ((g - b) / d) % 6;
+    else if (max === g) h = (b - r) / d + 2;
+    else h = (r - g) / d + 4;
+    return { h: (h * 60 + 360) % 360, s: d / (1 - Math.abs(2 * l - 1)), l };
+  }
+
+  it("mantém o matiz — azul continua azul", () => {
+    const antes = hsl("#5aa9ff");
+    const depois = hsl(paraFundoClaro("#5aa9ff"));
+
+    expect(Math.abs(antes.h - depois.h)).toBeLessThan(2);
+  });
+
+  it("mantém a saturação, e não devolve um cinza-azulado", () => {
+    // A primeira versão multiplicava os canais RGB e derrubava a saturação de
+    // 100% para 48%. É o defeito que este caso existe para não deixar voltar.
+    const antes = hsl("#5aa9ff");
+    const depois = hsl(paraFundoClaro("#5aa9ff"));
+
+    expect(depois.s).toBeGreaterThan(antes.s - 0.05);
+  });
+
+  it("escurece, que é o ponto do ajuste", () => {
+    expect(hsl(paraFundoClaro("#5aa9ff")).l).toBeLessThan(hsl("#5aa9ff").l);
   });
 });

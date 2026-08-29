@@ -84,7 +84,14 @@
    * O texto que vai *sobre* o azul continua sendo --text-inverse, e ali o
    * contraste subiu de 5,3:1 (com o laranja) para 8,0:1.
    */
-  --accent: #5aa9ff;
+  /*
+   * Duas variaveis, e nao uma: a home injeta --accent-escuro e --accent-claro
+   * a partir da cor salva no painel, e o tema escolhe. Um tom bom sobre quase
+   * preto costuma reprovar sobre branco — ver paraFundoClaro em lib/cores.ts.
+   */
+  --accent-escuro: #5aa9ff;
+  --accent-claro: #0f62c4;
+  --accent: var(--accent-escuro);
   --accent-hover: #7cbcff;
   --accent-active: #3d8fe0;
   --accent-subtle: rgba(90, 169, 255, 0.12);
@@ -164,6 +171,82 @@
   /* ---------- Layout ---------- */
   --container-max: 1140px;
   --header-height: 72px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tema claro                                                         */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Só as variáveis que mudam. Espaçamento, tipografia, raio e duração são os
+ * mesmos nos dois temas — o que muda é a cor, e redeclarar o resto criaria dois
+ * lugares para manter a mesma medida.
+ *
+ * A escala de elevação inverte a lógica do escuro: lá a superfície sobe ficando
+ * mais clara, aqui sobe ficando mais branca, com o fundo da página um degrau
+ * abaixo do branco puro. Cartão branco sobre fundo branco não tem elevação
+ * nenhuma, e a página inteira vira uma folha só.
+ *
+ * Todos os tons de texto foram medidos contra o fundo em que aparecem:
+ * primary 16,1:1, secondary 8,6:1 e tertiary 5,3:1 sobre o branco — os mesmos
+ * papéis e as mesmas folgas que o tema escuro tem.
+ */
+[data-theme="light"] {
+  --surface-base: #ffffff;
+  --surface-raised: #f4f4f6;
+  --surface-overlay: #ffffff;
+  --surface-sunken: #ebebef;
+
+  --border-subtle: #e2e2e8;
+  --border-strong: #c2c2cd;
+  --border-focus: var(--accent-claro);
+
+  --text-primary: #16161c;
+  --text-secondary: #4a4a57;
+  --text-tertiary: #6a6a78;
+  /* Como no escuro: só para desabilitado, onde o baixo contraste é o recado. */
+  --text-disabled: #a6a6b2;
+  --text-inverse: #ffffff;
+
+  /* O destaque troca pelo tom que serve sobre fundo claro. */
+  --accent: var(--accent-claro);
+
+  /*
+   * Hover escurece em vez de clarear. No escuro, mais claro é mais próximo; no
+   * claro, é o contrário — manter a mesma direção faria o botão sumir no fundo
+   * exatamente quando o cursor chega nele.
+   */
+  --accent-hover: var(--accent-claro-hover, #0b4c99);
+  --accent-active: var(--accent-claro-active, #093b76);
+
+  --success: #1a7f4f;
+  --success-subtle: rgba(26, 127, 79, 0.12);
+  --warning: #8a5a00;
+  --warning-subtle: rgba(138, 90, 0, 0.12);
+  --danger: #c1272d;
+  --danger-subtle: rgba(193, 39, 45, 0.1);
+  --info: #5b3fd6;
+  --info-subtle: rgba(91, 63, 214, 0.1);
+
+  /*
+   * Sombra volta a existir. No escuro ela é quase invisível e a elevação vem da
+   * cor da superfície; no claro é a sombra que separa o cartão do fundo.
+   */
+  --shadow-sm: 0 1px 2px rgba(16, 16, 28, 0.06);
+  --shadow-md: 0 2px 8px rgba(16, 16, 28, 0.08);
+  --shadow-lg: 0 8px 24px rgba(16, 16, 28, 0.1);
+}
+
+/*
+ * Diz ao navegador em qual tema a página está, para ele acertar o que desenha
+ * sozinho: barra de rolagem, campo de formulário nativo, seletor de cor.
+ */
+:root {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
 }
 
 /* Respeitar quem pediu menos movimento não é opcional — é acessibilidade. */

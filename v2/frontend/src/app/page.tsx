@@ -3,7 +3,7 @@ import { AcaoProjetos, TextoProjetos } from "@/components/ui/AcaoProjetos";
 import { ContactForm } from "@/components/ui/ContactForm";
 import { LinkDeAcesso } from "@/components/ui/LinkDeAcesso";
 import { SkillIcon } from "@/components/ui/SkillIcon";
-import { paletaDeDestaque } from "@/lib/cores";
+import { paletaDeDestaque, paraFundoClaro } from "@/lib/cores";
 import {
   type AjustesDoSite,
   EDUCATION_LEVELS,
@@ -81,12 +81,36 @@ export default async function HomePage() {
    * transferir aritmética para quem edita, com boa chance de sair incoerente.
    */
   const paleta = paletaDeDestaque(settings.cor_destaque);
+
+  /*
+   * Duas paletas, porque a cor escolhida serve a um fundo só. Um tom bom sobre
+   * quase preto costuma reprovar em contraste sobre branco — o azul padrão cai
+   * de 8:1 para 2,1:1. O paraFundoClaro escurece o necessário, e o tokens.css
+   * decide qual das duas vale conforme o tema.
+   */
+  const claro = paletaDeDestaque(paraFundoClaro(settings.cor_destaque));
+
+  /*
+   * As duas paletas inteiras, com nome por tema. Quem escolhe entre elas é o
+   * page.module.css, e não o :root: `--accent: var(--accent-claro)` declarado
+   * lá resolveria contra o valor padrão do tokens.css, porque a substituição
+   * acontece no elemento onde a declaração está — e as cores do painel são
+   * injetadas aqui embaixo, no container da home.
+   */
   const tema = {
-    "--accent": paleta.accent,
-    "--accent-hover": paleta.accentHover,
-    "--accent-active": paleta.accentActive,
-    "--accent-subtle": paleta.accentSubtle,
-    "--accent-ring": paleta.accentRing,
+    "--accent-escuro": paleta.accent,
+    "--accent-escuro-hover": paleta.accentHover,
+    "--accent-escuro-active": paleta.accentActive,
+    "--accent-escuro-subtle": paleta.accentSubtle,
+    "--accent-escuro-ring": paleta.accentRing,
+
+    "--accent-claro": claro.accent,
+    // No claro o hover escurece: clarear afastaria o botão do olho justamente
+    // quando o cursor chega nele.
+    "--accent-claro-hover": claro.accentActive,
+    "--accent-claro-active": paletaDeDestaque(claro.accentActive).accentActive,
+    "--accent-claro-subtle": claro.accentSubtle,
+    "--accent-claro-ring": claro.accentRing,
   } as CSSProperties;
 
   return (
@@ -141,6 +165,9 @@ export default async function HomePage() {
                 </a>
               ) : null}
               <AcaoProjetos className={styles.secondary} />
+              <Link href="/curriculo" className={styles.secondary}>
+                Currículo em PDF
+              </Link>
             </div>
           </div>
         </div>

@@ -148,6 +148,11 @@ export default function RecuperarSenhaPage() {
               name="code"
               inputMode="numeric"
               autoComplete="one-time-code"
+              // Mesmo motivo do campo em /entrar: gerenciador de senha ignora o
+              // autocomplete e preenche com o e-mail salvo.
+              data-1p-ignore="true"
+              data-lpignore="true"
+              data-bwignore="true"
               placeholder="0000000"
               maxLength={7}
               required

@@ -35,6 +35,30 @@ CMD ["npm", "run", "dev"]
 # ---------- build de produção ----------
 FROM base AS build
 ENV NEXT_TELEMETRY_DISABLED=1
+
+# As variáveis NEXT_PUBLIC_* são substituídas pelo Next DENTRO do bundle, no
+# momento do build. Passá-las apenas no `docker run` não tem efeito nenhum: a
+# imagem já saiu com o valor congelado.
+#
+# Sem estes ARGs, `--target prod` gerava um site que chamava
+# http://127.0.0.1:8000 — a máquina de quem visita —, com CSP liberando só
+# http://localhost:8000 e sitemap anunciando http://localhost:3000. O defeito
+# não aparecia no ambiente local porque ali o alvo é `dev`, e o `next dev` lê o
+# ambiente em tempo de execução.
+#
+# Os padrões abaixo são os mesmos fallbacks que o código já usa, para que um
+# build sem argumento continue se comportando como antes em vez de assar uma
+# string vazia no lugar da URL.
+#
+#   docker build -f docker/web/Dockerfile --target prod \
+#     --build-arg NEXT_PUBLIC_API_URL=https://api.seudominio.com.br \
+#     --build-arg NEXT_PUBLIC_SITE_URL=https://seudominio.com.br \
+#     -t portifolio-web:prod .
+ARG NEXT_PUBLIC_API_URL=http://127.0.0.1:8000
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3000
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY v2/frontend/ /app/
 RUN npm run build

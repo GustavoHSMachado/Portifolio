@@ -13,3 +13,25 @@ v1
 **/*.log
 .idea
 .vscode
+
+# Ferramentas e artefatos de teste do backend não têm o que fazer na imagem de
+# produção da API. O ambiente de desenvolvimento não é afetado: o docker-compose
+# monta ./v2/backend:/app por bind mount, e o COPY do Dockerfile é apenas o
+# caminho de fallback para um build sem mount.
+#
+# Os caminhos são explícitos do backend, e não `**/tests`, de propósito: o build
+# do frontend roda `tsc` sobre `src/**/*.test.tsx`, e esses testes dependem dos
+# matchers declarados em v2/frontend/tests/setup.ts. Tirar `tests/` do contexto
+# quebrava o `npm run build` com dezenas de erros de tipo — e o frontend não
+# precisa da exclusão de qualquer forma: a imagem final copia só
+# `.next/standalone`, `.next/static` e `public`.
+v2/backend/tests
+v2/backend/phpunit.xml
+v2/backend/phpstan.neon
+v2/backend/infection.json5
+v2/backend/coverage.xml
+v2/backend/coverage-html
+v2/backend/.phpunit.cache
+v2/backend/.phpstan.cache
+v2/backend/.php-cs-fixer.cache
+v2/backend/.php-cs-fixer.dist.php

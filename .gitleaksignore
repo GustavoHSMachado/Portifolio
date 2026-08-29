@@ -1,0 +1,28 @@
+# Achados do Gitleaks conhecidos e aceitos.
+#
+# Cada linha é a impressão digital de um achado: commit, arquivo, regra e linha.
+# Estar aqui não apaga o segredo — apenas registra que a equipe já o examinou e
+# decidiu o que fazer.
+#
+# ── A senha de aplicativo do Gmail (2024) ──────────────────────────────────
+#
+# Descoberta na homologação de 29/08/2026, no commit inicial do projeto. A
+# credencial pertence ao dono do repositório, que **aceitou o risco e optou por
+# não revogá-la** em 29/08/2026, por reutilizá-la como senha de teste em outros
+# sistemas.
+#
+# Consequência registrada: enquanto o commit aba029d existir, o segredo continua
+# publicamente acessível no repositório, que é público. Rodar
+# `limpar-senha-do-historico.sh` remove as ocorrências do histórico local, mas
+# não apaga os objetos dos servidores do GitHub — eles seguem alcançáveis por
+# SHA direto até a coleta de lixo de lá, e só um chamado ao suporte força isso.
+#
+# Estas duas linhas existem para o job `security` do CI não ficar vermelho para
+# sempre por um achado já decidido. Se a decisão mudar e o histórico for
+# reescrito, apague-as: os commits deixam de existir e as impressões digitais
+# param de casar sozinhas.
+#
+# O que NÃO está silenciado: qualquer senha nova atribuída no código continua
+# reprovando, pela regra `senha-atribuida-no-codigo` do .gitleaks.toml.
+aba029d01e0a94a40bc60d4a4bd60ed2ec387d44:configEmail.php:senha-atribuida-no-codigo:18
+aba029d01e0a94a40bc60d4a4bd60ed2ec387d44:formail.php:senha-atribuida-no-codigo:58

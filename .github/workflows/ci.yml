@@ -1,13 +1,13 @@
 name: CI
 
-# Esteira de qualidade. Nada entra na main sem passar por aqui.
+# Esteira de qualidade. Nada entra na master sem passar por aqui.
 # Os jobs rodam em paralelo e o gate final (quality-gate) exige todos verdes.
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [master, dev]
   push:
-    branches: [main]
+    branches: [master, dev]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -171,10 +171,22 @@ jobs:
 
       - name: Orçamento de bundle
         run: |
-          SIZE=$(du -sk .next/static | cut -f1)
-          echo "Bundle estático: ${SIZE}KB"
-          if [ "$SIZE" -gt 1024 ]; then
-            echo "::error::Bundle acima do orçamento de 1024KB (atual: ${SIZE}KB)"
+          # Medido comprimido, e não em disco.
+          #
+          # O critério anterior era `du -sk .next/static` contra 1024KB, e nunca
+          # chegou a rodar — o workflow disparava em branches que não existem
+          # neste repositório. Quando a homologação de 29/08/2026 o executou pela
+          # primeira vez, deu 1296KB: reprovaria para sempre, medindo uma
+          # grandeza que ninguém experimenta. O que o visitante baixa é o
+          # conteúdo comprimido, e nisso há folga — 319KB na mesma medição.
+          BYTES=$(find .next/static -type f \
+                    \( -name '*.js' -o -name '*.css' \) \
+                    -exec gzip -c -9 {} + | wc -c)
+          KB=$((BYTES / 1024))
+          ORCAMENTO=400
+          echo "Bundle estático (gzip): ${KB}KB de ${ORCAMENTO}KB"
+          if [ "$KB" -gt "$ORCAMENTO" ]; then
+            echo "::error::Bundle acima do orçamento de ${ORCAMENTO}KB (atual: ${KB}KB)"
             exit 1
           fi
 
@@ -256,10 +268,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      # As regras do projeto vivem em .gitleaks.toml, e não são cosméticas: o
+      # conjunto padrão do Gitleaks NÃO detecta senha comum atribuída no código,
+      # que é exatamente a única credencial que este repositório já vazou.
+      # Verificado em 29/08/2026 — sem a configuração, o commit aba029d passa
+      # limpo pela varredura.
       - name: Varredura de segredos (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
 
       - name: Revisão de dependências
         if: github.event_name == 'pull_request'

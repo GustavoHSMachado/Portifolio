@@ -43,9 +43,9 @@ if (PHP_SAPI !== 'cli') {
 
 Config::boot(dirname(__DIR__));
 
-$dryRun   = in_array('--dry-run', $argv, true);
+$dryRun = in_array('--dry-run', $argv, true);
 $testData = in_array('--test-data', $argv, true);
-$db       = new Connection();
+$db = new Connection();
 
 /*
  * --test-data existe porque a suíte E2E cadastra contas de verdade, pela tela,
@@ -72,11 +72,11 @@ $contar = static function (string $sql, array $params) use ($db): int {
     return (int) ($row['total'] ?? 0);
 };
 
-$refreshDays      = Config::int('PURGE_REFRESH_TOKENS_DAYS', 30);
+$refreshDays = Config::int('PURGE_REFRESH_TOKENS_DAYS', 30);
 $verificationDays = Config::int('PURGE_VERIFICATION_TOKENS_DAYS', 7);
 $rateLimitSeconds = Config::int('PURGE_RATE_LIMITS_SECONDS', 86400);
-$messageDays      = Config::int('PURGE_MESSAGES_DAYS', 365);
-$auditDays        = Config::int('PURGE_AUDIT_DAYS', 180);
+$messageDays = Config::int('PURGE_MESSAGES_DAYS', 365);
+$auditDays = Config::int('PURGE_AUDIT_DAYS', 180);
 
 $alvos = [
     'refresh_tokens' => [
@@ -84,7 +84,7 @@ $alvos = [
             'SELECT COUNT(*) AS total FROM refresh_tokens WHERE expires_at < DATE_SUB(NOW(), INTERVAL ? DAY)',
             [$refreshDays]
         ),
-        'apagar' => static fn (): int => (new RefreshToken($db))->purgeExpired($refreshDays),
+        'apagar'   => static fn (): int => (new RefreshToken($db))->purgeExpired($refreshDays),
         'criterio' => sprintf('expirados há mais de %d dia(s)', $refreshDays),
     ],
     'verification_tokens' => [
@@ -92,7 +92,7 @@ $alvos = [
             'SELECT COUNT(*) AS total FROM verification_tokens WHERE expires_at < DATE_SUB(NOW(), INTERVAL ? DAY)',
             [$verificationDays]
         ),
-        'apagar' => static fn (): int => (new VerificationToken($db))->purgeExpired($verificationDays),
+        'apagar'   => static fn (): int => (new VerificationToken($db))->purgeExpired($verificationDays),
         'criterio' => sprintf('expirados há mais de %d dia(s)', $verificationDays),
     ],
     'messages' => [
@@ -100,7 +100,7 @@ $alvos = [
             'SELECT COUNT(*) AS total FROM messages WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)',
             [$messageDays]
         ),
-        'apagar' => static fn (): int => (new Message($db))->purgeOld($messageDays),
+        'apagar'   => static fn (): int => (new Message($db))->purgeOld($messageDays),
         'criterio' => sprintf('recebidas há mais de %d dia(s)', $messageDays),
     ],
     'audit_log' => [
@@ -108,7 +108,7 @@ $alvos = [
             'SELECT COUNT(*) AS total FROM audit_log WHERE created_at < DATE_SUB(NOW(), INTERVAL ? DAY)',
             [$auditDays]
         ),
-        'apagar' => static fn (): int => (new AuditLog($db))->purgeOld($auditDays),
+        'apagar'   => static fn (): int => (new AuditLog($db))->purgeOld($auditDays),
         'criterio' => sprintf('eventos anteriores a %d dia(s)', $auditDays),
     ],
     'rate_limits' => [
@@ -116,7 +116,7 @@ $alvos = [
             'SELECT COUNT(*) AS total FROM rate_limits WHERE window_start < DATE_SUB(NOW(), INTERVAL ? SECOND)',
             [$rateLimitSeconds]
         ),
-        'apagar' => static fn (): int => (new RateLimiter($db))->purge($rateLimitSeconds),
+        'apagar'   => static fn (): int => (new RateLimiter($db))->purge($rateLimitSeconds),
         'criterio' => sprintf('janelas anteriores a %d segundo(s)', $rateLimitSeconds),
     ],
 ];

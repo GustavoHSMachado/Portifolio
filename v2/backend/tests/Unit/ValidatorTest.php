@@ -74,15 +74,15 @@ final class ValidatorTest extends TestCase
         return [
             // A política passou a exigir maiúscula, minúscula, número e símbolo
             // com no mínimo 7 caracteres — ver Validator::passwordError.
-            'curta demais'         => ['Ab1!de', false],
-            'só repetição'         => ['aaaaaaaaaaaa', false],
-            'comum na blocklist'   => ['password123', false],
-            'sem maiúscula'        => ['senha123!', false],
-            'sem minúscula'        => ['SENHA123!', false],
-            'sem número'           => ['SenhaBoa!', false],
-            'sem símbolo'          => ['SenhaBoa123', false],
-            'no limite dos sete'   => ['Ab1!def', true],
-            'longa com tudo'       => ['uma Frase longa como senha 7!', true],
+            'curta demais'       => ['Ab1!de', false],
+            'só repetição'       => ['aaaaaaaaaaaa', false],
+            'comum na blocklist' => ['password123', false],
+            'sem maiúscula'      => ['senha123!', false],
+            'sem minúscula'      => ['SENHA123!', false],
+            'sem número'         => ['SenhaBoa!', false],
+            'sem símbolo'        => ['SenhaBoa123', false],
+            'no limite dos sete' => ['Ab1!def', true],
+            'longa com tudo'     => ['uma Frase longa como senha 7!', true],
         ];
     }
 

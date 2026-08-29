@@ -83,7 +83,7 @@ final class Validator
             'max' => mb_strlen($value) > (int) $param
                 ? sprintf('Deve ter no máximo %d caracteres.', (int) $param) : null,
             // digits sozinho: só números. digits:7: exatamente sete deles.
-            'digits' => $this->digitsError($value, $param),
+            'digits'     => $this->digitsError($value, $param),
             'between'    => $this->betweenError($value, (string) $param),
             'alpha_dash' => preg_match('/^[A-Za-z0-9._-]+$/', $value) !== 1
                 ? 'Use apenas letras, números, ponto, hífen ou underscore.' : null,

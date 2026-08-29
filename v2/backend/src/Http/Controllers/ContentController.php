@@ -61,7 +61,7 @@ final class ContentController
             // A home renderiza no servidor e precisa dos ajustes junto do resto:
             // buscá-los depois faria a cor e os títulos chegarem em um segundo
             // render, com a página trocando de aparência na frente de quem lê.
-            'settings'     => $this->settings->all(),
+            'settings' => $this->settings->all(),
         ]);
     }
 
@@ -106,18 +106,18 @@ final class ContentController
     public function updateProfile(Request $request): Response
     {
         $data = Validator::make($request->body, [
-            'fullName'          => 'required|max:120',
-            'shortName'         => 'required|max:60',
-            'role'              => 'required|max:120',
-            'headline'          => 'required|max:160',
-            'objective'         => 'max:255',
-            'summary'           => 'required',
-            'city'              => 'max:80',
-            'state'             => 'max:2',
-            'websiteUrl'        => 'url|max:255',
-            'githubUrl'         => 'url|max:255',
-            'linkedinUrl'       => 'url|max:255',
-            'whatsappUrl'       => 'url|max:255',
+            'fullName'    => 'required|max:120',
+            'shortName'   => 'required|max:60',
+            'role'        => 'required|max:120',
+            'headline'    => 'required|max:160',
+            'objective'   => 'max:255',
+            'summary'     => 'required',
+            'city'        => 'max:80',
+            'state'       => 'max:2',
+            'websiteUrl'  => 'url|max:255',
+            'githubUrl'   => 'url|max:255',
+            'linkedinUrl' => 'url|max:255',
+            'whatsappUrl' => 'url|max:255',
 
         ])->validated();
 
@@ -159,11 +159,11 @@ final class ContentController
             AuditLog::CONTEUDO_SALVO,
             $request->userId(),
             $request->ip,
-            $request->header("user-agent"),
-            ["colecao" => $colecaoAuditada, "id" => $id],
+            $request->header('user-agent'),
+            ['colecao' => $colecaoAuditada, 'id' => $id],
         );
 
-        return Response::ok(["id" => $id]);
+        return Response::ok(['id' => $id]);
     }
 
     public function saveExperience(Request $request): Response
@@ -203,11 +203,11 @@ final class ContentController
             AuditLog::CONTEUDO_SALVO,
             $request->userId(),
             $request->ip,
-            $request->header("user-agent"),
-            ["colecao" => $colecaoAuditada, "id" => $id],
+            $request->header('user-agent'),
+            ['colecao' => $colecaoAuditada, 'id' => $id],
         );
 
-        return Response::ok(["id" => $id]);
+        return Response::ok(['id' => $id]);
     }
 
     public function saveSkill(Request $request): Response
@@ -230,11 +230,11 @@ final class ContentController
             AuditLog::CONTEUDO_SALVO,
             $request->userId(),
             $request->ip,
-            $request->header("user-agent"),
-            ["colecao" => $colecaoAuditada, "id" => $id],
+            $request->header('user-agent'),
+            ['colecao' => $colecaoAuditada, 'id' => $id],
         );
 
-        return Response::ok(["id" => $id]);
+        return Response::ok(['id' => $id]);
     }
 
     public function saveProject(Request $request): Response
@@ -270,11 +270,11 @@ final class ContentController
             AuditLog::CONTEUDO_SALVO,
             $request->userId(),
             $request->ip,
-            $request->header("user-agent"),
-            ["colecao" => $colecaoAuditada, "id" => $id],
+            $request->header('user-agent'),
+            ['colecao' => $colecaoAuditada, 'id' => $id],
         );
 
-        return Response::ok(["id" => $id]);
+        return Response::ok(['id' => $id]);
     }
 
     public function destroy(Request $request): Response
@@ -312,19 +312,19 @@ final class ContentController
     private function presentProfile(array $row): array
     {
         return [
-            'fullName'          => $row['full_name'],
-            'shortName'         => $row['short_name'],
-            'role'              => $row['role'],
-            'headline'          => $row['headline'],
-            'objective'         => $row['objective'],
-            'summary'           => $row['summary'],
-            'city'              => $row['city'],
-            'state'             => $row['state'],
-            'websiteUrl'        => $row['website_url'],
-            'githubUrl'         => $row['github_url'],
-            'linkedinUrl'       => $row['linkedin_url'],
-            'whatsappUrl'       => $row['whatsapp_url'],
-            'resumePath'        => $row['resume_path'],
+            'fullName'    => $row['full_name'],
+            'shortName'   => $row['short_name'],
+            'role'        => $row['role'],
+            'headline'    => $row['headline'],
+            'objective'   => $row['objective'],
+            'summary'     => $row['summary'],
+            'city'        => $row['city'],
+            'state'       => $row['state'],
+            'websiteUrl'  => $row['website_url'],
+            'githubUrl'   => $row['github_url'],
+            'linkedinUrl' => $row['linkedin_url'],
+            'whatsappUrl' => $row['whatsapp_url'],
+            'resumePath'  => $row['resume_path'],
 
         ];
     }

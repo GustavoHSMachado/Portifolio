@@ -70,7 +70,7 @@ if ($emailConfigurado === '') {
 
 echo "Criando o administrador de {$emailConfigurado}.\n\n";
 
-$db   = new Connection();
+$db = new Connection();
 $nome = ler('Nome completo: ');
 
 if (mb_strlen($nome) < 3) {

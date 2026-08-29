@@ -58,7 +58,7 @@ if ($email === '') {
     exit(1);
 }
 
-$db   = new Connection();
+$db = new Connection();
 $user = $db->first('SELECT id, name FROM users WHERE email = ? AND deleted_at IS NULL', [mb_strtolower($email)]);
 
 if ($user === null) {

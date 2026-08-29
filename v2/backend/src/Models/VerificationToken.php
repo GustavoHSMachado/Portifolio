@@ -71,7 +71,7 @@ final class VerificationToken
     public function issueCode(int $userId, string $purpose, int $ttlMinutes): string
     {
         $maximo = (10 ** self::CODE_LENGTH) - 1;
-        $code   = str_pad((string) random_int(0, $maximo), self::CODE_LENGTH, '0', STR_PAD_LEFT);
+        $code = str_pad((string) random_int(0, $maximo), self::CODE_LENGTH, '0', STR_PAD_LEFT);
 
         $this->db->run(
             'DELETE FROM verification_tokens WHERE user_id = ? AND purpose = ?',

@@ -10,7 +10,7 @@ import { ApiError, api } from "@/lib/api";
 import { fadeInUp, staggerContainer } from "@/lib/motion";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import type { FormEvent } from "react";
 import styles from "./page.module.css";
 
@@ -259,8 +259,15 @@ export default function PainelPage() {
           onSubmit={etapaSenha === "senha-atual" ? handlePedirCodigo : handlePassword}
           noValidate
         >
+          {/*
+            As keys separam as duas etapas na reconciliação do React: sem elas,
+            o <input> da senha atual é reaproveitado como o do código, e o valor
+            digitado antes continua lá — o campo não é controlado, então quem
+            guarda o texto é o DOM.
+          */}
           {etapaSenha === "senha-atual" ? (
             <Input
+              key="senha-atual"
               label="Senha atual"
               name="currentPassword"
               revealable
@@ -271,7 +278,7 @@ export default function PainelPage() {
               error={passwordErrors.currentPassword?.[0]}
             />
           ) : (
-            <>
+            <Fragment key="codigo">
               <Input
                 label="Código recebido por e-mail"
                 name="code"
@@ -308,7 +315,7 @@ export default function PainelPage() {
                 required
                 disabled={changingPassword}
               />
-            </>
+            </Fragment>
           )}
 
           {passwordError ? (

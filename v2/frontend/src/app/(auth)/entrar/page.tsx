@@ -145,7 +145,17 @@ export default function LoginPage() {
 
   if (etapa === "codigo") {
     return (
+      /*
+       * A key separa as duas etapas na reconciliação do React.
+       *
+       * Sem ela, as duas árvores têm a mesma forma — div > header + form >
+       * div > Input —, e o React reaproveita o <input> em vez de trocá-lo.
+       * Como os campos não são controlados, o valor fica no DOM: o e-mail
+       * digitado na etapa anterior aparecia dentro do campo de código, o que
+       * parecia autofill do navegador e não era.
+       */
       <motion.div
+        key="codigo"
         className={styles.wrapper}
         variants={staggerContainer(4)}
         initial="hidden"
@@ -170,9 +180,11 @@ export default function LoginPage() {
                * o código direto da notificação do e-mail, sem copiar e colar.
                *
                * Os data-*ignore são para os gerenciadores de senha, que não
-               * olham o autocomplete: eles viam um campo de texto numa tela de
-               * login e enfiavam o e-mail salvo dentro dele. Cada um tem o seu
-               * atributo, daí os três — 1Password, LastPass e Bitwarden.
+               * olham o autocomplete e ofereceriam o e-mail salvo num campo de
+               * texto dentro de uma tela de login. Cada um tem o seu atributo,
+               * daí os três — 1Password, LastPass e Bitwarden. Eles não eram a
+               * causa do e-mail que aparecia aqui, mas continuam valendo: são
+               * a defesa contra o preenchimento que vem de fora da página.
                */
               inputMode="numeric"
               autoComplete="one-time-code"
@@ -217,6 +229,7 @@ export default function LoginPage() {
 
   return (
     <motion.div
+      key="credenciais"
       className={styles.wrapper}
       variants={staggerContainer(5)}
       initial="hidden"

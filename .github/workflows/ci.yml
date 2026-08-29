@@ -35,10 +35,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+      # O --config e obrigatorio: este job roda na raiz do repositorio, e o
+      # commitlint.config.js vive em v2/frontend/ (junto da dependencia que o
+      # declara). O cosmiconfig procura da pasta atual para CIMA, nunca para
+      # baixo — sem apontar o caminho, ele nao acha nada e reprova todo commit
+      # com "[empty-rules]", independente da mensagem.
+      #
+      # Ficou invisivel ate 29/08/2026 porque o gatilho do workflow apontava
+      # para branches que nao existem neste repositorio, e a esteira nunca rodou.
       - name: Validar mensagens de commit
         run: |
           npm install --no-save @commitlint/cli @commitlint/config-conventional
-          npx commitlint --from ${{ github.event.pull_request.base.sha || 'HEAD~1' }} --to HEAD --verbose
+          npx commitlint --config v2/frontend/commitlint.config.js \
+            --from ${{ github.event.pull_request.base.sha || 'HEAD~1' }} --to HEAD --verbose
 
   # ------------------------------------------------------------------
   # Backend

@@ -118,6 +118,155 @@ final class Migrator
         )['next'] ?? 1);
     }
 
+    /** O número do último lote aplicado, ou null se não há nenhum. */
+    public function lastBatch(): ?int
+    {
+        $row = $this->db->first('SELECT MAX(batch) AS ultimo FROM migrations');
+
+        return $row === null || $row['ultimo'] === null ? null : (int) $row['ultimo'];
+    }
+
+    /**
+     * Os comandos que desfazem uma migração, lidos do comentário do arquivo.
+     *
+     * Duas convenções coexistem no diretório, e as duas são aceitas porque
+     * ambas já estão escritas — impor uma terceira só criaria trabalho de
+     * migrar as quinze existentes:
+     *
+     *     -- ROLLBACK: DROP TABLE users;          (uma linha, pode repetir)
+     *
+     *     -- ROLLBACK                             (cabeçalho e o bloco abaixo)
+     *     -- DROP TABLE IF EXISTS projects;
+     *     -- DROP TABLE IF EXISTS skills;
+     *
+     * Devolve lista vazia quando o arquivo não declara volta. Quem chama
+     * precisa tratar isso como recusa, e não como "nada a fazer": marcar uma
+     * migração como revertida sem executar nada deixaria o registro mentindo
+     * sobre o estado real do banco.
+     *
+     * @return list<string>
+     */
+    public function rollbackStatementsIn(string $file): array
+    {
+        $linhas = preg_split('/\R/', file_get_contents($file) ?: '') ?: [];
+        $comandos = [];
+        $dentroDoBloco = false;
+
+        foreach ($linhas as $linha) {
+            $linha = trim($linha);
+
+            // -- ROLLBACK: <sql>
+            if (preg_match('/^--\s*ROLLBACK\s*:\s*(.+)$/i', $linha, $m) === 1) {
+                $comandos[] = trim($m[1]);
+                $dentroDoBloco = false;
+                continue;
+            }
+
+            // -- ROLLBACK  (cabeçalho de bloco)
+            if (preg_match('/^--\s*ROLLBACK\s*$/i', $linha) === 1) {
+                $dentroDoBloco = true;
+                continue;
+            }
+
+            if (!$dentroDoBloco) {
+                continue;
+            }
+
+            // Dentro do bloco: cada linha de comentário é um comando; linha em
+            // branco ou qualquer outra coisa encerra.
+            if (preg_match('/^--\s*(.+)$/', $linha, $m) === 1) {
+                $comandos[] = trim($m[1]);
+                continue;
+            }
+
+            $dentroDoBloco = false;
+        }
+
+        return array_values(array_filter(
+            array_map(static fn (string $c): string => rtrim(trim($c), ';'), $comandos),
+            static fn (string $c): bool => $c !== ''
+        ));
+    }
+
+    /**
+     * Desfaz o último lote aplicado, na ordem inversa.
+     *
+     * ATENÇÃO, e isto precisa ficar escrito junto do código: rollback só é
+     * seguro para migração ESTRUTURAL ADITIVA — criar tabela, criar coluna,
+     * criar índice. Migração que apaga ou transforma dado não tem volta por
+     * SQL: o DROP devolve a estrutura, nunca o conteúdo. Para essas, a única
+     * resposta é o dump prévio, e é por isso que o docs/DEPLOY.md exige um
+     * antes de todo deploy com migração.
+     *
+     * Recusa o lote inteiro, sem executar nada, se qualquer migração dele não
+     * declarar rollback. Meio lote revertido é pior que nenhum: deixa o banco
+     * num estado que nem o código novo nem o velho esperam.
+     *
+     * @param null|callable(string, int): void $onRolledBack recebe nome e nº de comandos
+     * @return int quantidade de migrações revertidas
+     */
+    public function rollback(?callable $onRolledBack = null): int
+    {
+        $this->ensureControlTable();
+
+        $batch = $this->lastBatch();
+
+        if ($batch === null) {
+            return 0;
+        }
+
+        $registros = $this->db->all(
+            'SELECT filename FROM migrations WHERE batch = ? ORDER BY filename DESC',
+            [$batch]
+        );
+
+        $plano = [];
+        $semVolta = [];
+
+        foreach ($registros as $registro) {
+            $nome = (string) $registro['filename'];
+            $caminho = $this->path . '/' . $nome;
+
+            if (!is_file($caminho)) {
+                throw new RuntimeException(
+                    "{$nome}: registrado como aplicado, mas o arquivo não existe mais. "
+                    . 'Reverter às cegas apagaria estrutura sem saber qual.'
+                );
+            }
+
+            $comandos = $this->rollbackStatementsIn($caminho);
+
+            if ($comandos === []) {
+                $semVolta[] = $nome;
+                continue;
+            }
+
+            $plano[] = ['nome' => $nome, 'comandos' => $comandos];
+        }
+
+        if ($semVolta !== []) {
+            throw new RuntimeException(
+                'Este lote não pode ser revertido: ' . implode(', ', $semVolta)
+                . ' não declara rollback. Acrescente um comentário "-- ROLLBACK: ..." '
+                . 'no arquivo, ou restaure o dump.'
+            );
+        }
+
+        foreach ($plano as $item) {
+            foreach ($item['comandos'] as $comando) {
+                $this->db->run($comando);
+            }
+
+            $this->db->run('DELETE FROM migrations WHERE filename = ?', [$item['nome']]);
+
+            if ($onRolledBack !== null) {
+                $onRolledBack($item['nome'], count($item['comandos']));
+            }
+        }
+
+        return count($plano);
+    }
+
     /**
      * Aplica tudo que estiver pendente.
      *

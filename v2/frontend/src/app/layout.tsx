@@ -1,5 +1,5 @@
 import { PageTransition } from "@/components/motion/PageTransition";
-import { BotaoDeTema } from "@/components/ui/BotaoDeTema";
+import { TemaFlutuante } from "@/components/ui/TemaFlutuante";
 import { ToastProvider } from "@/components/ui/Toast";
 import { AuthProvider } from "@/hooks/useAuth";
 import { TemaProvider } from "@/hooks/useTema";
@@ -125,11 +125,11 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               <PageTransition>{children}</PageTransition>
 
               {/*
-                Flutuante e no layout, para existir em toda tela sem cada uma
-                precisar lembrar de colocá-lo. O canto inferior direito é onde
-                não disputa espaço com cabeçalho nenhum.
+                Cobre todas as telas menos a home, que tem o seu na barra
+                superior. O canto inferior direito é onde não disputa espaço
+                com cabeçalho nenhum.
               */}
-              <BotaoDeTema flutuante />
+              <TemaFlutuante />
             </ToastProvider>
           </AuthProvider>
         </TemaProvider>

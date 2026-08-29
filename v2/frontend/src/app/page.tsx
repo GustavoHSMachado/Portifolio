@@ -1,5 +1,6 @@
 import { Reveal, RevealItem, RevealList } from "@/components/motion/Reveal";
 import { AcaoProjetos, TextoProjetos } from "@/components/ui/AcaoProjetos";
+import { BotaoDeTema } from "@/components/ui/BotaoDeTema";
 import { ContactForm } from "@/components/ui/ContactForm";
 import { LinkDeAcesso } from "@/components/ui/LinkDeAcesso";
 import { SkillIcon } from "@/components/ui/SkillIcon";
@@ -130,6 +131,7 @@ export default async function HomePage() {
         atrás da sessão, isso deixou de ser um detalhe.
       */}
       <nav className={styles.topBar} aria-label="Acesso">
+        <BotaoDeTema />
         <LinkDeAcesso className={styles.topLink} />
       </nav>
 

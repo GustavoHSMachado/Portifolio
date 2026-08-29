@@ -262,6 +262,15 @@ jobs:
 
       MAIL_HOST: 127.0.0.1
       MAIL_PORT: "1025"
+      # Vazia, e nao ausente. Sem MAIL_USERNAME o MailService entrega direto em
+      # vez de desviar para captura, e nesse caminho MAIL_ENCRYPTION assume
+      # "tls" quando nao esta definida — o PHPMailer forca STARTTLS e o Mailpit
+      # responde "Command not implemented". Nenhum e-mail saia, e a suite
+      # falhava em todo cenario que espera mensagem.
+      #
+      # String vazia e o que o docker-compose local ja usa, e o que desliga TLS
+      # e auto-TLS: e o caminho previsto para servidor de captura.
+      MAIL_ENCRYPTION: ""
       MAIL_FROM_ADDRESS: nao-responda@portifolio.local
       MAIL_FROM_NAME: Portifolio
 

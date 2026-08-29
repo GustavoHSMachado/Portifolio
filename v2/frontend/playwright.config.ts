@@ -35,11 +35,25 @@ export default defineConfig({
   // dois, passaram os 70. Vale a pena: uma suíte que falha ao acaso não é
   // consultada, e o que ela deixa de dizer é justamente onde há defeito.
   workers: 2,
-  // Mesmo motivo do expect abaixo: fora do CI, cada rota é compilada na
-  // primeira visita. Os fluxos longos — criar conta, confirmar por e-mail,
-  // recuperar e redefinir a senha, entrar — encadeiam seis navegações e
-  // passavam dos 30s por compilação, não por lentidão do produto.
-  timeout: process.env.CI ? 30_000 : 60_000,
+  // Fora do CI, cada rota é compilada na primeira visita, e os fluxos longos —
+  // criar conta, confirmar por e-mail, recuperar e redefinir a senha, entrar —
+  // encadeiam seis navegações que passavam dos 30s por compilação, não por
+  // lentidão do produto.
+  //
+  // No CI o motivo é outro, e foi medido em 29/08/2026, na primeira execução
+  // real da esteira: 26 dos 87 cenários falhavam, todos com
+  // "Target page, context or browser has been closed" dentro do aguardarEmail.
+  //
+  // A causa era aritmética. O aguardarEmail espera até 60 × 500ms = 30 segundos
+  // pela mensagem, e o teste inteiro tinha exatamente 30 segundos. O orçamento
+  // de espera de e-mail era igual ao orçamento do teste todo, então qualquer
+  // cenário que somasse navegação de tela E espera de e-mail estourava antes de
+  // chegar à asserção — mesmo com o e-mail chegando normalmente.
+  //
+  // A prova de que a entrega funcionava: os cenários do painel administrativo
+  // que só falam com a API, e que também esperam código por e-mail, passaram
+  // todos. Quem caiu foi só quem tinha navegação junto.
+  timeout: process.env.CI ? 90_000 : 60_000,
 
   // Fora do CI os testes rodam contra o servidor de desenvolvimento, que
   // compila cada rota na primeira visita — o que pode passar de 10s e nada

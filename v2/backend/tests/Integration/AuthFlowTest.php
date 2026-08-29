@@ -5,10 +5,14 @@ declare(strict_types=1);
 namespace Tests\Integration;
 
 use App\Core\Config;
+use App\Core\Container;
+use App\Core\HttpException;
+use App\Models\AuditLog;
 use App\Models\PasswordHistory;
 use App\Models\RefreshToken;
 use App\Models\User;
 use App\Models\VerificationToken;
+use App\Services\AuthService;
 use App\Support\Hash;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\DatabaseTestCase;
@@ -158,6 +162,102 @@ final class AuthFlowTest extends DatabaseTestCase
         self::assertFalse($refresh->isUsable($reused));
     }
 
+    /**
+     * Emite um refresh token já rotacionado há $segundos, e devolve o valor em claro.
+     */
+    private function seedRefreshRotacionadoHa(int $userId, string $familyId, int $segundos): string
+    {
+        $token = bin2hex(random_bytes(32));
+
+        $this->db->run(
+            'INSERT INTO refresh_tokens (user_id, family_id, token_hash, expires_at, rotated_at)
+             VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 30 DAY), DATE_SUB(NOW(), INTERVAL ? SECOND))',
+            [$userId, $familyId, hash('sha256', $token), $segundos]
+        );
+
+        return $token;
+    }
+
+    #[Test]
+    public function refresh_concorrente_dentro_da_janela_nao_derruba_a_sessao(): void
+    {
+        Config::set('REFRESH_ROTATION_GRACE', '10');
+
+        $userId = $this->seedUser();
+        $familyId = bin2hex(random_bytes(16));
+        $token = $this->seedRefreshRotacionadoHa($userId, $familyId, 1);
+
+        $refresh = new RefreshToken($this->db);
+        $antes = $refresh->find($token) ?? self::fail('o token semeado não foi encontrado');
+
+        $auth = (new Container())->get(AuthService::class);
+        self::assertInstanceOf(AuthService::class, $auth);
+
+        // A segunda aba apresentando o mesmo cookie um segundo depois da
+        // primeira: é corrida, não roubo.
+        $resultado = $auth->refresh($token, 'PHPUnit', '127.0.0.1');
+
+        self::assertNotSame('', $resultado['refreshToken']);
+        self::assertArrayHasKey('accessToken', $resultado);
+
+        /*
+         * Lido direto do banco, e não por find() de novo: o PHPStan reaproveita
+         * o tipo já estreitado de uma chamada idêntica e passa a considerar
+         * impossível o caso nulo, reprovando qualquer checagem dele.
+         */
+        $depois = $this->db->first(
+            'SELECT rotated_at, revoked_at FROM refresh_tokens WHERE token_hash = ?',
+            [hash('sha256', $token)]
+        ) ?? self::fail('o token sumiu do banco');
+
+        self::assertNull($depois['revoked_at'], 'a família não pode ser revogada dentro da janela');
+        self::assertSame(
+            $antes['rotated_at'],
+            $depois['rotated_at'],
+            'rotated_at não pode ser empurrado para frente: isso faria a janela nunca fechar'
+        );
+
+        $novo = $refresh->find($resultado['refreshToken']) ?? self::fail('o token novo não foi gravado');
+
+        self::assertTrue($refresh->isUsable($novo));
+        self::assertSame($familyId, $novo['family_id'], 'o token novo continua na mesma família');
+    }
+
+    #[Test]
+    public function refresh_de_token_rotacionado_fora_da_janela_derruba_a_familia(): void
+    {
+        Config::set('REFRESH_ROTATION_GRACE', '10');
+
+        $userId = $this->seedUser();
+        $familyId = bin2hex(random_bytes(16));
+
+        // Bem depois da janela: aqui a reapresentação é o sinal de roubo.
+        $token = $this->seedRefreshRotacionadoHa($userId, $familyId, 600);
+
+        $auth = (new Container())->get(AuthService::class);
+        self::assertInstanceOf(AuthService::class, $auth);
+
+        try {
+            $auth->refresh($token, 'PHPUnit', '127.0.0.1');
+            self::fail('um token rotacionado fora da janela deveria ser recusado');
+        } catch (HttpException $e) {
+            self::assertSame(401, $e->status());
+        }
+
+        $refresh = new RefreshToken($this->db);
+        $row = $refresh->find($token) ?? self::fail('o token sumiu do banco');
+
+        self::assertNotNull($row['revoked_at'], 'a família inteira deve ser revogada');
+
+        $evento = $this->db->first(
+            'SELECT event FROM audit_log WHERE user_id = ? ORDER BY id DESC LIMIT 1',
+            [$userId]
+        );
+
+        self::assertNotNull($evento);
+        self::assertSame(AuditLog::SESSAO_COMPROMETIDA, $evento['event']);
+    }
+
     #[Test]
     public function revogar_familia_derruba_todos_os_tokens_da_sessao(): void
     {
@@ -206,7 +306,7 @@ final class AuthFlowTest extends DatabaseTestCase
     #[Test]
     public function senha_ja_usada_e_reconhecida(): void
     {
-        $userId  = $this->seedUser(password: 'PrimeiraS1!');
+        $userId = $this->seedUser(password: 'PrimeiraS1!');
         $history = new PasswordHistory($this->db);
 
         $history->recordCurrent($userId);
@@ -224,14 +324,14 @@ final class AuthFlowTest extends DatabaseTestCase
     #[Test]
     public function historico_guarda_apenas_as_ultimas_senhas(): void
     {
-        $userId  = $this->seedUser(password: 'Senha000!');
+        $userId = $this->seedUser(password: 'Senha000!');
         $history = new PasswordHistory($this->db);
-        $limite  = $history->size();
+        $limite = $history->size();
 
         // Uma a mais que o limite: a primeira precisa cair fora.
         $senhas = [];
         for ($i = 0; $i <= $limite; $i++) {
-            $senha    = sprintf('Senha%03d!', $i);
+            $senha = sprintf('Senha%03d!', $i);
             $senhas[] = $senha;
 
             $this->db->run(
@@ -255,7 +355,7 @@ final class AuthFlowTest extends DatabaseTestCase
     #[Test]
     public function excluir_a_conta_libera_o_e_mail_para_um_novo_cadastro(): void
     {
-        $users  = new User($this->db);
+        $users = new User($this->db);
         $userId = $this->seedUser('quer-sair@example.com');
 
         self::assertTrue($users->emailExists('quer-sair@example.com'));

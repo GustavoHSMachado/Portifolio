@@ -62,7 +62,7 @@ final class AuthController
             ]);
         }
 
-        $result = $this->auth->register(
+        $this->auth->register(
             $data['name'],
             $data['email'],
             $data['phone'],
@@ -70,9 +70,17 @@ final class AuthController
             ['ip' => $request->ip, 'userAgent' => $request->header('user-agent')],
         );
 
+        /*
+         * Mesma resposta nos dois casos — conta criada ou e-mail já cadastrado.
+         *
+         * O corpo não traz mais o usuário porque a tela nunca o usou (ela mostra
+         * o e-mail que a própria pessoa digitou) e porque devolvê-lo só no
+         * caminho feliz era, junto com o 201 contra 202, o que tornava os dois
+         * casos distinguíveis por quem sondasse a API.
+         */
         return Response::created(
-            $result,
-            'Conta criada. Enviamos um link de confirmação para o seu e-mail.'
+            null,
+            'Se este e-mail estiver disponível, enviamos um link de confirmação para ele.'
         );
     }
 

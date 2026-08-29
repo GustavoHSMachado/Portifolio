@@ -55,14 +55,6 @@ export default function CriarContaPage() {
         return;
       }
 
-      // 202 significa "e-mail possivelmente já cadastrado" — a API responde
-      // de forma deliberadamente ambígua para não permitir enumeração de contas.
-      // Do lado do usuário legítimo, o resultado visual é o mesmo do sucesso.
-      if (error.status === 202) {
-        setRegistered(payload.email);
-        return;
-      }
-
       if (error.isValidation) {
         setFieldErrors(error.fieldErrors);
         return;

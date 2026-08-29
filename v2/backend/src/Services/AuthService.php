@@ -7,8 +7,8 @@ namespace App\Services;
 use App\Core\Config;
 use App\Core\HttpException;
 use App\Database\Connection;
-use App\Models\LegalAcceptance;
 use App\Models\AuditLog;
+use App\Models\LegalAcceptance;
 use App\Models\PasswordHistory;
 use App\Models\RefreshToken;
 use App\Models\User;
@@ -47,8 +47,11 @@ final class AuthService
     // ------------------------------------------------------------------
 
     /**
+     * Não devolve nada de propósito: a resposta do cadastro é a mesma tenha a
+     * conta sido criada ou o e-mail já existisse. Ver o comentário do
+     * emailExists abaixo.
+     *
      * @param array{ip:string,userAgent:?string} $context usado no registro do aceite legal
-     * @return array{user: array<string,mixed>}
      */
     public function register(
         string $name,
@@ -56,21 +59,27 @@ final class AuthService
         string $phone,
         string $password,
         array $context = ['ip' => '', 'userAgent' => null],
-    ): array {
+    ): void {
         $email = mb_strtolower($email);
 
-        // Não revelamos que o e-mail já existe: retornamos sucesso e enviamos
-        // um aviso ao dono real da conta. Evita enumeração no cadastro.
+        /*
+         * E-mail já cadastrado: sai por aqui em silêncio, sem status próprio.
+         *
+         * A intenção sempre foi não revelar se a conta existe, e a mensagem já
+         * era ambígua. O que entregava era o CÓDIGO DE STATUS: o caminho feliz
+         * respondia 201 e este respondia 202, então um único curl distinguia os
+         * dois casos. O controller agora devolve a mesma resposta para ambos.
+         *
+         * Encontrado na homologação de 29/08/2026 — a revisão de segurança
+         * anterior havia concluído que não havia enumeração, olhando só a
+         * mensagem e o tempo de resposta.
+         */
         if ($this->users->emailExists($email)) {
             $this->logger->warning('Tentativa de registro com e-mail existente', [
                 'email' => str_mask_email($email),
             ]);
 
-            throw new HttpException(
-                'Se este e-mail estiver disponível, você receberá uma confirmação em instantes.',
-                202,
-                errorCode: 'registration_pending'
-            );
+            return;
         }
 
         $result = $this->db->transaction(function () use ($name, $email, $phone, $password, $context): array {
@@ -122,8 +131,6 @@ final class AuthService
             $context['ip'] ?? null,
             $context['userAgent'] ?? null,
         );
-
-        return ['user' => User::toPublic($this->users->findById($userId) ?? [])];
     }
 
     /** Reenvio: emite um token novo e entrega na hora, fora de qualquer transação. */
@@ -247,7 +254,7 @@ final class AuthService
 
         $this->users->clearFailedAttempts((int) $user['id']);
 
-        $ttl  = Config::int('LOGIN_2FA_TTL', 10);
+        $ttl = Config::int('LOGIN_2FA_TTL', 10);
         $code = $this->verificationTokens->issueCode(
             (int) $user['id'],
             VerificationToken::PURPOSE_LOGIN_2FA,
@@ -345,19 +352,55 @@ final class AuthService
             throw HttpException::unauthorized('Sessão inválida. Faça login novamente.');
         }
 
+        /*
+         * Um token já rotacionado voltando é o sinal de roubo — mas só depois
+         * de uma janela curta.
+         *
+         * Duas abas do site montam ao mesmo tempo e disparam refresh com o mesmo
+         * cookie: a primeira rotaciona, a segunda chega com um token já marcado.
+         * Sem a janela, esse gesto banal derrubava a família inteira, obrigava a
+         * refazer o login com segundo fator, e gravava um alarme de sessão
+         * comprometida no audit_log. Esse alarme é o único sinal de roubo que o
+         * sistema tem; com falso positivo trivial de produzir, ele deixa de valer.
+         *
+         * Quem rouba um token não o apresenta no mesmo segundo que o dono. Quem
+         * tem duas abas, sim. É essa diferença que a janela separa.
+         */
+        $dentroDaJanela = false;
+
         if ($row['rotated_at'] !== null) {
-            $this->refreshTokens->revokeFamily($row['family_id']);
-            $this->logger->error('Reuso de refresh token detectado — família revogada', [
+            $janela = Config::int('REFRESH_ROTATION_GRACE', 10);
+            $rotacionadoHa = time() - (new \DateTimeImmutable((string) $row['rotated_at']))->getTimestamp();
+
+            $dentroDaJanela = $row['revoked_at'] === null
+                && $rotacionadoHa >= 0
+                && $rotacionadoHa <= $janela;
+
+            if (!$dentroDaJanela) {
+                $this->refreshTokens->revokeFamily($row['family_id']);
+                $this->logger->error('Reuso de refresh token detectado — família revogada', [
+                    'user_id'   => $row['user_id'],
+                    'family_id' => $row['family_id'],
+                    'ip'        => $ip,
+                ]);
+                $this->audit->record(AuditLog::SESSAO_COMPROMETIDA, (int) $row['user_id'], $ip, $userAgent);
+
+                throw HttpException::unauthorized('Sessão comprometida. Faça login novamente.');
+            }
+
+            $this->logger->info('Refresh concorrente dentro da janela de tolerância', [
                 'user_id'   => $row['user_id'],
                 'family_id' => $row['family_id'],
-                'ip'        => $ip,
             ]);
-            $this->audit->record(AuditLog::SESSAO_COMPROMETIDA, (int) $row['user_id'], $ip, $userAgent);
-
-            throw HttpException::unauthorized('Sessão comprometida. Faça login novamente.');
         }
 
-        if (!$this->refreshTokens->isUsable($row)) {
+        /*
+         * Revogação e expiração valem nos dois caminhos. isUsable() exige
+         * rotated_at nulo, então ele não serve para o caminho da janela — a
+         * checagem precisa ser explícita aqui.
+         */
+        if ($row['revoked_at'] !== null
+            || new \DateTimeImmutable((string) $row['expires_at']) <= new \DateTimeImmutable()) {
             throw HttpException::unauthorized('Sessão expirada. Faça login novamente.');
         }
 
@@ -367,8 +410,17 @@ final class AuthService
             throw HttpException::unauthorized('Sessão inválida.');
         }
 
-        $newToken = $this->db->transaction(function () use ($row, $userAgent, $ip): string {
-            $this->refreshTokens->markRotated((int) $row['id']);
+        $newToken = $this->db->transaction(function () use ($row, $userAgent, $ip, $dentroDaJanela): string {
+            /*
+             * Dentro da janela o token NÃO é re-marcado, de propósito. Marcar de
+             * novo empurraria rotated_at para frente a cada reapresentação e a
+             * janela nunca fecharia — um token roubado seria renovável para
+             * sempre, de dez em dez segundos. Ancorada na primeira rotação, ela
+             * fecha na hora certa.
+             */
+            if (!$dentroDaJanela) {
+                $this->refreshTokens->markRotated((int) $row['id']);
+            }
 
             return $this->refreshTokens->issue(
                 (int) $row['user_id'],
@@ -421,7 +473,7 @@ final class AuthService
             return;
         }
 
-        $ttl  = Config::int('PASSWORD_RESET_TTL', 15);
+        $ttl = Config::int('PASSWORD_RESET_TTL', 15);
         $code = $this->verificationTokens->issueCode(
             (int) $user['id'],
             VerificationToken::PURPOSE_PASSWORD_RESET,
@@ -520,7 +572,7 @@ final class AuthService
             ], 'invalid_credentials');
         }
 
-        $ttl  = Config::int('PASSWORD_RESET_TTL', 15);
+        $ttl = Config::int('PASSWORD_RESET_TTL', 15);
         $code = $this->verificationTokens->issueCode(
             $userId,
             VerificationToken::PURPOSE_PASSWORD_RESET,

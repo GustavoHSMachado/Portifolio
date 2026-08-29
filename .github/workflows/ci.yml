@@ -243,6 +243,10 @@ jobs:
       NEXT_PUBLIC_API_URL: http://localhost:8000
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
       MAILPIT_URL: http://localhost:8025
+      # O spec administrativo fala direto com a API para conferir os 403 que o
+      # servidor devolve — esconder a tela no front nao e controle de acesso.
+      # A porta muda entre os ambientes: 8001 no compose local, 8000 aqui.
+      E2E_API_URL: http://localhost:8000
 
       APP_ENV: local
       APP_DEBUG: "false"

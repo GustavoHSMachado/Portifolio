@@ -248,6 +248,9 @@ services:
       E2E_FORWARD: "1"
       E2E_BASE_URL: http://localhost:3000
       MAILPIT_URL: http://mailpit:8025
+      # A porta da API muda entre ambientes; o spec administrativo fala direto
+      # com ela. Aqui e a publicada no host, que o global-setup encaminha.
+      E2E_API_URL: http://localhost:${API_PORT:-8000}
       # CI fica deliberadamente vazio: com ela, o playwright.config sobe o
       # próprio servidor com build de produção, e o alvo aqui é o container web.
     volumes:

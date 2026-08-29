@@ -92,6 +92,46 @@ function encaminhar({ porta, destinoHost, destinoPorta }: Encaminhamento): Promi
   });
 }
 
+/**
+ * Rotas que os cenários visitam. Todas, e não só as de autenticação: uma rota
+ * fria compilando ao lado disputa a mesma thread das que estão sendo testadas.
+ */
+const ROTAS = [
+  "/",
+  "/entrar",
+  "/criar-conta",
+  "/recuperar-senha",
+  "/confirmar-email",
+  "/painel",
+  "/projetos",
+  "/curriculo",
+  "/legal/termos-de-uso",
+  "/legal/politica-de-privacidade",
+];
+
+/**
+ * Compila as rotas antes de a suíte começar.
+ *
+ * Fora do CI os testes rodam contra o servidor de desenvolvimento, que compila
+ * cada rota na primeira visita — medido aqui, de 2 a 7 segundos por rota, numa
+ * thread só. Com dois workers e cinco projetos, essa compilação cai no meio de
+ * um cenário e estoura o limite de 20s do expect, sempre nos navegadores mais
+ * lentos: eram quatro falhas em WebKit, todas por tempo e nenhuma por defeito.
+ *
+ * Uma visita antecipada por rota resolve, porque a segunda já vem do cache.
+ * Falha de rede aqui é ignorada de propósito: aquecer é otimização, e não uma
+ * pré-condição do teste.
+ */
+async function aquecer(): Promise<void> {
+  await Promise.all(
+    ROTAS.map((rota) =>
+      fetch(`http://localhost:3000${rota}`).catch(() => {
+        /* rota fria continua fria; o cenário paga o custo, como pagava antes */
+      }),
+    ),
+  );
+}
+
 export default async function globalSetup(): Promise<() => Promise<void>> {
   // Fora do container não há o que encaminhar: as portas já são as do host.
   if (process.env.E2E_FORWARD !== "1") {
@@ -101,6 +141,8 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   for (const encaminhamento of ENCAMINHAMENTOS) {
     await encaminhar(encaminhamento);
   }
+
+  await aquecer();
 
   return async () => {
     await Promise.all(

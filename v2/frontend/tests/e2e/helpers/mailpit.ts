@@ -1,4 +1,4 @@
-import { type APIRequestContext, type Page, expect } from "@playwright/test";
+import { type APIRequestContext, type Locator, type Page, expect } from "@playwright/test";
 
 /**
  * Leitura da caixa falsa do Mailpit.
@@ -17,19 +17,30 @@ interface MensagemResumida {
 /**
  * Espera a chegada da mensagem mais recente para o endereço e devolve o corpo.
  *
- * A janela é de 30s, e não de 15s como antes: com o SMTP real configurado, o
- * e-mail de domínio reservado não vai direto ao Mailpit — ele é desviado para
- * lá pelo MailService, o que custa uma conexão a mais por mensagem. Sob os dois
- * workers da suíte isso passou dos 15s e derrubou um cenário que estava certo.
+ * A janela é de 30s: com o SMTP real configurado, o e-mail de domínio reservado
+ * não vai direto ao Mailpit — ele é desviado para lá pelo MailService, o que
+ * custa uma conexão a mais por mensagem.
+ *
+ * `assunto` diz qual das mensagens daquele endereço interessa, e existe porque
+ * vários cenários esperam a segunda: o código de acesso depois do link de
+ * confirmação. Antes, isso era resolvido apagando a caixa entre um e outro — e
+ * era essa limpeza que, com dois workers, fazia um cenário apagar o e-mail que
+ * o outro ainda esperava. Filtrar não toca em nada que seja de outro teste.
  */
 export async function aguardarEmail(
   request: APIRequestContext,
   destinatario: string,
-  { tentativas = 60, intervaloMs = 500 } = {},
+  {
+    assunto,
+    tentativas = 60,
+    intervaloMs = 500,
+  }: { assunto?: string; tentativas?: number; intervaloMs?: number } = {},
 ): Promise<string> {
+  const consulta = assunto ? `to:${destinatario} subject:"${assunto}"` : `to:${destinatario}`;
+
   for (let tentativa = 0; tentativa < tentativas; tentativa++) {
     const busca = await request.get(
-      `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${destinatario}`)}`,
+      `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(consulta)}`,
     );
 
     if (busca.ok()) {
@@ -50,8 +61,8 @@ export async function aguardarEmail(
   }
 
   throw new Error(
-    `Nenhum e-mail chegou para ${destinatario} em ` +
-      `${(tentativas * intervaloMs) / 1000}s. O Mailpit está no ar?`,
+    `Nenhum e-mail${assunto ? ` com assunto "${assunto}"` : ""} chegou para ` +
+      `${destinatario} em ${(tentativas * intervaloMs) / 1000}s. O Mailpit está no ar?`,
   );
 }
 
@@ -74,36 +85,48 @@ export function extrairToken(corpo: string): string {
 }
 
 /**
- * Apaga o que já chegou para este destinatário, e só para ele.
+ * Preenche um formulário e o envia, repetindo tudo se a tela não responder.
  *
- * Existe porque vários cenários esperam um segundo e-mail para o mesmo
- * endereço — o código de acesso depois do link de confirmação — e a busca
- * devolveria o anterior.
+ * A página chega pronta ao navegador, mas os campos só passam a valer depois da
+ * hidratação. Preencher antes disso não dá erro visível: o texto entra, a
+ * montagem do React o apaga, e o formulário é enviado vazio — a API respondia
+ * 422 e a tela seguinte nunca aparecia. Durante uma rodada da suíte foram 37
+ * dessas.
  *
- * Antes isto limpava a caixa inteira, e essa era a causa de uma falha
- * intermitente que parecia lentidão: com dois workers, um cenário apagava a
- * mensagem que o outro ainda estava esperando. O endereço de cada teste já é
- * único (timestamp + aleatório), então limpar por destinatário resolve o
- * problema real sem tocar no que não é seu.
+ * Conferir o valor logo depois de digitar não resolve, porque a limpeza pode
+ * vir depois da conferência. O que resolve é tratar preencher-conferir-enviar
+ * como uma coisa só: se qualquer parte não sobreviveu, o ciclo inteiro recomeça
+ * a partir do preenchimento.
+ *
+ * Reenviar é seguro nos formulários que passam por aqui: cadastro com e-mail
+ * único, login que apenas gera outro código, recuperação que reemite o mesmo
+ * tipo de mensagem. E o ambiente local afrouxa o limite de tentativas de
+ * autenticação — ver docker-compose.yml.
  */
-export async function limparCaixa(request: APIRequestContext, destinatario: string): Promise<void> {
-  const busca = await request.get(
-    `${MAILPIT_URL}/api/v1/search?query=${encodeURIComponent(`to:${destinatario}`)}`,
-  );
-
-  if (!busca.ok()) {
-    return;
+export async function preencherEEnviar(
+  campos: Array<[Locator, string]>,
+  botao: Locator,
+  alvo: Locator,
+  { timeout = 45_000 } = {},
+): Promise<void> {
+  for (const [campo] of campos) {
+    await expect(campo).toBeVisible();
   }
 
-  const { messages = [] } = (await busca.json()) as { messages?: MensagemResumida[] };
+  await expect(async () => {
+    for (const [campo, valor] of campos) {
+      await campo.fill(valor);
+    }
 
-  if (messages.length === 0) {
-    return;
-  }
+    // Confere depois de preencher tudo: a montagem limpa o formulário inteiro,
+    // e não um campo de cada vez.
+    for (const [campo, valor] of campos) {
+      await expect(campo).toHaveValue(valor, { timeout: 500 });
+    }
 
-  await request.delete(`${MAILPIT_URL}/api/v1/messages`, {
-    data: { IDs: messages.map((m) => m.ID) },
-  });
+    await botao.click();
+    await expect(alvo).toBeVisible({ timeout: 5_000 });
+  }).toPass({ timeout });
 }
 
 /**
@@ -137,13 +160,19 @@ export async function entrar(
   senha: string,
 ): Promise<void> {
   await page.goto("/entrar");
-  await page.getByLabel("E-mail").fill(email);
-  await page.getByLabel("Senha", { exact: true }).fill(senha);
-  await page.getByRole("button", { name: "Entrar" }).click();
 
-  await expect(page.getByRole("heading", { name: "Confirme que é você" })).toBeVisible();
+  await preencherEEnviar(
+    [
+      [page.getByLabel("E-mail"), email],
+      [page.getByLabel("Senha", { exact: true }), senha],
+    ],
+    page.getByRole("button", { name: "Entrar" }),
+    page.getByRole("heading", { name: "Confirme que é você" }),
+  );
 
-  const codigo = extrairCodigo(await aguardarEmail(request, email));
+  const codigo = extrairCodigo(
+    await aguardarEmail(request, email, { assunto: "Seu código de acesso" }),
+  );
 
   await page.getByLabel("Código").fill(codigo);
   await page.getByRole("button", { name: "Confirmar e entrar" }).click();

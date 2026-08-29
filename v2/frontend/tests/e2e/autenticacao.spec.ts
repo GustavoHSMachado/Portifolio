@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { aguardarEmail, entrar, extrairCodigo, extrairToken, limparCaixa } from "./helpers/mailpit";
+import {
+  aguardarEmail,
+  entrar,
+  extrairCodigo,
+  extrairToken,
+  preencherEEnviar,
+} from "./helpers/mailpit";
 
 /**
  * O caminho completo da conta: cadastrar, confirmar o e-mail, entrar.
@@ -43,25 +49,27 @@ test.describe("cadastro e confirmação de e-mail", () => {
 
     await page.goto("/criar-conta");
 
-    await page.getByLabel("Nome completo").fill(usuario.nome);
-    await page.getByLabel("E-mail").fill(usuario.email);
-    await page.getByLabel("Telefone").fill(usuario.telefone);
-    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
-    await page.getByLabel("Confirmar senha").fill(usuario.senha);
     await aceitarTermos(page);
 
-    await page.getByRole("button", { name: "Criar conta" }).click();
-
     // A tela confirma o envio sem revelar se o e-mail já existia.
-    await expect(page.getByText("Confira seu e-mail")).toBeVisible();
+    await preencherEEnviar(
+      [
+        [page.getByLabel("Nome completo"), usuario.nome],
+        [page.getByLabel("E-mail"), usuario.email],
+        [page.getByLabel("Telefone"), usuario.telefone],
+        [page.getByLabel("Senha", { exact: true }), usuario.senha],
+        [page.getByLabel("Confirmar senha"), usuario.senha],
+      ],
+      page.getByRole("button", { name: "Criar conta" }),
+      page.getByText("Confira seu e-mail"),
+    );
 
-    const corpo = await aguardarEmail(request, usuario.email);
+    const corpo = await aguardarEmail(request, usuario.email, { assunto: "Confirme seu e-mail" });
     const token = extrairToken(corpo);
 
     await page.goto(`/confirmar-email?token=${token}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
 
-    await limparCaixa(request, usuario.email);
     await entrar(page, request, usuario.email, usuario.senha);
 
     await expect(page).toHaveURL(/\/painel/);
@@ -72,28 +80,35 @@ test.describe("cadastro e confirmação de e-mail", () => {
     const usuario = usuarioNovo();
 
     await page.goto("/criar-conta");
-    await page.getByLabel("Nome completo").fill(usuario.nome);
-    await page.getByLabel("E-mail").fill(usuario.email);
-    await page.getByLabel("Telefone").fill(usuario.telefone);
-    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
-    await page.getByLabel("Confirmar senha").fill(usuario.senha);
     await aceitarTermos(page);
-    await page.getByRole("button", { name: "Criar conta" }).click();
-    await expect(page.getByText("Confira seu e-mail")).toBeVisible();
+    await preencherEEnviar(
+      [
+        [page.getByLabel("Nome completo"), usuario.nome],
+        [page.getByLabel("E-mail"), usuario.email],
+        [page.getByLabel("Telefone"), usuario.telefone],
+        [page.getByLabel("Senha", { exact: true }), usuario.senha],
+        [page.getByLabel("Confirmar senha"), usuario.senha],
+      ],
+      page.getByRole("button", { name: "Criar conta" }),
+      page.getByText("Confira seu e-mail"),
+    );
 
-    const confirmacao = extrairToken(await aguardarEmail(request, usuario.email));
+    const confirmacao = extrairToken(
+      await aguardarEmail(request, usuario.email, { assunto: "Confirme seu e-mail" }),
+    );
     await page.goto(`/confirmar-email?token=${confirmacao}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
 
-    await limparCaixa(request, usuario.email);
-
     // O primeiro passo é a senha, e ele não pode entregar sessão nenhuma.
     await page.goto("/entrar");
-    await page.getByLabel("E-mail").fill(usuario.email);
-    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
-    await page.getByRole("button", { name: "Entrar" }).click();
-
-    await expect(page.getByRole("heading", { name: "Confirme que é você" })).toBeVisible();
+    await preencherEEnviar(
+      [
+        [page.getByLabel("E-mail"), usuario.email],
+        [page.getByLabel("Senha", { exact: true }), usuario.senha],
+      ],
+      page.getByRole("button", { name: "Entrar" }),
+      page.getByRole("heading", { name: "Confirme que é você" }),
+    );
     await expect(page).toHaveURL(/\/entrar/);
 
     // E o painel continua fechado enquanto o código não for confirmado.
@@ -105,34 +120,46 @@ test.describe("cadastro e confirmação de e-mail", () => {
     const usuario = usuarioNovo();
 
     await page.goto("/criar-conta");
-    await page.getByLabel("Nome completo").fill(usuario.nome);
-    await page.getByLabel("E-mail").fill(usuario.email);
-    await page.getByLabel("Telefone").fill(usuario.telefone);
-    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
-    await page.getByLabel("Confirmar senha").fill(usuario.senha);
     await aceitarTermos(page);
-    await page.getByRole("button", { name: "Criar conta" }).click();
-    await expect(page.getByText("Confira seu e-mail")).toBeVisible();
+    await preencherEEnviar(
+      [
+        [page.getByLabel("Nome completo"), usuario.nome],
+        [page.getByLabel("E-mail"), usuario.email],
+        [page.getByLabel("Telefone"), usuario.telefone],
+        [page.getByLabel("Senha", { exact: true }), usuario.senha],
+        [page.getByLabel("Confirmar senha"), usuario.senha],
+      ],
+      page.getByRole("button", { name: "Criar conta" }),
+      page.getByText("Confira seu e-mail"),
+    );
 
-    const confirmacao = extrairToken(await aguardarEmail(request, usuario.email));
+    const confirmacao = extrairToken(
+      await aguardarEmail(request, usuario.email, { assunto: "Confirme seu e-mail" }),
+    );
     await page.goto(`/confirmar-email?token=${confirmacao}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
 
-    await limparCaixa(request, usuario.email);
-
     await page.goto("/entrar");
-    await page.getByLabel("E-mail").fill(usuario.email);
-    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
-    await page.getByRole("button", { name: "Entrar" }).click();
-    await expect(page.getByRole("heading", { name: "Confirme que é você" })).toBeVisible();
+    await preencherEEnviar(
+      [
+        [page.getByLabel("E-mail"), usuario.email],
+        [page.getByLabel("Senha", { exact: true }), usuario.senha],
+      ],
+      page.getByRole("button", { name: "Entrar" }),
+      page.getByRole("heading", { name: "Confirme que é você" }),
+    );
 
-    const codigoReal = extrairCodigo(await aguardarEmail(request, usuario.email));
+    const codigoReal = extrairCodigo(
+      await aguardarEmail(request, usuario.email, { assunto: "Seu código de acesso" }),
+    );
     const codigoErrado = codigoReal === "0000000" ? "1111111" : "0000000";
 
-    await page.getByLabel("Código").fill(codigoErrado);
-    await page.getByRole("button", { name: "Confirmar e entrar" }).click();
+    await preencherEEnviar(
+      [[page.getByLabel("Código"), codigoErrado]],
+      page.getByRole("button", { name: "Confirmar e entrar" }),
+      page.getByRole("alert").first(),
+    );
 
-    await expect(page.getByRole("alert").first()).toBeVisible();
     await expect(page).toHaveURL(/\/entrar/);
   });
 
@@ -146,16 +173,22 @@ test.describe("cadastro e confirmação de e-mail", () => {
     const usuario = usuarioNovo();
 
     await page.goto("/criar-conta");
-    await page.getByLabel("Nome completo").fill(usuario.nome);
-    await page.getByLabel("E-mail").fill(usuario.email);
-    await page.getByLabel("Telefone").fill(usuario.telefone);
-    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
-    await page.getByLabel("Confirmar senha").fill(usuario.senha);
     await aceitarTermos(page);
-    await page.getByRole("button", { name: "Criar conta" }).click();
-    await expect(page.getByText("Confira seu e-mail")).toBeVisible();
+    await preencherEEnviar(
+      [
+        [page.getByLabel("Nome completo"), usuario.nome],
+        [page.getByLabel("E-mail"), usuario.email],
+        [page.getByLabel("Telefone"), usuario.telefone],
+        [page.getByLabel("Senha", { exact: true }), usuario.senha],
+        [page.getByLabel("Confirmar senha"), usuario.senha],
+      ],
+      page.getByRole("button", { name: "Criar conta" }),
+      page.getByText("Confira seu e-mail"),
+    );
 
-    const token = extrairToken(await aguardarEmail(request, usuario.email));
+    const token = extrairToken(
+      await aguardarEmail(request, usuario.email, { assunto: "Confirme seu e-mail" }),
+    );
 
     await page.goto(`/confirmar-email?token=${token}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
@@ -172,12 +205,13 @@ test.describe("recuperação de senha", () => {
     const inexistente = `nao-existe-${Date.now()}@portifolio.local`;
 
     await page.goto("/recuperar-senha");
-    await page.getByLabel("E-mail").fill(inexistente);
-    await page.getByRole("button", { name: "Enviar link" }).click();
-
     // Mensagem genérica de propósito: resposta diferente para e-mail existente
     // transforma o formulário em ferramenta de enumeração de contas.
-    await expect(page.getByText("Verifique seu e-mail")).toBeVisible();
+    await preencherEEnviar(
+      [[page.getByLabel("E-mail"), inexistente]],
+      page.getByRole("button", { name: "Enviar link" }),
+      page.getByText("Verifique seu e-mail"),
+    );
   });
 
   test("permite definir uma senha nova e entrar com ela", async ({ page, request }) => {
@@ -185,35 +219,48 @@ test.describe("recuperação de senha", () => {
     const senhaNova = "outraSenhaBoa456!";
 
     await page.goto("/criar-conta");
-    await page.getByLabel("Nome completo").fill(usuario.nome);
-    await page.getByLabel("E-mail").fill(usuario.email);
-    await page.getByLabel("Telefone").fill(usuario.telefone);
-    await page.getByLabel("Senha", { exact: true }).fill(usuario.senha);
-    await page.getByLabel("Confirmar senha").fill(usuario.senha);
     await aceitarTermos(page);
-    await page.getByRole("button", { name: "Criar conta" }).click();
-    await expect(page.getByText("Confira seu e-mail")).toBeVisible();
+    await preencherEEnviar(
+      [
+        [page.getByLabel("Nome completo"), usuario.nome],
+        [page.getByLabel("E-mail"), usuario.email],
+        [page.getByLabel("Telefone"), usuario.telefone],
+        [page.getByLabel("Senha", { exact: true }), usuario.senha],
+        [page.getByLabel("Confirmar senha"), usuario.senha],
+      ],
+      page.getByRole("button", { name: "Criar conta" }),
+      page.getByText("Confira seu e-mail"),
+    );
 
-    const confirmacao = extrairToken(await aguardarEmail(request, usuario.email));
+    const confirmacao = extrairToken(
+      await aguardarEmail(request, usuario.email, { assunto: "Confirme seu e-mail" }),
+    );
     await page.goto(`/confirmar-email?token=${confirmacao}`);
     await expect(page.getByRole("heading", { name: "E-mail confirmado" })).toBeVisible();
-
-    await limparCaixa(request, usuario.email);
 
     // As duas etapas da recuperação vivem na mesma rota desde que o token de
     // 64 caracteres deu lugar ao código de 7 dígitos: um código não pode
     // viajar pela URL, onde ficaria no histórico e nos logs de intermediários.
     await page.goto("/recuperar-senha");
-    await page.getByLabel("E-mail").fill(usuario.email);
-    await page.getByRole("button", { name: "Enviar link" }).click();
-    await expect(page.getByText("Verifique seu e-mail")).toBeVisible();
+    await preencherEEnviar(
+      [[page.getByLabel("E-mail"), usuario.email]],
+      page.getByRole("button", { name: "Enviar link" }),
+      page.getByText("Verifique seu e-mail"),
+    );
 
-    const codigoReset = extrairCodigo(await aguardarEmail(request, usuario.email));
+    const codigoReset = extrairCodigo(
+      await aguardarEmail(request, usuario.email, { assunto: "Código para redefinir sua senha" }),
+    );
 
-    await page.getByLabel("Código recebido").fill(codigoReset);
-    await page.getByLabel("Nova senha", { exact: true }).fill(senhaNova);
-    await page.getByLabel("Confirmar nova senha").fill(senhaNova);
-    await page.getByRole("button", { name: "Salvar nova senha" }).click();
+    await preencherEEnviar(
+      [
+        [page.getByLabel("Código recebido"), codigoReset],
+        [page.getByLabel("Nova senha", { exact: true }), senhaNova],
+        [page.getByLabel("Confirmar nova senha"), senhaNova],
+      ],
+      page.getByRole("button", { name: "Salvar nova senha" }),
+      page.getByRole("heading", { name: "Entrar" }),
+    );
 
     // O toHaveURL confirma que a redefinição terminou: quem redireciona é a
     // própria tela, ao receber a resposta da API. Sem ele havia um goto direto
@@ -237,7 +284,6 @@ test.describe("recuperação de senha", () => {
     // exercita continua sendo a sessão de verdade.
     const abaLogin = await page.context().newPage();
 
-    await limparCaixa(request, usuario.email);
     await entrar(abaLogin, request, usuario.email, senhaNova);
 
     await expect(abaLogin).toHaveURL(/\/painel/);

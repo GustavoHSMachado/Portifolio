@@ -9,7 +9,6 @@ use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\StreamHandler;
 use Monolog\Level;
 use Monolog\Logger as Monolog;
-use Monolog\LogRecord;
 use Monolog\Processor\PsrLogMessageProcessor;
 
 /**
@@ -26,6 +25,7 @@ final class Logger
     ];
 
     private Monolog $logger;
+    private ?string $requestId = null;
 
     public function __construct()
     {
@@ -65,38 +65,59 @@ final class Logger
         };
     }
 
-    public function withRequestId(string $requestId): self
+    /**
+     * Passa a carimbar todo log desta requisição com o id de correlação.
+     *
+     * Campo mutável num singleton, e não clone imutável, de propósito. A versão
+     * anterior devolvia um clone — e o clone nunca chegava a lugar nenhum: quando
+     * o RequestId roda, ErrorHandler, AuthService, MailService e MessageController
+     * já foram construídos com a instância original do container. Fazer o clone
+     * alcançá-los exigiria reconfigurar o container no meio da requisição. Foi
+     * por isso que o método existiu por meses sem um único chamador, e o
+     * `request_id` nunca apareceu em log nenhum.
+     *
+     * O compartilhamento é seguro porque uma requisição PHP é um processo: não há
+     * duas requisições dentro do mesmo Logger ao mesmo tempo.
+     */
+    public function setRequestId(string $requestId): void
     {
-        $clone = clone $this;
-        $clone->logger = $this->logger->withName($this->logger->getName());
-        // O Monolog 3 entrega um LogRecord, não um array. Com a assinatura
-        // antiga isto lançava TypeError na primeira linha de log — o recurso de
-        // correlação nunca funcionou, e nunca foi notado porque nada o chamava.
-        $clone->logger->pushProcessor(
-            static fn (LogRecord $record): LogRecord => $record->with(
-                extra: [...$record->extra, 'request_id' => $requestId],
-            )
-        );
-
-        return $clone;
+        $this->requestId = $requestId;
     }
 
     /** @param array<string, mixed> $context */
     public function info(string $message, array $context = []): void
     {
-        $this->logger->info($message, $this->redact($context));
+        $this->logger->info($message, $this->prepara($context));
     }
 
     /** @param array<string, mixed> $context */
     public function warning(string $message, array $context = []): void
     {
-        $this->logger->warning($message, $this->redact($context));
+        $this->logger->warning($message, $this->prepara($context));
     }
 
     /** @param array<string, mixed> $context */
     public function error(string $message, array $context = []): void
     {
-        $this->logger->error($message, $this->redact($context));
+        $this->logger->error($message, $this->prepara($context));
+    }
+
+    /**
+     * Acrescenta o id de correlação e então remove os segredos.
+     *
+     * O array_key_exists respeita quem já trouxe o próprio request_id — é o caso
+     * do ErrorHandler, que o lê dos atributos da requisição e continua valendo.
+     *
+     * @param array<string, mixed> $context
+     * @return array<string, mixed>
+     */
+    private function prepara(array $context): array
+    {
+        if ($this->requestId !== null && !array_key_exists('request_id', $context)) {
+            $context['request_id'] = $this->requestId;
+        }
+
+        return $this->redact($context);
     }
 
     /**

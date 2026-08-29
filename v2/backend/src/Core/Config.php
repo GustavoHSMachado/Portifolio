@@ -50,19 +50,32 @@ final class Config
         }
     }
 
+    /**
+     * Valor da chave no ambiente, ou o padrão de quem chamou.
+     *
+     * O cache guarda o que o AMBIENTE disse — nunca o padrão do chamador.
+     * Misturar os dois fazia o primeiro chamador decidir o valor para todos os
+     * seguintes: o Logger lê Config::get('APP_NAME') sem padrão e grava null, e
+     * o HealthController pedindo Config::get('APP_NAME', 'portifolio-api')
+     * recebia esse null de volta, com o próprio padrão descartado. O sintoma
+     * era um "service": null no /health; o problema é que o valor de uma chave
+     * passava a depender da ORDEM em que o código a lesse.
+     *
+     * Ausência é cacheada como null e continua sendo ausência: o padrão é
+     * aplicado na leitura, não na gravação. Variável definida como string vazia
+     * continua sendo string vazia, que é diferente de não definida — quem quiser
+     * tratar as duas igual usa ?: em vez de ??, como o Logger já faz.
+     */
     public static function get(string $key, ?string $default = null): ?string
     {
-        if (array_key_exists($key, self::$cache)) {
-            return self::$cache[$key];
+        if (!array_key_exists($key, self::$cache)) {
+            // getenv devolve string|false; false é o único caso de "não definida".
+            $bruto = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+            self::$cache[$key] = $bruto === false ? null : (string) $bruto;
         }
 
-        // O ?? já descarta null em cada etapa, e getenv devolve string|false —
-        // então só false sobra para tratar aqui. Testar null de novo era código
-        // morto: a condição nunca podia ser verdadeira.
-        $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
-        $value = $value === false ? $default : (string) $value;
-
-        return self::$cache[$key] = $value;
+        return self::$cache[$key] ?? $default;
     }
 
     public static function bool(string $key, bool $default = false): bool

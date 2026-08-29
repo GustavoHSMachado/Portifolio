@@ -1,0 +1,462 @@
+name: CI
+
+# Esteira de qualidade. Nada entra na master sem passar por aqui.
+# Os jobs rodam em paralelo e o gate final (quality-gate) exige todos verdes.
+
+on:
+  pull_request:
+    branches: [master, dev]
+  push:
+    branches: [master, dev]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  PHP_VERSION: "8.3"
+  NODE_VERSION: "20"
+
+jobs:
+  # ------------------------------------------------------------------
+  # Commits
+  # ------------------------------------------------------------------
+  commitlint:
+    name: Padrão de commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      # O --config e obrigatorio: este job roda na raiz do repositorio, e o
+      # commitlint.config.js vive em v2/frontend/ (junto da dependencia que o
+      # declara). O cosmiconfig procura da pasta atual para CIMA, nunca para
+      # baixo — sem apontar o caminho, ele nao acha nada e reprova todo commit
+      # com "[empty-rules]", independente da mensagem.
+      #
+      # Ficou invisivel ate 29/08/2026 porque o gatilho do workflow apontava
+      # para branches que nao existem neste repositorio, e a esteira nunca rodou.
+      - name: Validar mensagens de commit
+        run: |
+          npm install --no-save @commitlint/cli @commitlint/config-conventional
+          npx commitlint --config v2/frontend/commitlint.config.js \
+            --from ${{ github.event.pull_request.base.sha || 'HEAD~1' }} --to HEAD --verbose
+
+  # ------------------------------------------------------------------
+  # Backend
+  # ------------------------------------------------------------------
+  backend:
+    name: Backend (PHP ${{ matrix.php }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.3", "8.4"]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: portifolio_test
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    defaults:
+      run:
+        working-directory: v2/backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, pdo_mysql, openssl, json
+          coverage: xdebug
+          tools: composer:v2
+
+      - name: Cache do Composer
+        uses: actions/cache@v4
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ matrix.php }}-${{ hashFiles('v2/backend/composer.lock') }}
+
+      - run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Lint de sintaxe
+        run: find src public database tests -name "*.php" -print0 | xargs -0 -n1 php -l
+
+      - name: Estilo de código (PHP-CS-Fixer)
+        run: composer run lint
+
+      - name: Análise estática (PHPStan nível 8)
+        run: composer run analyse
+
+      - name: Auditoria de dependências
+        run: composer audit --abandoned=report
+
+      - name: Migrações
+        run: php database/migrate.php
+        env:
+          DB_HOST: 127.0.0.1
+          DB_NAME: portifolio_test
+          DB_USER: root
+          DB_PASS: root
+          APP_KEY: ci-key-000000000000000000000000000000
+          JWT_SECRET: ci-jwt-secret-00000000000000000000000000
+
+      - name: Testes com cobertura
+        run: composer run test:coverage
+        env:
+          DB_HOST: 127.0.0.1
+          DB_NAME: portifolio_test
+          DB_USER: root
+          DB_PASS: root
+
+      - name: Enviar cobertura ao Codecov
+        if: matrix.php == '8.3'
+        uses: codecov/codecov-action@v4
+        with:
+          files: v2/backend/coverage.xml
+          flags: backend
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+  # ------------------------------------------------------------------
+  # Frontend
+  # ------------------------------------------------------------------
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: v2/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: v2/frontend/package-lock.json
+
+      - run: npm ci
+
+      - name: Lint e formatação (Biome)
+        run: npm run lint
+
+      - name: Verificação de tipos
+        run: npm run typecheck
+
+      - name: Código e dependências mortas (Knip)
+        run: npm run knip
+
+      - name: Testes unitários com cobertura
+        run: npm run test:coverage
+
+      - name: Enviar cobertura ao Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          directory: v2/frontend/coverage
+          flags: frontend
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
+
+      - name: Build
+        run: npm run build
+
+      - name: Orçamento de bundle
+        run: |
+          # Medido comprimido, e não em disco.
+          #
+          # O critério anterior era `du -sk .next/static` contra 1024KB, e nunca
+          # chegou a rodar — o workflow disparava em branches que não existem
+          # neste repositório. Quando a homologação de 29/08/2026 o executou pela
+          # primeira vez, deu 1296KB: reprovaria para sempre, medindo uma
+          # grandeza que ninguém experimenta. O que o visitante baixa é o
+          # conteúdo comprimido, e nisso há folga — 319KB na mesma medição.
+          BYTES=$(find .next/static -type f \
+                    \( -name '*.js' -o -name '*.css' \) \
+                    -exec gzip -c -9 {} + | wc -c)
+          KB=$((BYTES / 1024))
+          ORCAMENTO=400
+          echo "Bundle estático (gzip): ${KB}KB de ${ORCAMENTO}KB"
+          if [ "$KB" -gt "$ORCAMENTO" ]; then
+            echo "::error::Bundle acima do orçamento de ${ORCAMENTO}KB (atual: ${KB}KB)"
+            exit 1
+          fi
+
+  # ------------------------------------------------------------------
+  # Testes de ponta a ponta
+  # ------------------------------------------------------------------
+  # A suite E2E exercita o produto inteiro: cadastro, confirmacao por e-mail,
+  # login com segundo fator e a area administrativa. Isso exige banco, API e um
+  # servidor de e-mail — nao so o Next.
+  #
+  # Ate 29/08/2026 este job subia apenas o frontend. Todo cenario que tocava a
+  # API ficava esperando resposta que nunca vinha, e o job so terminava por
+  # esgotar tempo. Nunca foi notado porque o gatilho do workflow apontava para
+  # branches que nao existem neste repositorio, e a esteira nunca rodou.
+  e2e:
+    name: E2E (Playwright)
+    runs-on: ubuntu-latest
+    needs: [frontend]
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: portifolio_e2e
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      # Captura o e-mail em vez de envia-lo. E o que permite testar confirmacao
+      # de conta e o codigo do segundo fator sem SMTP e sem risco de mandar
+      # mensagem para endereco real.
+      mailpit:
+        image: axllent/mailpit
+        ports: ["1025:1025", "8025:8025"]
+
+    # Tudo no nivel do job, e nao repetido passo a passo: o GitHub Actions nao
+    # suporta ancoras YAML, entao a alternativa seria duplicar trinta linhas.
+    env:
+      # Precisa ser o endereco publicado, e nao um nome interno: e a origem que
+      # a allowlist do CORS espera, e o valor fica gravado dentro do bundle no
+      # build (ver docker/web/Dockerfile).
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      MAILPIT_URL: http://localhost:8025
+      # O spec administrativo fala direto com a API para conferir os 403 que o
+      # servidor devolve — esconder a tela no front nao e controle de acesso.
+      # A porta muda entre os ambientes: 8001 no compose local, 8000 aqui.
+      E2E_API_URL: http://localhost:8000
+
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_KEY: e2e-key-00000000000000000000000000000
+      JWT_SECRET: e2e-jwt-secret-000000000000000000000
+      APP_URL: http://localhost:8000
+      FRONTEND_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      APP_FORCE_HTTPS: "false"
+      APP_SECURE_COOKIES: "false"
+
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_NAME: portifolio_e2e
+      DB_USER: root
+      DB_PASS: root
+
+      MAIL_HOST: 127.0.0.1
+      MAIL_PORT: "1025"
+      # Vazia, e nao ausente. Sem MAIL_USERNAME o MailService entrega direto em
+      # vez de desviar para captura, e nesse caminho MAIL_ENCRYPTION assume
+      # "tls" quando nao esta definida — o PHPMailer forca STARTTLS e o Mailpit
+      # responde "Command not implemented". Nenhum e-mail saia, e a suite
+      # falhava em todo cenario que espera mensagem.
+      #
+      # String vazia e o que o docker-compose local ja usa, e o que desliga TLS
+      # e auto-TLS: e o caminho previsto para servidor de captura.
+      MAIL_ENCRYPTION: ""
+      MAIL_FROM_ADDRESS: nao-responda@portifolio.local
+      MAIL_FROM_NAME: Portifolio
+
+      REGISTRATION_ENABLED: "true"
+      # A area administrativa e amarrada a este endereco. Dominio reservado,
+      # entao o codigo do segundo fator cai no Mailpit em vez de sair por SMTP —
+      # e o que torna o painel testavel. Ver RequireAdmin.
+      ADMIN_EMAIL: admin@portifolio.local
+
+      # Afrouxados so aqui: o contador e persistido no banco, e os valores de
+      # producao inviabilizariam uma suite que cadastra dezenas de contas. Quem
+      # prova que o limite funciona e o RateLimiterTest.
+      RATE_LIMIT_LOGIN_MAX: "1000"
+      RATE_LIMIT_LOGIN_WINDOW: "60"
+      RATE_LIMIT_LOGIN_VERIFY_MAX: "1000"
+      RATE_LIMIT_LOGIN_VERIFY_WINDOW: "60"
+      RATE_LIMIT_REGISTER_MAX: "1000"
+      RATE_LIMIT_REGISTER_WINDOW: "60"
+      RATE_LIMIT_FORGOT_PASSWORD_MAX: "1000"
+      RATE_LIMIT_FORGOT_PASSWORD_WINDOW: "60"
+      RATE_LIMIT_RESET_PASSWORD_MAX: "1000"
+      RATE_LIMIT_RESET_PASSWORD_WINDOW: "60"
+      RATE_LIMIT_RESEND_VERIFICATION_MAX: "1000"
+      RATE_LIMIT_RESEND_VERIFICATION_WINDOW: "60"
+      RATE_LIMIT_MESSAGES_MAX: "1000"
+      RATE_LIMIT_MESSAGES_WINDOW: "60"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ---- backend ----
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo_mysql, openssl, json
+          tools: composer:v2
+
+      - name: Dependencias da API
+        working-directory: v2/backend
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Migracoes e administrador de teste
+        working-directory: v2/backend
+        run: |
+          php database/migrate.php
+          php database/seed-e2e-admin.php
+
+      - name: Subir a API
+        working-directory: v2/backend
+        run: |
+          php -S 0.0.0.0:8000 -t public > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "API no ar."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::A API nao respondeu em 30s"
+          cat /tmp/api.log
+          exit 1
+
+      # ---- frontend ----
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: v2/frontend/package-lock.json
+
+      - run: npm ci
+        working-directory: v2/frontend
+
+      - run: npx playwright install --with-deps chromium webkit firefox
+        working-directory: v2/frontend
+
+      - name: Rodar E2E
+        working-directory: v2/frontend
+        run: npm run test:e2e
+        env:
+          CI: true
+
+      - name: Log da API quando algo falha
+        if: failure()
+        run: tail -100 /tmp/api.log || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: v2/frontend/playwright-report/
+          retention-days: 14
+
+  # ------------------------------------------------------------------
+  # Performance
+  # ------------------------------------------------------------------
+  performance:
+    name: Orçamento de performance
+    runs-on: ubuntu-latest
+    needs: [frontend]
+    if: github.event_name == 'pull_request'
+    defaults:
+      run:
+        working-directory: v2/frontend
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: v2/frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run build
+      - name: Lighthouse CI
+        run: |
+          npm install --no-save @lhci/cli
+          npx lhci autorun --config=lighthouserc.json
+        env:
+          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+
+  # ------------------------------------------------------------------
+  # Segurança
+  # ------------------------------------------------------------------
+  security:
+    name: Revisão de segurança
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # As regras do projeto vivem em .gitleaks.toml, e não são cosméticas: o
+      # conjunto padrão do Gitleaks NÃO detecta senha comum atribuída no código,
+      # que é exatamente a única credencial que este repositório já vazou.
+      # Verificado em 29/08/2026 — sem a configuração, o commit aba029d passa
+      # limpo pela varredura.
+      - name: Varredura de segredos (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_CONFIG: ${{ github.workspace }}/.gitleaks.toml
+
+      - name: Revisão de dependências
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+      - name: CodeQL — inicializar
+        uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+
+      - name: CodeQL — analisar
+        uses: github/codeql-action/analyze@v3
+
+  # ------------------------------------------------------------------
+  # Gate final
+  # ------------------------------------------------------------------
+  quality-gate:
+    name: Quality Gate
+    runs-on: ubuntu-latest
+    needs: [commitlint, backend, frontend, e2e, security]
+    if: always()
+
+    steps:
+      - name: Verificar resultado dos jobs
+        run: |
+          echo "commitlint: ${{ needs.commitlint.result }}"
+          echo "backend:    ${{ needs.backend.result }}"
+          echo "frontend:   ${{ needs.frontend.result }}"
+          echo "e2e:        ${{ needs.e2e.result }}"
+          echo "security:   ${{ needs.security.result }}"
+
+          if [[ "${{ contains(needs.*.result, 'failure') }}" == "true" ]]; then
+            echo "::error::Quality gate reprovado. Corrija os jobs vermelhos antes do merge."
+            exit 1
+          fi
+
+          echo "Quality gate aprovado."

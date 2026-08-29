@@ -1,0 +1,287 @@
+/**
+ * Design tokens — fonte única de verdade da interface.
+ *
+ * Herdado da v1 (decisão do Gustavo): a família tipográfica Open Sans. A cor de
+ * destaque era o laranja do tema Namari e passou a ser azul em 23/08/2026.
+ *
+ * Nada de valor mágico em componente: cor, espaço, raio, sombra, duração e
+ * curva de animação saem daqui. Isso é o que impede a interface de virar
+ * uma colcha de retalhos conforme o projeto cresce.
+ */
+
+:root {
+  /* ---------- Tipografia ---------- */
+  /*
+   * A família vem de --font-open-sans, que o next/font declara no layout raiz
+   * com um nome gerado (__openSans_xxxxxx) e já traz a cadeia de reserva.
+   *
+   * Antes daqui constava a string literal "Open Sans", que só casa com a fonte
+   * instalada na máquina de quem visita: o arquivo servido pelo próprio site
+   * ficava com status "unloaded" no navegador, baixado e nunca aplicado. Quem
+   * não tivesse Open Sans instalada lia o site em Segoe UI ou Roboto.
+   *
+   * O segundo valor é reserva para contextos sem o layout raiz — os testes de
+   * componente, por exemplo, que renderizam fora dele.
+   */
+  --font-sans: var(--font-open-sans, "Open Sans"), -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+
+  /* Escala tipográfica em razão 1.25 (terça maior) */
+  --text-xs: 0.75rem; /* 12px */
+  --text-sm: 0.875rem; /* 14px */
+  --text-base: 1rem; /* 16px */
+  --text-lg: 1.125rem; /* 18px */
+  --text-xl: 1.375rem; /* 22px */
+  --text-2xl: 1.75rem; /* 28px */
+  --text-3xl: 2.25rem; /* 36px */
+  --text-4xl: 3rem; /* 48px */
+
+  --leading-tight: 1.15;
+  --leading-snug: 1.35;
+  --leading-normal: 1.6;
+
+  --tracking-tight: -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide: 0.04em;
+
+  --weight-regular: 400;
+  --weight-medium: 600;
+  --weight-bold: 700;
+
+  /* ---------- Cor ---------- */
+  /* Superfícies em escala de elevação, não em "cinza 1, cinza 2" */
+  --surface-base: #0b0b0f;
+  --surface-raised: #14141b;
+  --surface-overlay: #1c1c25;
+  --surface-sunken: #08080c;
+
+  --border-subtle: #26262f;
+  --border-strong: #3a3a47;
+  --border-focus: #5aa9ff;
+
+  --text-primary: #f5f5f7;
+  --text-secondary: #c9c9d1;
+  --text-tertiary: #8a8a95;
+  /*
+   * Só para o estado desabilitado, onde o baixo contraste é o próprio recado.
+   * Texto que a pessoa precisa ler usa --text-tertiary (5,4:1 ou mais sobre as
+   * superfícies do tema); este fica em 2,7:1 e reprovaria em qualquer um deles.
+   */
+  --text-disabled: #5a5a66;
+  --text-inverse: #0b0b0f;
+
+  /*
+   * Azul de destaque, adotado em 23/08/2026 no lugar do laranja Namari herdado
+   * da v1. Decisão do dono do produto.
+   *
+   * O tom foi escolhido pela medição, não pelo gosto: 8,0:1 sobre a superfície
+   * base e 7,5:1 sobre a elevada, bem acima dos 4,5:1 que o AA exige — e a cor
+   * é usada como texto em 32 lugares, de link a rótulo de seção. Tons mais
+   * escuros de azul (o #3b82f6, por exemplo) ficam em 5,3:1: passam, mas com
+   * pouca folga sobre um fundo quase preto.
+   *
+   * O texto que vai *sobre* o azul continua sendo --text-inverse, e ali o
+   * contraste subiu de 5,3:1 (com o laranja) para 8,0:1.
+   */
+  /*
+   * Duas variaveis, e nao uma: a home injeta --accent-escuro e --accent-claro
+   * a partir da cor salva no painel, e o tema escolhe. Um tom bom sobre quase
+   * preto costuma reprovar sobre branco — ver paraFundoClaro em lib/cores.ts.
+   */
+  --accent-escuro: #5aa9ff;
+  --accent-claro: #0f62c4;
+  --accent: var(--accent-escuro);
+  --accent-hover: #7cbcff;
+  --accent-active: #3d8fe0;
+  --accent-subtle: rgba(90, 169, 255, 0.12);
+  --accent-ring: rgba(90, 169, 255, 0.4);
+
+  --success: #3ecf8e;
+  --success-subtle: rgba(62, 207, 142, 0.12);
+  --warning: #f5b942;
+  --warning-subtle: rgba(245, 185, 66, 0.12);
+  --danger: #f04b4b;
+  --danger-subtle: rgba(240, 75, 75, 0.12);
+  /*
+   * Roxo, e não azul, desde que o destaque virou azul: o #4b9df0 anterior ficava
+   * a 24 unidades de distância do --accent, o que os torna indistinguíveis lado
+   * a lado. Um aviso informativo precisa parecer diferente de um destaque.
+   */
+  --info: #8b7cf6;
+  --info-subtle: rgba(139, 124, 246, 0.12);
+
+  /* ---------- Espaçamento (base 4px) ---------- */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+  --space-9: 6rem;
+
+  /* ---------- Forma ---------- */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Sombras com duas camadas: contato + difusão. Uma camada só parece falso. */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 16px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 4px 8px rgba(0, 0, 0, 0.3), 0 16px 32px rgba(0, 0, 0, 0.4);
+  --shadow-focus: 0 0 0 3px var(--accent-ring);
+
+  /* ---------- Movimento ---------- */
+  /*
+   * Durações curtas. Acima de ~400ms a interface começa a parecer lenta;
+   * abaixo de ~120ms o olho não registra a transição e parece um corte seco.
+   */
+  --duration-instant: 80ms;
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --duration-slow: 340ms;
+  --duration-slower: 480ms;
+
+  /* Ciclo de indicadores contínuos (spinner, shimmer). */
+  --duration-spin: 640ms;
+  --duration-shimmer: 1600ms;
+
+  /*
+   * Curvas: entrada desacelera (ease-out), saída acelera (ease-in).
+   * O padrão é sempre ease-out — o elemento chega e freia, como massa real.
+   * "spring" é a curva com leve overshoot, para elementos que entram em cena.
+   */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ---------- Camadas ---------- */
+  --z-base: 0;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+
+  /* ---------- Layout ---------- */
+  --container-max: 1140px;
+  --header-height: 72px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tema claro                                                         */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Só as variáveis que mudam. Espaçamento, tipografia, raio e duração são os
+ * mesmos nos dois temas — o que muda é a cor, e redeclarar o resto criaria dois
+ * lugares para manter a mesma medida.
+ *
+ * A escala de elevação inverte a lógica do escuro: lá a superfície sobe ficando
+ * mais clara, aqui sobe ficando mais branca, com o fundo da página um degrau
+ * abaixo do branco puro. Cartão branco sobre fundo branco não tem elevação
+ * nenhuma, e a página inteira vira uma folha só.
+ *
+ * Todos os tons de texto foram medidos contra o fundo em que aparecem:
+ * primary 16,1:1, secondary 8,6:1 e tertiary 5,3:1 sobre o branco — os mesmos
+ * papéis e as mesmas folgas que o tema escuro tem.
+ */
+[data-theme="light"] {
+  --surface-base: #ffffff;
+  --surface-raised: #f4f4f6;
+  --surface-overlay: #ffffff;
+  --surface-sunken: #ebebef;
+
+  --border-subtle: #e2e2e8;
+  --border-strong: #c2c2cd;
+  --border-focus: var(--accent-claro);
+
+  --text-primary: #16161c;
+  --text-secondary: #4a4a57;
+  --text-tertiary: #6a6a78;
+  /* Como no escuro: só para desabilitado, onde o baixo contraste é o recado. */
+  --text-disabled: #a6a6b2;
+  --text-inverse: #ffffff;
+
+  /* O destaque troca pelo tom que serve sobre fundo claro. */
+  --accent: var(--accent-claro);
+
+  /*
+   * Hover escurece em vez de clarear. No escuro, mais claro é mais próximo; no
+   * claro, é o contrário — manter a mesma direção faria o botão sumir no fundo
+   * exatamente quando o cursor chega nele.
+   */
+  --accent-hover: var(--accent-claro-hover, #0b4c99);
+  --accent-active: var(--accent-claro-active, #093b76);
+
+  --success: #1a7f4f;
+  --success-subtle: rgba(26, 127, 79, 0.12);
+  --warning: #8a5a00;
+  --warning-subtle: rgba(138, 90, 0, 0.12);
+  --danger: #c1272d;
+  --danger-subtle: rgba(193, 39, 45, 0.1);
+  --info: #5b3fd6;
+  --info-subtle: rgba(91, 63, 214, 0.1);
+
+  /*
+   * Sombra volta a existir. No escuro ela é quase invisível e a elevação vem da
+   * cor da superfície; no claro é a sombra que separa o cartão do fundo.
+   */
+  --shadow-sm: 0 1px 2px rgba(16, 16, 28, 0.06);
+  --shadow-md: 0 2px 8px rgba(16, 16, 28, 0.08);
+  --shadow-lg: 0 8px 24px rgba(16, 16, 28, 0.1);
+}
+
+/*
+ * Diz ao navegador em qual tema a página está, para ele acertar o que desenha
+ * sozinho: barra de rolagem, campo de formulário nativo, seletor de cor.
+ */
+:root {
+  color-scheme: dark;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+}
+
+/* Respeitar quem pediu menos movimento não é opcional — é acessibilidade. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0.01ms;
+    --duration-fast: 0.01ms;
+    --duration-base: 0.01ms;
+    --duration-slow: 0.01ms;
+    --duration-slower: 0.01ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /*
+   * Exceção necessária: indicadores de carregamento contínuo.
+   *
+   * O reset acima usa !important e, sem esta exceção, zeraria também o spinner e
+   * o shimmer — deixando quem ativou "reduzir movimento" sem NENHUM sinal de que
+   * algo está carregando. Reduzir movimento não é remover feedback.
+   *
+   * Componentes que precisam manter um loop marcam o elemento com
+   * [data-motion-loop] e redefinem a animação para uma variação sem
+   * deslocamento (pulso de opacidade). Ver Button.module.css e Skeleton.module.css.
+   */
+  [data-motion-loop],
+  [data-motion-loop]::before,
+  [data-motion-loop]::after {
+    animation-iteration-count: infinite !important;
+  }
+}

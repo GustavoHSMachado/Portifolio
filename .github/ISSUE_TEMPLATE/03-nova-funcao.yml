@@ -1,0 +1,53 @@
+name: "🟢 Nova função"
+description: Uma capacidade que o sistema ainda não tem.
+title: "[Nova função] "
+labels: ["nova função"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problema a resolver
+      description: Comece pelo problema, não pela solução.
+    validations: { required: true }
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solução proposta
+    validations: { required: true }
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Escopo
+      value: |
+        **Dentro do escopo:**
+        - 
+
+        **Fora do escopo:**
+        - 
+    validations: { required: true }
+
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: Impacto
+      options:
+        - label: Backend (API)
+        - label: Frontend (web)
+        - label: Banco de dados (migração)
+        - label: Autenticação/autorização
+        - label: Nova variável de ambiente
+        - label: Nova dependência
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critérios de aceite
+      value: |
+        - [ ] 
+        - [ ] Estados de loading, vazio e erro tratados
+        - [ ] Acessível por teclado e leitor de tela
+        - [ ] Funciona com prefers-reduced-motion
+        - [ ] Coberto por teste automatizado
+    validations: { required: true }

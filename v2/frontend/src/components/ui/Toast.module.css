@@ -1,0 +1,106 @@
+.viewport {
+  position: fixed;
+  top: var(--space-5);
+  right: var(--space-5);
+  z-index: var(--z-toast);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+
+  width: min(380px, calc(100vw - var(--space-6)));
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+
+  padding: var(--space-4);
+  background-color: var(--surface-overlay);
+  border: 1px solid var(--border-subtle);
+  border-left-width: 3px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+
+  pointer-events: auto;
+}
+
+.success {
+  border-left-color: var(--success);
+}
+
+.error {
+  border-left-color: var(--danger);
+}
+
+.info {
+  border-left-color: var(--info);
+}
+
+/*
+ * min-width: 0 é o que impede o toast de vazar a tela.
+ *
+ * O padrão de um item flex é não encolher abaixo do próprio min-content — e
+ * uma frase sem espaços curtos empurra o contêiner para fora da viewport. Em
+ * 320px isso fazia o toast ultrapassar a borda direita, achado na auditoria de
+ * 23/08/2026. O overflow-wrap cuida do caso extremo: uma URL ou palavra única
+ * mais larga que a tela.
+ */
+.message {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+}
+
+/*
+ * O alvo tem 44px; o desenho continua com 24.
+ *
+ * A margem negativa devolve ao layout o espaço que o alvo maior ocuparia, então
+ * o botão continua parecendo do mesmo tamanho e alinhado ao texto — só a área
+ * que responde ao toque cresce.
+ */
+.close {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px -10px 0;
+  display: grid;
+  place-items: center;
+
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+
+  transition: color var(--duration-fast) var(--ease-out), background-color var(--duration-fast)
+    var(--ease-out);
+}
+
+.close:hover {
+  color: var(--text-primary);
+  background-color: var(--surface-raised);
+}
+
+.close:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+/* Em telas pequenas o toast ocupa a largura e vem de baixo, perto do polegar. */
+@media (max-width: 640px) {
+  .viewport {
+    top: auto;
+    bottom: var(--space-4);
+    left: var(--space-4);
+    right: var(--space-4);
+    width: auto;
+  }
+}

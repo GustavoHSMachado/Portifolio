@@ -1,0 +1,45 @@
+name: "🟡 Melhoria"
+description: Algo que funciona, mas pode ficar melhor — performance, código, UX ou operação.
+title: "[Melhoria] "
+labels: ["melhoria"]
+body:
+  - type: dropdown
+    id: area
+    attributes:
+      label: Área
+      options: [Performance, Qualidade de código, UX/UI, Acessibilidade, Segurança, Observabilidade, DX, Documentação]
+    validations: { required: true }
+
+  - type: textarea
+    id: situation
+    attributes:
+      label: Situação atual
+      description: O que existe hoje e por que incomoda.
+    validations: { required: true }
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposta
+    validations: { required: true }
+
+  - type: textarea
+    id: benefit
+    attributes:
+      label: Benefício esperado
+      description: Se possível, mensurável. "Reduz o LCP de 3.1s para menos de 2.5s".
+    validations: { required: true }
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: Riscos
+      description: O que pode regredir com esta mudança.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critério de aceite
+      value: |
+        - [ ] 
+    validations: { required: true }

@@ -1,0 +1,278 @@
+# Stack de desenvolvimento local.
+#
+#   make up        sobe tudo
+#   make logs      acompanha
+#   make down      derruba
+#
+# Serviços e portas — os valores abaixo são o padrão, todos ajustáveis no .env.
+# Se outra stack já ocupa uma porta, mude apenas o .env: nada aqui precisa mudar.
+#
+#   WEB_PORT=3000       web      (Next.js)
+#   API_PORT=8000       api      (PHP)
+#   MAILPIT_PORT=8025   mailpit  (caixa de e-mail falsa)
+#   ADMINER_PORT=8080   adminer  (cliente do banco)
+#   DB_PORT=3307        mysql    (3307 para não colidir com um MySQL local)
+
+name: portifolio
+
+services:
+  # ------------------------------------------------------------------
+  db:
+  # ------------------------------------------------------------------
+    image: mysql:8.0
+    container_name: portifolio-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_NAME:-portifolio}
+      MYSQL_USER: ${DB_USER:-portifolio}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-portifolio}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      # Sem isso, o MySQL 8 usa autenticação que o driver PDO antigo recusa.
+      - --default-authentication-plugin=mysql_native_password
+    ports:
+      - "${DB_PORT:-3307}:3306"
+    volumes:
+      - db-data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      # O healthcheck é o que faz a API esperar o banco estar pronto de verdade,
+      # em vez de tentar conectar e morrer no boot.
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD:-root}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks: [portifolio]
+
+  # ------------------------------------------------------------------
+  api:
+  # ------------------------------------------------------------------
+    build:
+      # Contexto na raiz para o Dockerfile alcançar docker/api/ e v2/backend/.
+      context: .
+      dockerfile: docker/api/Dockerfile
+      target: dev
+    container_name: portifolio-api
+    restart: unless-stopped
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      # URL externa: precisa da porta publicada no host, não da porta interna.
+      APP_URL: http://localhost:${API_PORT:-8000}
+      APP_VERSION: 2.0.0-dev
+      APP_FORCE_HTTPS: "false"
+      APP_SECURE_COOKIES: "false"
+      APP_KEY: ${APP_KEY:-dev-only-key-nao-use-em-producao-000000}
+      JWT_SECRET: ${JWT_SECRET:-dev-only-jwt-secret-nao-use-em-producao-0000}
+
+      FRONTEND_URL: http://localhost:${WEB_PORT:-3000}
+      CORS_ALLOWED_ORIGINS: http://localhost:${WEB_PORT:-3000}
+
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-portifolio}
+      DB_USER: root
+      DB_PASS: ${DB_ROOT_PASSWORD:-root}
+
+      # Mailpit captura tudo — nenhum e-mail sai de verdade em desenvolvimento.
+      # E-mail. Os padrões apontam para o Mailpit, que captura tudo sem enviar.
+      # Preencha MAIL_* no .env para usar o SMTP de verdade — a mesma
+      # configuração serve local e produção.
+      #
+      # Mensagens para domínios reservados (.local, .test, example.com) nunca
+      # saem por SMTP autenticado: ver MailService::isDominioReservado. É o que
+      # permite a suíte E2E rodar com o servidor real configurado sem despejar
+      # devoluções na reputação do remetente.
+      MAIL_DRIVER: ${MAIL_DRIVER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-mailpit}
+      MAIL_PORT: ${MAIL_PORT:-1025}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-nao-responda@portifolio.local}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Portifólio}
+
+      # Destino da mensagem endereçada a domínio reservado enquanto o SMTP real
+      # está configurado: ela é desviada para cá em vez de sair. Deixe o host
+      # vazio para descartá-la.
+      MAIL_SANDBOX_HOST: ${MAIL_SANDBOX_HOST:-mailpit}
+      MAIL_SANDBOX_PORT: ${MAIL_SANDBOX_PORT:-1025}
+
+      # Limites de autenticação afrouxados APENAS no ambiente local.
+      #
+      # Em produção valem os padrões do próprio código (registro: 3 por hora),
+      # e um ambiente que não define nada continua com eles. Aqui eles
+      # inviabilizariam uma suíte E2E repetível: o contador persiste no banco,
+      # então a segunda execução dentro da mesma hora falharia sempre.
+      #
+      # Quem prova que o limite funciona é RateLimiterTest, que exercita o
+      # bloqueio e a virada de janela diretamente, sem depender destes valores.
+      # O cadastro público fica fechado em produção (padrão do código). Aqui ele
+      # é ligado porque a suíte E2E exercita cadastro e confirmação de e-mail.
+      REGISTRATION_ENABLED: "true"
+      # A conta administradora é amarrada a este endereço; ver RequireAdmin.
+      # ADMIN_EMAIL aceita lista separada por vírgula (ver RequireAdmin).
+      #
+      # O segundo endereço é do ambiente local e só dele: a suíte E2E precisa
+      # entrar no painel, e o segundo fator vai por e-mail. Com apenas o
+      # endereço real do dono, o código sairia por SMTP para uma caixa de
+      # verdade e nenhum teste conseguiria lê-lo. `.local` é domínio reservado,
+      # então o MailService desvia a mensagem para o Mailpit.
+      #
+      # docker-compose.prod.yml NÃO inclui este endereço — em produção
+      # ADMIN_EMAIL continua sendo uma conta só.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-},admin@portifolio.local
+      RATE_LIMIT_REGISTER_MAX: 100
+      RATE_LIMIT_REGISTER_WINDOW: 60
+      RATE_LIMIT_LOGIN_MAX: 100
+      RATE_LIMIT_LOGIN_WINDOW: 60
+      RATE_LIMIT_LOGIN_VERIFY_MAX: 100
+      RATE_LIMIT_LOGIN_VERIFY_WINDOW: 60
+      RATE_LIMIT_FORGOT_PASSWORD_MAX: 100
+      RATE_LIMIT_FORGOT_PASSWORD_WINDOW: 60
+      RATE_LIMIT_RESET_PASSWORD_MAX: 100
+      RATE_LIMIT_RESET_PASSWORD_WINDOW: 60
+      RATE_LIMIT_RESEND_VERIFICATION_MAX: 100
+      RATE_LIMIT_RESEND_VERIFICATION_WINDOW: 60
+
+      TERMS_VERSION: 1.0.0
+      PRIVACY_VERSION: 1.0.0
+
+      LOG_PATH: php://stdout
+      LOG_LEVEL: debug
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      # Bind mount para hot reload do PHP; vendor fica em volume nomeado para
+      # não ser sobrescrito pelo host (e para não sofrer com I/O do Windows).
+      - ./v2/backend:/app
+      - api-vendor:/app/vendor
+    depends_on:
+      db:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+    networks: [portifolio]
+
+  # ------------------------------------------------------------------
+  web:
+  # ------------------------------------------------------------------
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+      target: dev
+    container_name: portifolio-web
+    restart: unless-stopped
+    environment:
+      NODE_ENV: development
+      # O navegador é quem faz estas chamadas, então valem as portas do host.
+      NEXT_PUBLIC_API_URL: http://localhost:${API_PORT:-8000}
+      NEXT_PUBLIC_SITE_URL: http://localhost:${WEB_PORT:-3000}
+      # A renderização no servidor acontece dentro da rede do compose, onde
+      # localhost é o próprio container do web. O conteúdo público é buscado
+      # por aqui para chegar no HTML — sem isso ele só apareceria após o
+      # JavaScript rodar, e buscador nenhum enxergaria o portfólio.
+      API_INTERNAL_URL: http://api:8000
+      # Necessário para o hot reload funcionar em bind mount no Windows/macOS.
+      WATCHPACK_POLLING: "true"
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    volumes:
+      - ./v2/frontend:/app
+      - web-node-modules:/app/node_modules
+      - web-next:/app/.next
+    depends_on:
+      - api
+    networks: [portifolio]
+
+  # ------------------------------------------------------------------
+  mailpit:
+  # ------------------------------------------------------------------
+    image: axllent/mailpit:latest
+    container_name: portifolio-mailpit
+    restart: unless-stopped
+    environment:
+      MP_MAX_MESSAGES: 500
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    ports:
+      - "${MAILPIT_PORT:-8025}:8025"        # interface web
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"   # SMTP
+    networks: [portifolio]
+
+  # ------------------------------------------------------------------
+  adminer:
+  # ------------------------------------------------------------------
+    image: adminer:latest
+    container_name: portifolio-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+      ADMINER_DESIGN: dracula
+    ports:
+      - "${ADMINER_PORT:-8080}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [portifolio]
+
+  # ------------------------------------------------------------------
+  e2e:
+  # ------------------------------------------------------------------
+  # Executor dos testes de ponta a ponta.
+  #
+  #   docker compose --profile e2e run --rm e2e
+  #
+  # Fica atrás de um profile porque a imagem passa de 2 GB: quem não vai rodar
+  # E2E não paga o download. Container próprio, e não os navegadores instalados
+  # dentro do `web`: a imagem oficial já traz navegador e dependências de sistema
+  # na versão certa, e mantém 2 GB fora da imagem de desenvolvimento.
+  #
+  # (Até 22/08/2026 o motivo era outro: o `web` rodava em Alpine, para o qual o
+  # Playwright não distribui navegadores. Hoje ele é Debian — ver o Dockerfile —
+  # mas separar o executor continua valendo pelo tamanho.)
+  #
+  # A tag precisa acompanhar a versão de @playwright/test no package.json:
+  # imagem e biblioteca desalinhadas resultam em navegador que não abre.
+    profiles: ["e2e"]
+    image: mcr.microsoft.com/playwright:v1.62.1-noble
+    container_name: portifolio-e2e
+    working_dir: /app
+    environment:
+      # O global-setup encaminha 3000 e 8001 do container para web e api, então
+      # o navegador do teste usa os mesmos endereços de quem navega da máquina —
+      # inclusive a origem que a allowlist do CORS espera.
+      E2E_FORWARD: "1"
+      E2E_BASE_URL: http://localhost:3000
+      MAILPIT_URL: http://mailpit:8025
+      # A porta da API muda entre ambientes; o spec administrativo fala direto
+      # com ela. Aqui e a publicada no host, que o global-setup encaminha.
+      E2E_API_URL: http://localhost:${API_PORT:-8000}
+      # CI fica deliberadamente vazio: com ela, o playwright.config sobe o
+      # próprio servidor com build de produção, e o alvo aqui é o container web.
+    volumes:
+      - ./v2/frontend:/app
+      - e2e-node-modules:/app/node_modules
+    command: sh -c "npm install --no-audit --no-fund && npx playwright test"
+    depends_on:
+      web:
+        condition: service_started
+      api:
+        condition: service_started
+      mailpit:
+        condition: service_started
+    networks: [portifolio]
+
+volumes:
+  db-data:
+  api-vendor:
+  web-node-modules:
+  web-next:
+  e2e-node-modules:
+
+networks:
+  portifolio:
+    driver: bridge

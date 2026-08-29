@@ -1,0 +1,738 @@
+.page {
+  min-height: 100dvh;
+}
+
+/* ---------------- Capa ---------------- */
+
+.hero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  /*
+   * A capa não toma mais a tela inteira. Em portfólio, quem avalia quer ver
+   * trabalho: com 88dvh o primeiro projeto só aparecia depois de um scroll
+   * completo. Agora ela ocupa pouco mais da metade da dobra e o início da
+   * seção de projetos fica visível, sinalizando que há conteúdo abaixo.
+   */
+  min-height: min(62dvh, 34rem);
+  /* O respiro do topo escala com a tela: 96px fixos empurravam o resumo para
+     fora da dobra no celular sem acrescentar nada em telas grandes. */
+  padding: clamp(var(--space-6), 7vh, var(--space-9)) var(--space-4) var(--space-7);
+  overflow: hidden;
+  text-align: center;
+}
+
+/* Estático e sem animação: blur grande é caro de repintar a cada frame. */
+.glow {
+  position: absolute;
+  top: -30%;
+  left: 50%;
+  width: min(780px, 130vw);
+  height: min(780px, 130vw);
+  transform: translateX(-50%);
+  background: radial-gradient(circle, var(--accent-subtle) 0%, transparent 65%);
+  filter: blur(80px);
+  pointer-events: none;
+}
+
+.heroInner {
+  position: relative;
+  width: min(var(--container-max), 100%);
+  margin: 0 auto;
+}
+
+.eyebrow {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.title {
+  margin-bottom: var(--space-5);
+  /* clamp evita media query só para tipografia e escala de forma contínua. */
+  font-size: clamp(var(--text-2xl), 7vw, var(--text-4xl));
+  font-weight: var(--weight-bold);
+}
+
+.lead {
+  max-width: 58ch;
+  margin: 0 auto var(--space-6);
+  /* O resumo é o parágrafo mais longo da capa e, em 18px fixos, ocupava quase
+     metade da tela do celular sozinho. */
+  font-size: clamp(var(--text-base), 3.6vw, var(--text-lg));
+  line-height: var(--leading-normal);
+  color: var(--text-tertiary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.primary,
+.secondary {
+  display: inline-flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 var(--space-6);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  transition: background-color var(--duration-fast) var(--ease-out), border-color
+    var(--duration-fast) var(--ease-out), transform var(--duration-fast) var(--ease-out);
+}
+
+/* Tinta escura sobre o azul: 8,0:1, contra os 4,5:1 que o AA pede. Com o laranja
+   anterior, branco dava 3,7:1 e reprovava — a tinta escura resolvia em 5,3:1. */
+.primary {
+  color: var(--text-inverse);
+  background-color: var(--accent);
+}
+
+.primary:hover {
+  background-color: var(--accent-hover);
+  transform: translateY(-2px);
+}
+
+.secondary {
+  color: var(--text-primary);
+  background-color: var(--surface-raised);
+  border-color: var(--border-subtle);
+}
+
+.secondary:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.primary:active,
+.secondary:active {
+  transform: translateY(0);
+}
+
+/* ---------------- Conteúdo ---------------- */
+
+.main {
+  width: min(var(--container-max), 100%);
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.section {
+  padding: var(--space-8) 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.sectionTitle {
+  margin-bottom: var(--space-2);
+  font-size: var(--text-2xl);
+  font-weight: var(--weight-medium);
+}
+
+.sectionSubtitle {
+  margin-bottom: var(--space-6);
+  font-size: var(--text-base);
+  color: var(--text-tertiary);
+}
+
+.prose {
+  max-width: 68ch;
+}
+
+.prose p {
+  margin-bottom: var(--space-4);
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+/* ---------------- Tecnologias ---------------- */
+
+.grid {
+  display: grid;
+  gap: var(--space-4);
+  /* auto-fit + minmax: colunas se ajustam sem uma única media query. */
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-5);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  transition: border-color var(--duration-base) var(--ease-out), transform var(--duration-base)
+    var(--ease-out);
+}
+
+.card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-3px);
+}
+
+.cardCategory {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+}
+
+.cardTitle {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.cardLevel {
+  align-self: flex-start;
+  margin-top: auto;
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  background-color: var(--surface-overlay);
+}
+
+.cardLevel[data-level="Avançado"] {
+  color: var(--success);
+  background-color: var(--success-subtle);
+}
+
+.cardLevel[data-level="Intermediário"] {
+  color: var(--info);
+  background-color: var(--info-subtle);
+}
+
+/* ---------------- Notas ---------------- */
+
+.notes {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.note {
+  height: 100%;
+  padding: var(--space-5);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.noteTitle {
+  margin-bottom: var(--space-3);
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.noteBody {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-tertiary);
+}
+
+/* ---------------- Links sociais ---------------- */
+
+.links {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.socialLink {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  text-decoration: none;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration-fast) var(--ease-out), background-color
+    var(--duration-fast) var(--ease-out);
+}
+
+.socialLink:hover {
+  background-color: var(--surface-overlay);
+  border-color: var(--accent);
+}
+
+.socialLink:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.socialLabel {
+  font-size: var(--text-base);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.socialHandle {
+  flex: 1;
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.socialArrow {
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast) var(--ease-out), color var(--duration-fast)
+    var(--ease-out);
+}
+
+.socialLink:hover .socialArrow {
+  color: var(--accent);
+  transform: translate(2px, -2px);
+}
+
+/* ---------------- Lema ---------------- */
+
+.motto {
+  max-width: 52ch;
+  margin: var(--space-8) auto;
+  padding: var(--space-6);
+  text-align: center;
+  border-left: 3px solid var(--accent);
+  background-color: var(--surface-raised);
+  border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+
+.motto p {
+  font-size: var(--text-xl);
+  font-style: italic;
+  line-height: var(--leading-snug);
+  color: var(--text-secondary);
+  text-wrap: balance;
+}
+
+/* ---------------- Rodapé ---------------- */
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: min(var(--container-max), 100%);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-7);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.copyright,
+.footerNav {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.footerNav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* Alvo de toque de 44px sem mudar o desenho: a altura extra vem do inline-flex,
+   e o link continua ocupando a mesma largura de texto. */
+.footerLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--text-tertiary);
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.footerLink:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+@media (max-width: 640px) {
+  .section {
+    padding: var(--space-7) 0;
+  }
+
+  .footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* ---------------------------------------------------------------- */
+/*  Projetos, experiência e formação — vindos da API                 */
+/* ---------------------------------------------------------------- */
+
+.location {
+  margin: var(--space-3) 0 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.empty {
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+/*
+ * Duas colunas a partir de ~62rem de container, uma abaixo disso.
+ *
+ * O card ocupava a largura inteira (1108px no desktop) enquanto o texto parava
+ * em 68ch — sobrava uma faixa vazia à direita de cada bloco. Estreitando o card
+ * até perto da medida de leitura, o texto preenche o card e ainda cabe o dobro
+ * de conteúdo na dobra. O minmax com min(100%, ...) evita que a coluna force
+ * estouro horizontal em telas estreitas.
+ */
+.projects,
+.timeline {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+  align-items: stretch;
+}
+
+/* O invólucro de animação fica entre o grid e o card; sem esticá-lo, o
+   height: 100% do card não tem a que se referir e as alturas desalinham. */
+.projects > *,
+.timeline > * {
+  height: 100%;
+}
+
+/* O teto de largura fica no card, não na coluna: `auto-fit` conta as colunas
+   pelo tamanho máximo do track, e um máximo em rem faria o grid parar em uma
+   coluna só. Com 1fr nas colunas e o teto aqui, duas colunas se formam quando
+   há espaço, e um item sozinho não estica até os 1108px do container.
+
+   40rem ≈ 75 caracteres por linha, o limite a partir do qual a leitura cansa.
+   No tablet, onde o grid tem uma coluna de ~726px, o card fica quase cheio; no
+   desktop com um único projeto, para antes de virar uma linha de 125. */
+.project,
+.entry {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 40rem;
+  padding: var(--space-5);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.projectHead {
+  margin-bottom: var(--space-4);
+}
+
+.projectTitle,
+.entryTitle {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xl);
+  line-height: var(--leading-tight);
+}
+
+.projectSummary {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+
+/* Lista de tecnologias: sem marcador, itens como etiquetas. */
+.stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0 0 var(--space-4);
+  list-style: none;
+}
+
+.tech {
+  padding: var(--space-1) var(--space-3);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+}
+
+/* Estudo de caso: o rótulo acima e o texto abaixo lêem melhor que lado a lado
+   em telas estreitas, e a lista de definição já carrega a relação semântica. */
+.caseStudy {
+  display: grid;
+  gap: var(--space-4);
+  margin: 0 0 var(--space-4);
+}
+
+.caseStudy dt {
+  margin-bottom: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.caseStudy dd {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.projectLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  /* margin-top: auto encosta os links na base — em grid de duas colunas os
+     cards têm alturas diferentes e os links ficariam em linhas distintas. */
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+
+/* Alvo de toque: um link de 22px de altura é difícil de acertar com o polegar.
+   O padding leva a área a 44px sem afastar visualmente os links entre si. */
+.projectLinks a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--accent);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+.projectLinks a:hover {
+  text-decoration: underline;
+}
+
+.entryHead {
+  margin-bottom: var(--space-2);
+}
+
+.entryOrg {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-base);
+}
+
+.entryPeriod {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.entryBody {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.badge {
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+  background-color: var(--accent-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.cardEvidence {
+  margin: var(--space-2) 0 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.videoLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: var(--space-4);
+  color: var(--accent);
+  font-weight: var(--weight-medium);
+  text-decoration: none;
+}
+
+.videoLink:hover {
+  text-decoration: underline;
+}
+
+/* ---------------- Projetos atrás do login ---------------- */
+
+/*
+ * O bloco é um convite, não um aviso de erro: fundo elevado e borda tracejada
+ * dizem "há conteúdo aqui" sem o vermelho que sinalizaria falha. A borda
+ * tracejada é o vocabulário visual de espaço a preencher, o mesmo do estado
+ * vazio do painel.
+ */
+.gated {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+  max-width: 40rem;
+  padding: var(--space-6);
+  background-color: var(--surface-raised);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-lg);
+}
+
+.gatedTitle {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.gatedBody {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}
+
+.gatedActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* ---------------- Acesso no topo ---------------- */
+
+.topBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  width: min(var(--container-max), 100%);
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) 0;
+}
+
+/* Alvo de toque de 44px, como os demais links do site. */
+.topLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  text-decoration: none;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration-fast) var(--ease-out), color var(--duration-fast)
+    var(--ease-out);
+}
+
+.topLink:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+/* ---------------- Ícone da tecnologia ---------------- */
+
+/*
+ * O ícone usa a cor de destaque num fundo sutil da mesma cor: é o suficiente
+ * para dar identidade sem competir com o nome da tecnologia, que é o que a
+ * pessoa está lendo. O tamanho vem em rem para acompanhar quem aumenta a fonte
+ * do navegador.
+ */
+.cardIcon {
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin-bottom: var(--space-1);
+  color: var(--accent);
+  background-color: var(--accent-subtle);
+  border-radius: var(--radius-md);
+}
+
+.cardIcon svg {
+  width: 1.375rem;
+  height: 1.375rem;
+}
+
+/* ---------------- Faixa com o lema ---------------- */
+
+/*
+ * Movimento continuo tem duas regras que nao sao opiniao:
+ *
+ * 1. Precisa parar. A WCAG 2.2.2 exige controle sobre qualquer movimento
+ *    automatico que passe de cinco segundos — aqui, parar no hover e no foco
+ *    do teclado, que e o que alguem faz ao tentar ler a frase inteira.
+ * 2. Precisa sumir para quem pediu menos movimento. O texto continua la,
+ *    parado e legivel — a frase importa, a animacao e enfeite.
+ */
+.faixa {
+  overflow: hidden;
+  padding: var(--space-4) 0 var(--space-2);
+}
+
+/*
+ * O padding-left de 100% e relativo a largura da faixa, ou seja, a da tela:
+ * empurra a frase para fora, a direita, antes de comecar. Ja o translateX de
+ * -100% e relativo a largura do proprio elemento, padding incluido, e leva
+ * tudo para fora a esquerda. O resultado e uma passagem completa por ciclo,
+ * com a frase aparecendo uma vez so.
+ */
+.faixaTexto {
+  display: inline-block;
+  margin: 0;
+  padding-left: 100%;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-wide);
+  color: var(--accent);
+  white-space: nowrap;
+  will-change: transform;
+  animation: correr 18s linear infinite;
+}
+
+.faixa:hover .faixaTexto,
+.faixa:focus-within .faixaTexto {
+  animation-play-state: paused;
+}
+
+@keyframes correr {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Sem movimento a frase fica centrada e inteira, sem depender de esperar. */
+  .faixaTexto {
+    display: block;
+    padding-left: 0;
+    text-align: center;
+    white-space: normal;
+    animation: none;
+  }
+}

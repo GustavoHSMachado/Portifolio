@@ -1,0 +1,6 @@
+Arquivos estáticos servidos na raiz do site (/arquivo.ext).
+
+A pasta está versionada mesmo vazia porque o estágio de produção do
+docker/web/Dockerfile a copia para a imagem — sem ela, o COPY falha e a imagem
+não constrói. Favicon e cartão social não moram aqui: são gerados por
+src/app/icon.svg e src/app/opengraph-image.tsx.

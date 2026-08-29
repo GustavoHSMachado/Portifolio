@@ -1,0 +1,114 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-normal);
+}
+
+.inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast)
+    var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+}
+
+.inputWrap:hover:not([data-error="true"]) {
+  border-color: var(--border-strong);
+}
+
+.inputWrap:focus-within {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-focus);
+  background-color: var(--surface-overlay);
+}
+
+.inputWrap[data-error="true"] {
+  border-color: var(--danger);
+}
+
+.inputWrap[data-error="true"]:focus-within {
+  box-shadow: 0 0 0 3px var(--danger-subtle);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 46px;
+  padding: 0 var(--space-4);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+/* Placeholder é texto exibido, e por isso segue a régua de contraste do texto
+   auxiliar. O token "disabled" fica reservado ao estado desabilitado real. */
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.input:disabled {
+  cursor: not-allowed;
+  color: var(--text-disabled);
+}
+
+/* Autofill do Chrome ignora background-color; a sombra interna contorna isso. */
+.input:-webkit-autofill,
+.input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary);
+  -webkit-box-shadow: 0 0 0 1000px var(--surface-overlay) inset;
+  transition: background-color 100000s ease-in-out 0s;
+}
+
+/* O campo tem 46px de altura; o botão acompanha para o alvo de toque ficar do
+   tamanho do controle que ele modifica, em vez dos 35px que tinha. */
+.reveal {
+  flex-shrink: 0;
+  align-self: stretch;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  font-family: var(--font-sans);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: color var(--duration-fast) var(--ease-out);
+}
+
+.reveal:hover {
+  color: var(--text-primary);
+}
+
+.reveal:focus-visible {
+  outline: none;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.hint {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--text-tertiary);
+}
+
+.error {
+  display: block;
+  overflow: hidden;
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--danger);
+}

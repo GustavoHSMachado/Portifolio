@@ -1,0 +1,242 @@
+/* ------------------------------------------------------------------ */
+/*  Barra de ações — só na tela                                        */
+/* ------------------------------------------------------------------ */
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: min(48rem, 100%);
+  margin: 0 auto;
+  padding: var(--space-5) var(--space-4) 0;
+}
+
+.voltar {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+}
+
+.voltar:hover {
+  color: var(--accent);
+}
+
+.imprimir {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-5);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-inverse);
+  background-color: var(--accent);
+  border: none;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.imprimir:hover {
+  background-color: var(--accent-hover);
+}
+
+.imprimir:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------ */
+/*  A folha                                                            */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Largura de página, não de site: 48rem aproxima a coluna de texto de uma
+ * folha A4, que é onde isto vai parar. Ler na tela num formato próximo do
+ * impresso também evita a surpresa de o PDF sair diferente do que se viu.
+ */
+.pagina {
+  width: min(48rem, 100%);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-8);
+  color: var(--text-primary);
+}
+
+.cabecalho {
+  padding-bottom: var(--space-4);
+  margin-bottom: var(--space-5);
+  border-bottom: 2px solid var(--accent);
+}
+
+.nome {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+}
+
+.cargo {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+  color: var(--accent);
+}
+
+/* Os contatos numa linha só, separados por ponto médio via ::before. */
+.contato {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.contato a {
+  color: inherit;
+}
+
+.secao {
+  margin-bottom: var(--space-6);
+}
+
+.secaoTitulo {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.resumo {
+  margin: 0;
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.item {
+  margin-bottom: var(--space-4);
+}
+
+.item:last-child {
+  margin-bottom: 0;
+}
+
+.itemTopo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.itemTitulo {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+}
+
+.itemPeriodo {
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.itemSubtitulo {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.itemTexto {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.categoria {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.categoriaNome {
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Papel                                                              */
+/* ------------------------------------------------------------------ */
+
+/*
+ * O currículo impresso é sempre claro, independentemente do tema da tela.
+ * Fundo escuro em papel gasta tinta, sai acinzentado em impressora comum e é
+ * ilegível em fotocópia — e um currículo costuma passar por uma das duas.
+ *
+ * As cores viram valores fixos aqui em vez de tokens: as variáveis do tema
+ * mudam com o modo escolhido, e a impressão não pode depender disso.
+ */
+@media print {
+  .barra {
+    display: none;
+  }
+
+  .pagina {
+    width: auto;
+    max-width: none;
+    padding: 0;
+    color: #000000;
+  }
+
+  .cabecalho {
+    border-bottom-color: #333333;
+  }
+
+  .cargo,
+  .secaoTitulo {
+    color: #1a1a1a;
+  }
+
+  .resumo,
+  .itemTexto,
+  .categoria,
+  .contato {
+    color: #262626;
+  }
+
+  .itemPeriodo,
+  .itemSubtitulo {
+    color: #4d4d4d;
+  }
+
+  /* Um bloco não deve começar no rodapé de uma folha e terminar na seguinte. */
+  .item,
+  .secao {
+    break-inside: avoid;
+  }
+
+  .secaoTitulo {
+    break-after: avoid;
+  }
+
+  /*
+   * O endereço de cada link, escrito ao lado dele. Em papel o link não é
+   * clicável, e "GitHub" sozinho não diz para onde ia.
+   */
+  .contato a {
+    text-decoration: none;
+  }
+}
+
+@page {
+  margin: 16mm 14mm;
+}

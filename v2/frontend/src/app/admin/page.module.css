@@ -1,0 +1,272 @@
+.page {
+  min-height: 100dvh;
+  padding: var(--space-7) var(--space-4) var(--space-8);
+}
+
+.container {
+  width: min(var(--container-max), 100%);
+  max-width: 880px;
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------- */
+/*  Cabeçalho                                                        */
+/* ---------------------------------------------------------------- */
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.headerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+}
+
+/* Alvo de toque de 44px sem alterar a largura do link. */
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.backLink:hover {
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Seções                                                           */
+/* ---------------------------------------------------------------- */
+
+.section {
+  padding: var(--space-5);
+  margin-bottom: var(--space-5);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.sectionHead {
+  margin-bottom: var(--space-4);
+}
+
+.sectionTitle {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-xl);
+}
+
+.sectionDescription {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Formulários                                                      */
+/* ---------------------------------------------------------------- */
+
+.form,
+.inlineForm {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.inlineForm {
+  padding: var(--space-4);
+  margin-top: var(--space-4);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--space-4);
+}
+
+.textareaField,
+.selectField {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.textareaLabel {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.textarea,
+.select {
+  width: 100%;
+  padding: var(--space-3);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--text-primary);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  transition: border-color var(--duration-fast) var(--ease-out);
+}
+
+.textarea {
+  resize: vertical;
+  line-height: var(--leading-normal);
+  /* Altura mínima é dimensão intrínseca do controle, não decisão de tema. */
+  min-height: 96px;
+}
+
+/* height fixa: dimensão do controle, alinhada aos demais campos. */
+.select {
+  height: 44px;
+}
+
+.textarea:focus-visible,
+.select:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent-subtle);
+  outline-offset: 1px;
+}
+
+.checkboxRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.checkboxRow input {
+  /* Área de toque acessível sem depender de CSS do componente Checkbox. */
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Listas                                                           */
+/* ---------------------------------------------------------------- */
+
+.list {
+  display: grid;
+  gap: var(--space-2);
+  padding: 0;
+  margin: 0 0 var(--space-4);
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+}
+
+.itemBody {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  flex: 1 1 260px;
+}
+
+.itemTitle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+
+.itemMeta {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.itemActions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.draft {
+  padding: 2px var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wide);
+  color: var(--warning);
+  background-color: var(--warning-subtle);
+  border-radius: var(--radius-sm);
+}
+
+.empty {
+  padding: var(--space-4);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-align: center;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+}
+
+.skeletonStack {
+  display: grid;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+}
+
+@media (max-width: 640px) {
+  .item {
+    align-items: flex-start;
+  }
+
+  .itemActions {
+    width: 100%;
+  }
+}

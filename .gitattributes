@@ -1,0 +1,22 @@
+# Normaliza a quebra de linha na entrada e na saída.
+#
+# Sem isto, o Git de uma máquina Windows com core.autocrlf=true escreve CRLF em
+# disco. O repositório continua correto — o blob guardado tem LF —, mas as
+# ferramentas rodando no container sobre o bind mount enxergam o CRLF e
+# reprovam arquivos que estão certos: o Biome acusa o tsconfig.json e o
+# PHP-CS-Fixer acusa dezenas de arquivos PHP. O CI, em Linux, nunca via nada
+# disso, então o problema só custava tempo de quem desenvolve no Windows.
+* text=auto eol=lf
+
+# Binários não passam por conversão nenhuma.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.bundle binary

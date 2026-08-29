@@ -1,0 +1,54 @@
+name: "🔴 Correção"
+description: Algo está quebrado, inseguro ou se comporta de forma diferente do esperado.
+title: "[Correção] "
+labels: ["correção"]
+body:
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severidade
+      options:
+        - Crítica — dados expostos, sistema fora ou conta comprometida
+        - Alta — funcionalidade principal quebrada
+        - Média — funcionalidade secundária quebrada
+        - Baixa — cosmético ou incômodo menor
+    validations: { required: true }
+
+  - type: textarea
+    id: current
+    attributes:
+      label: Comportamento atual
+      description: O que acontece hoje.
+    validations: { required: true }
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportamento esperado
+    validations: { required: true }
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Passos para reproduzir
+      value: |
+        1.
+        2.
+        3.
+    validations: { required: true }
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidência
+      description: Logs, screenshots, request id. Não cole tokens nem senhas.
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Critério de aceite
+      description: Como saberemos que foi corrigido.
+      value: |
+        - [ ] 
+        - [ ] Teste de regressão cobrindo o caso
+    validations: { required: true }

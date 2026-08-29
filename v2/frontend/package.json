@@ -1,0 +1,59 @@
+{
+  "name": "portifolio-web",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.11"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:mutation": "stryker run",
+    "knip": "knip",
+    "analyze": "ANALYZE=true next build",
+    "perf:budget": "npx --yes @lhci/cli autorun --config=lighthouserc.json",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "framer-motion": "^11.3.28",
+    "next": "^16.3.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.8.3",
+    "@commitlint/cli": "^19.4.0",
+    "@commitlint/config-conventional": "^19.2.2",
+    "@playwright/test": "^1.46.0",
+    "@stryker-mutator/core": "^8.3.0",
+    "@stryker-mutator/vitest-runner": "^8.3.0",
+    "@testing-library/jest-dom": "^6.4.8",
+    "@testing-library/react": "^16.0.0",
+    "@testing-library/user-event": "^14.5.2",
+    "@types/node": "^22.4.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^4.3.1",
+    "@vitest/coverage-v8": "^2.0.5",
+    "husky": "^9.1.4",
+    "jsdom": "^24.1.1",
+    "knip": "^5.27.2",
+    "lint-staged": "^15.2.9",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.5"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css}": ["biome check --write --no-errors-on-unmatched"]
+  }
+}

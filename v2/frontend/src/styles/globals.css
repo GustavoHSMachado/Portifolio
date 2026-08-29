@@ -1,0 +1,177 @@
+/**
+ * Reset e base. Tudo que é valor visual vem de tokens.css.
+ */
+
+@import "./tokens.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  /* Scroll suave, exceto para quem pediu menos movimento (tratado em tokens.css). */
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100dvh;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background-color: var(--surface-base);
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+img,
+picture,
+video,
+canvas,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+input,
+button,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+p,
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  line-height: var(--leading-tight);
+  letter-spacing: var(--tracking-tight);
+  font-weight: var(--weight-medium);
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+a {
+  color: var(--accent);
+  text-underline-offset: 3px;
+}
+
+/* Foco visível apenas na navegação por teclado. */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* Atalho de acessibilidade: pular direto para o conteúdo. */
+.skip-link {
+  position: absolute;
+  top: var(--space-3);
+  left: var(--space-3);
+  z-index: var(--z-toast);
+  padding: var(--space-3) var(--space-4);
+  color: var(--text-primary);
+  background-color: var(--surface-overlay);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  transform: translateY(-200%);
+  transition: transform var(--duration-base) var(--ease-out);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+::selection {
+  background-color: var(--accent-subtle);
+  color: var(--text-primary);
+}
+
+/* Barra de rolagem discreta, coerente com o tema escuro. */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--surface-sunken);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--surface-sunken);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-strong);
+}
+
+/* Conteúdo só para leitores de tela. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* ------------------------------------------------------------------ */
+/*  Escolha da paleta de destaque                                      */
+/* ------------------------------------------------------------------ */
+
+/*
+ * A cor salva no painel chega como variável no <body>, injetada pelo layout
+ * raiz. A troca entre a versão para fundo escuro e a para fundo claro acontece
+ * aqui, no mesmo elemento que recebe os valores.
+ *
+ * Não dá para fazer isso no :root do tokens.css: `--accent: var(--accent-claro)`
+ * declarado lá seria resolvido lá, contra o valor padrão, e a cor escolhida
+ * nunca chegaria ao tema claro.
+ */
+body {
+  --accent: var(--accent-escuro);
+  --accent-hover: var(--accent-escuro-hover);
+  --accent-active: var(--accent-escuro-active);
+  --accent-subtle: var(--accent-escuro-subtle);
+  --accent-ring: var(--accent-escuro-ring);
+}
+
+[data-theme="light"] body {
+  --accent: var(--accent-claro);
+  --accent-hover: var(--accent-claro-hover);
+  --accent-active: var(--accent-claro-active);
+  --accent-subtle: var(--accent-claro-subtle);
+  --accent-ring: var(--accent-claro-ring);
+}

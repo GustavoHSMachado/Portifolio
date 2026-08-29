@@ -1,0 +1,16 @@
+{
+    "name": "gustavohsmachado/portifolio",
+    "description": "Portifólio pessoal com área autenticada (PHP + MySQL).",
+    "type": "project",
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-pdo_mysql": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
+        "phpmailer/phpmailer": "^6.9"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

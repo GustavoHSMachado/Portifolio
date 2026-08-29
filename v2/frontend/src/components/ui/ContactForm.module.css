@@ -1,0 +1,102 @@
+.form {
+  display: grid;
+  gap: var(--space-4);
+  max-width: 40rem;
+}
+
+/* Nome e e-mail lado a lado quando couber; empilhados no celular. */
+.linha {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+}
+
+.campo {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.rotulo {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.textarea {
+  width: 100%;
+  min-height: 8rem;
+  padding: var(--space-3) var(--space-4);
+  font-family: var(--font-sans);
+  /* 16px evita o zoom automático do iOS ao focar o campo. */
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-primary);
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  resize: vertical;
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast)
+    var(--ease-out);
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow: var(--shadow-focus);
+}
+
+.textarea:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.erroCampo,
+.erro {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--danger);
+}
+
+.erro {
+  padding: var(--space-3) var(--space-4);
+  background-color: var(--danger-subtle);
+  border: 1px solid var(--danger);
+  border-radius: var(--radius-md);
+}
+
+/*
+ * Campo-armadilha.
+ *
+ * Fora da tela em vez de display:none — alguns robôs ignoram campos ocultos por
+ * display, e este precisa parecer preenchível para funcionar. Não usa a classe
+ * sr-only porque o objetivo aqui é o oposto dela: esconder de todo mundo,
+ * inclusive do leitor de tela, que já ignora o contêiner por aria-hidden.
+ */
+.armadilha {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.sucesso {
+  max-width: 40rem;
+  padding: var(--space-5);
+  background-color: var(--success-subtle);
+  border: 1px solid var(--success);
+  border-radius: var(--radius-lg);
+}
+
+.sucessoTitulo {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-medium);
+  color: var(--text-primary);
+}
+
+.sucessoTexto {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: var(--leading-normal);
+}

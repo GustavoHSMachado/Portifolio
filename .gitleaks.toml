@@ -1,0 +1,69 @@
+# Configuração do Gitleaks.
+#
+# Criada em 29/08/2026, durante a homologação, ao descobrir que o conjunto de
+# regras padrão NÃO detectava a única credencial que este repositório de fato
+# vazou: a senha de aplicativo do Gmail em `$mail->Password = '...'`.
+#
+# O padrão do Gitleaks é bom para segredo com formato reconhecível — chave da
+# AWS, token do GitHub, chave privada PEM. Ele erra por omissão em senha comum:
+# quatro palavras minúsculas separadas por espaço não têm entropia nem prefixo
+# que as distingam de texto qualquer.
+#
+# Isso importa porque o CONTEXTO-DO-PROJETO.md credita ao Gitleaks o controle
+# que impede segredo commitado. Sem as regras abaixo, esse crédito era maior que
+# a proteção real — e a prova é que o vazamento de 2024 passaria batido mesmo se
+# a esteira estivesse rodando na época.
+#
+# As expressões usam RE2 (Go), que não tem lookahead: o que seria exclusão por
+# `(?!...)` vive na allowlist do fim do arquivo.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "senha-atribuida-no-codigo"
+description = "Senha atribuída direto no código (PHPMailer, PDO, conexões)"
+# Casa `->Password = 'algo'`, `->SMTPPassword = "algo"` e afins. Mínimo de 6
+# caracteres para não disparar em placeholder curto.
+regex = '''(?i)->\s*(password|senha|passwd|pwd)\s*=\s*['"][^'"\n]{6,}['"]'''
+tags = ["senha", "codigo"]
+
+[[rules]]
+id = "senha-preenchida-em-env"
+description = "Variável de senha com valor real em arquivo de ambiente"
+# O primeiro caractere do valor não pode ser $ (interpolação), < (placeholder),
+# aspas ou # — é o que separa valor de verdade de modelo a preencher.
+regex = '''(?im)^\s*(MAIL_PASSWORD|DB_PASSWORD|DB_PASS|DB_ROOT_PASSWORD|SMTP_PASSWORD)\s*=\s*[^\s"'#$<][^\s"'#]{5,}'''
+path = '''(?i)(\.env|\.env\..*|.*\.ini|.*\.conf)$'''
+tags = ["senha", "ambiente"]
+
+[[rules]]
+id = "chave-de-app-preenchida"
+description = "APP_KEY ou JWT_SECRET com valor real em arquivo de ambiente"
+regex = '''(?im)^\s*(APP_KEY|JWT_SECRET)\s*=\s*[A-Za-z0-9+/=_-]{24,}'''
+path = '''(?i)(\.env|\.env\..*)$'''
+tags = ["segredo", "ambiente"]
+
+[allowlist]
+description = "O que casa com os padrões acima sem ser segredo"
+
+paths = [
+  # O modelo existe para ser preenchido; o que está ali é exemplo.
+  '''\.env\.example$''',
+  # Dependência de terceiro não é nossa para auditar aqui.
+  '''(^|/)vendor/''',
+  '''(^|/)node_modules/''',
+  # Os relatórios descrevem o vazamento. Citar não é vazar.
+  '''^relatorio de trabalho/''',
+]
+
+regexes = [
+  # Regra de validação, não senha: 'password' => 'required|password|confirmed'
+  '''required\|''',
+  # Senha do administrador de teste do E2E: conta em domínio reservado, criada
+  # por um script que recusa rodar em produção. Ver database/seed-e2e-admin.php.
+  '''AdminE2E#2026''',
+  # O hash fixo que Hash::burn() usa para gastar CPU quando o usuário não
+  # existe. É um bcrypt público, de propósito, e não abre conta nenhuma.
+  '''\$2y\$12\$C6UzMDM''',
+]

@@ -1,0 +1,294 @@
+.page {
+  min-height: 100dvh;
+  padding: var(--space-7) var(--space-4) var(--space-8);
+}
+
+.container {
+  width: min(var(--container-max), 100%);
+  margin: 0 auto;
+}
+
+/* ---------------------------------------------------------------- */
+/*  Cabeçalho                                                        */
+/* ---------------------------------------------------------------- */
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+/* Sem isto o bloco encolhe até o subtítulo quebrar em duas linhas curtas. */
+.headerTexto {
+  flex: 1 1 24rem;
+  min-width: 0;
+}
+
+.eyebrow {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-3xl);
+  line-height: var(--leading-tight);
+}
+
+.subtitle {
+  margin: 0;
+  max-width: 52ch;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* Alvo de toque de 44px sem alterar a largura do link. */
+.link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.link:hover {
+  color: var(--accent);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Cartões de resumo                                                */
+/* ---------------------------------------------------------------- */
+
+.cartoes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-7);
+}
+
+.cartao {
+  padding: var(--space-4) var(--space-5);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.cartaoNumero {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.cartaoRotulo {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Seções                                                           */
+/* ---------------------------------------------------------------- */
+
+.secaoTitulo {
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-xl);
+}
+
+.secao + .secao {
+  margin-top: var(--space-7);
+}
+
+.vazio {
+  margin: 0;
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.nota {
+  margin: var(--space-4) 0 0;
+  max-width: 72ch;
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--text-tertiary);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Filtros                                                          */
+/* ---------------------------------------------------------------- */
+
+.filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+
+.filtro,
+.filtroAtivo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.filtro {
+  color: var(--text-secondary);
+  background-color: transparent;
+  border: 1px solid var(--border-subtle);
+}
+
+.filtro:hover {
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.filtroAtivo {
+  color: var(--text-inverse);
+  background-color: var(--accent);
+  border: 1px solid var(--accent);
+}
+
+.contagem {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.7;
+}
+
+/* ---------------------------------------------------------------- */
+/*  Tabelas                                                          */
+/* ---------------------------------------------------------------- */
+
+/*
+ * A tabela rola dentro do próprio contêiner. Sem isso, uma linha larga
+ * empurraria a página inteira para o lado no celular.
+ */
+.tabelaRolagem {
+  overflow-x: auto;
+  background-color: var(--surface-raised);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+}
+
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.tabela th {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-wide);
+  text-transform: uppercase;
+  color: var(--text-tertiary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tabela td {
+  padding: var(--space-3) var(--space-4);
+  vertical-align: top;
+  white-space: nowrap;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tabela tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.tabela tbody tr:hover td {
+  background-color: var(--surface-sunken);
+}
+
+.quando,
+.origem {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Segunda linha dentro da célula: o e-mail embaixo do nome. */
+.sub {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+
+/* ---------------------------------------------------------------- */
+/*  Marcas de estado                                                 */
+/* ---------------------------------------------------------------- */
+
+.marca,
+.marcaAlerta {
+  display: inline-block;
+  margin-left: var(--space-2);
+  padding: 0.125rem var(--space-2);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-full);
+  white-space: nowrap;
+}
+
+.marca {
+  color: var(--text-tertiary);
+  background-color: var(--surface-sunken);
+}
+
+.marcaAlerta {
+  color: var(--warning);
+  background-color: var(--warning-subtle);
+}
+
+.dicaRolagem {
+  display: none;
+}
+
+@media (max-width: 40rem) {
+  .page {
+    padding: var(--space-6) var(--space-3) var(--space-7);
+  }
+
+  /* Tabela larga em tela estreita: sem o aviso, a coluna cortada some. */
+  .dicaRolagem {
+    display: block;
+    margin: 0 0 var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+
+  .title {
+    font-size: var(--text-2xl);
+  }
+}
+
+.headerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+}

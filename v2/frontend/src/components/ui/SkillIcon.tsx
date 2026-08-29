@@ -1,3 +1,5 @@
+import type { ReactElement } from "react";
+
 /**
  * Ícone da habilidade, desenhado como SVG monocromático.
  *
@@ -18,7 +20,9 @@
  * pelo painel já nasce com o ícone da área dela, sem precisar de código.
  */
 
-type Desenho = (props: { className?: string }) => JSX.Element;
+// ReactElement, e não JSX.Element: o React 19 deixou de declarar o namespace
+// JSX global, e passou a expô-lo apenas como React.JSX.
+type Desenho = (props: { className?: string }) => ReactElement;
 
 const base = {
   viewBox: "0 0 24 24",

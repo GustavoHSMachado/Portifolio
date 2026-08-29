@@ -108,6 +108,7 @@ test-web: ## Testes do frontend (Vitest)
 # dos testes — senão uma rodada vermelha deixaria as contas para trás, que é
 # justamente quando alguém vai querer inspecionar o banco.
 test-e2e: ## Testes de ponta a ponta (Playwright) e limpeza das contas criadas
+	@$(COMPOSE) exec -T api php database/seed-e2e-admin.php
 	@status=0; \
 	$(COMPOSE) --profile e2e run --rm e2e || status=$$?; \
 	$(COMPOSE) exec -T api php database/purge.php --test-data; \

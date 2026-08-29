@@ -114,7 +114,17 @@ services:
       # é ligado porque a suíte E2E exercita cadastro e confirmação de e-mail.
       REGISTRATION_ENABLED: "true"
       # A conta administradora é amarrada a este endereço; ver RequireAdmin.
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      # ADMIN_EMAIL aceita lista separada por vírgula (ver RequireAdmin).
+      #
+      # O segundo endereço é do ambiente local e só dele: a suíte E2E precisa
+      # entrar no painel, e o segundo fator vai por e-mail. Com apenas o
+      # endereço real do dono, o código sairia por SMTP para uma caixa de
+      # verdade e nenhum teste conseguiria lê-lo. `.local` é domínio reservado,
+      # então o MailService desvia a mensagem para o Mailpit.
+      #
+      # docker-compose.prod.yml NÃO inclui este endereço — em produção
+      # ADMIN_EMAIL continua sendo uma conta só.
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-},admin@portifolio.local
       RATE_LIMIT_REGISTER_MAX: 100
       RATE_LIMIT_REGISTER_WINDOW: 60
       RATE_LIMIT_LOGIN_MAX: 100

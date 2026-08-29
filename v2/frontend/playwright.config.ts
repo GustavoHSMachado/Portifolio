@@ -1,6 +1,17 @@
 import { defineConfig, devices } from "@playwright/test";
 
 /**
+ * A suíte administrativa roda num projeto só, e fica de fora dos outros cinco.
+ *
+ * Os cenários dela escrevem em `site_settings`, que é estado global do site.
+ * Cinco navegadores salvando ao mesmo tempo se atropelariam, e a falha
+ * apareceria como intermitência sem causa — foi o que já aconteceu aqui quando
+ * um cenário limpava a caixa do Mailpit que outro esperava. Rodar uma vez, em
+ * um navegador, é cobertura suficiente para regra de servidor.
+ */
+const ADMINISTRACAO = "**/administracao.spec.ts";
+
+/**
  * E2E cobrindo os fluxos que, se quebrarem, quebram o produto:
  * cadastro, confirmação de e-mail, login, recuperação e troca de senha.
  *
@@ -54,16 +65,24 @@ export default defineConfig({
   },
 
   projects: [
-    { name: "chromium", use: { ...devices["Desktop Chrome"] } },
-    { name: "firefox", use: { ...devices["Desktop Firefox"] } },
-    { name: "webkit", use: { ...devices["Desktop Safari"] } },
-    { name: "mobile", use: { ...devices["Pixel 7"] } },
+    { name: "chromium", testIgnore: ADMINISTRACAO, use: { ...devices["Desktop Chrome"] } },
+    { name: "firefox", testIgnore: ADMINISTRACAO, use: { ...devices["Desktop Firefox"] } },
+    { name: "webkit", testIgnore: ADMINISTRACAO, use: { ...devices["Desktop Safari"] } },
+    { name: "mobile", testIgnore: ADMINISTRACAO, use: { ...devices["Pixel 7"] } },
     {
       // Verifica que a interface continua utilizável sem animação.
       name: "reduced-motion",
+      testIgnore: ADMINISTRACAO,
       // reducedMotion é opção do contexto do navegador, não do runner — fora de
       // contextOptions o TypeScript rejeita e a preferência não chega à página.
       use: { ...devices["Desktop Chrome"], contextOptions: { reducedMotion: "reduce" } },
+    },
+    {
+      // Ver o cabeçalho de administracao.spec.ts.
+      name: "admin",
+      testMatch: ADMINISTRACAO,
+      fullyParallel: false,
+      use: { ...devices["Desktop Chrome"] },
     },
   ],
 

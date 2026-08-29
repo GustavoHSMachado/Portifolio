@@ -184,18 +184,22 @@ para os registros do sistema.
   histórico de auditoria não ficar órfão.
 - **Aparência e textos.** A cor de destaque e os títulos das seções saíram do
   código e viraram ajustes editáveis. As outras quatro cores do tema derivam da
-  escolhida, e o contraste é medido antes de salvar. A cor aceita apenas
-  `#rrggbb`, no servidor e no cliente, porque é o único ajuste que termina dentro
-  de uma folha de estilo.
+  escolhida, e o contraste é medido e **exibido** antes de salvar — a escolha
+  final é de quem edita, e o servidor não recusa uma cor ilegível. A cor aceita
+  apenas `#rrggbb`, no servidor e no cliente, porque é o único ajuste que termina
+  dentro de uma folha de estilo.
 
 **Dois defeitos reais, encontrados ao verificar o que estava sendo construído:**
 
 - **A sessão caía a cada F5.** O `silentRefresh` passava por fora da
   deduplicação do `api.ts`, e com o StrictMode as duas montagens do efeito
   disparavam refresh com o mesmo cookie rotativo — que o servidor lê, com razão,
-  como token roubado. Corrigido com uma promessa compartilhada. **Continua em
-  aberto para duas abas simultâneas**, o que exigiria janela de tolerância na
-  rotação, do lado do servidor.
+  como token roubado. Corrigido com uma promessa compartilhada. **O caso de duas
+  abas simultâneas foi fechado em 29/08/2026** com a janela de tolerância na
+  rotação, do lado do servidor: um token rotacionado há poucos segundos é tratado
+  como corrida entre abas, não como roubo, e não é re-marcado — a janela fica
+  ancorada na primeira rotação e não pode ser esticada indefinidamente. Ver
+  `REFRESH_ROTATION_GRACE`.
 - **A suíte E2E ficou cega com o SMTP real.** Mensagem para domínio reservado
   era descartada, e os testes leem exatamente essas mensagens no Mailpit. Passou
   a ser desviada para a captura. A intermitência que sobrou tinha outra causa: o
@@ -225,11 +229,30 @@ todas as rotas administrativas, nos dois casos.
 | ID | Fase | Tarefa | Pri |
 |---|---|---|---|
 | B28 | 5 | PR da `dev` para a `master` | P1 · com o Gustavo |
-| B50 | 6 | Limpar a senha do histórico público (script pronto) | P2 · com o Gustavo |
-| B51 | 6 | Reuso de refresh token com duas abas abertas ao mesmo tempo | P3 |
+| B50 | 6 | Credencial no histórico público — **risco aceito em 29/08/2026**; falta decidir Gitleaks (limpar histórico ou `.gitleaksignore`) | P2  |
+| B52 | 7 | Definir a hospedagem e publicar (compose de produção pronto) | P1 · com o Gustavo |
+| ~~B53~~ | 7 | Subir o Next para a versão sem advisories — **feito em 29/08/2026**: 16.3.3 + React 19, `npm audit` em 0 | ✅ |
+| ~~B54~~ | 7 | Cobertura E2E da área administrativa — **feito**: 7 cenários, suíte de 80 para 87 | ✅ |
+| ~~B55~~ | 7 | Rollback de migração — **feito**: `migrate.php --rollback` + 5 testes | ✅ |
 
-Concluídos: B01–B27, B29–B49 — 48 itens, mais a Fase 6 inteira. Em aberto: o PR
-para a `master`, a limpeza do histórico e a corrida de refresh entre abas.
+~~B51 — Reuso de refresh token com duas abas~~ — **fechado em 29/08/2026.**
+
+Concluídos: B01–B27, B29–B51 — 50 itens, mais a Fase 6 inteira e a homologação
+de produção. Em aberto: o PR para a `master`, a limpeza do histórico e a
+publicação em si.
+
+## Homologação para produção — 29/08/2026
+
+Rodada completa registrada em `relatorio de trabalho/homologacao-producao/`.
+Resultado: **não aprovado**, por ausência de caminho de publicação — não por
+qualidade de código. A aplicação resistiu a todos os ataques testados, incluindo
+token forjado com o `JWT_SECRET` real.
+
+Corrigido na sequência: o build de produção do site (que congelava `localhost`
+dentro do bundle), o gatilho do CI (que apontava para branches inexistentes e
+por isso **nunca havia rodado**), a janela de tolerância no refresh, o cache do
+`Config::get`, a enumeração no cadastro, o `request_id` nos logs, as sondas de
+saúde e a configuração de produção inteira.
 
 ## O que a revisão de segurança encontrou (B26)
 
@@ -250,6 +273,15 @@ escape que falhe: sem `connect-src` liberado, um script injetado não consegue
 enviar para fora o que roubou.
 
 O resto passou: token forjado e `alg: none` recusados, rotas protegidas
-respondendo 401, sem enumeração de contas (nem por mensagem nem por tempo de
-resposta), cookie de sessão com `HttpOnly` e `SameSite`, sem stack trace em erro
-e sem segredo em log.
+respondendo 401, cookie de sessão com `HttpOnly` e `SameSite`, sem stack trace em
+erro e sem segredo em log.
+
+> **Correção de 29/08/2026.** Esta seção afirmava também "sem enumeração de
+> contas (nem por mensagem nem por tempo de resposta)". A afirmação estava
+> incompleta e a conclusão, errada: a mensagem era mesmo ambígua e o tempo de
+> resposta também, mas o **código de status** entregava a informação — o cadastro
+> respondia 201 para e-mail novo e 202 para e-mail já existente, e um único
+> `curl` distinguia os dois. Encontrado na homologação de produção e corrigido:
+> os dois casos agora devolvem 201 com o mesmo corpo. Fica o registro de que uma
+> revisão pode passar por três verificações certas e ainda assim concluir errado
+> por não ter olhado a quarta.

@@ -202,16 +202,129 @@ jobs:
   # ------------------------------------------------------------------
   # Testes de ponta a ponta
   # ------------------------------------------------------------------
+  # A suite E2E exercita o produto inteiro: cadastro, confirmacao por e-mail,
+  # login com segundo fator e a area administrativa. Isso exige banco, API e um
+  # servidor de e-mail — nao so o Next.
+  #
+  # Ate 29/08/2026 este job subia apenas o frontend. Todo cenario que tocava a
+  # API ficava esperando resposta que nunca vinha, e o job so terminava por
+  # esgotar tempo. Nunca foi notado porque o gatilho do workflow apontava para
+  # branches que nao existem neste repositorio, e a esteira nunca rodou.
   e2e:
     name: E2E (Playwright)
     runs-on: ubuntu-latest
     needs: [frontend]
-    defaults:
-      run:
-        working-directory: v2/frontend
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: portifolio_e2e
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+      # Captura o e-mail em vez de envia-lo. E o que permite testar confirmacao
+      # de conta e o codigo do segundo fator sem SMTP e sem risco de mandar
+      # mensagem para endereco real.
+      mailpit:
+        image: axllent/mailpit
+        ports: ["1025:1025", "8025:8025"]
+
+    # Tudo no nivel do job, e nao repetido passo a passo: o GitHub Actions nao
+    # suporta ancoras YAML, entao a alternativa seria duplicar trinta linhas.
+    env:
+      # Precisa ser o endereco publicado, e nao um nome interno: e a origem que
+      # a allowlist do CORS espera, e o valor fica gravado dentro do bundle no
+      # build (ver docker/web/Dockerfile).
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      MAILPIT_URL: http://localhost:8025
+
+      APP_ENV: local
+      APP_DEBUG: "false"
+      APP_KEY: e2e-key-00000000000000000000000000000
+      JWT_SECRET: e2e-jwt-secret-000000000000000000000
+      APP_URL: http://localhost:8000
+      FRONTEND_URL: http://localhost:3000
+      CORS_ALLOWED_ORIGINS: http://localhost:3000
+      APP_FORCE_HTTPS: "false"
+      APP_SECURE_COOKIES: "false"
+
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      DB_NAME: portifolio_e2e
+      DB_USER: root
+      DB_PASS: root
+
+      MAIL_HOST: 127.0.0.1
+      MAIL_PORT: "1025"
+      MAIL_FROM_ADDRESS: nao-responda@portifolio.local
+      MAIL_FROM_NAME: Portifolio
+
+      REGISTRATION_ENABLED: "true"
+      # A area administrativa e amarrada a este endereco. Dominio reservado,
+      # entao o codigo do segundo fator cai no Mailpit em vez de sair por SMTP —
+      # e o que torna o painel testavel. Ver RequireAdmin.
+      ADMIN_EMAIL: admin@portifolio.local
+
+      # Afrouxados so aqui: o contador e persistido no banco, e os valores de
+      # producao inviabilizariam uma suite que cadastra dezenas de contas. Quem
+      # prova que o limite funciona e o RateLimiterTest.
+      RATE_LIMIT_LOGIN_MAX: "1000"
+      RATE_LIMIT_LOGIN_WINDOW: "60"
+      RATE_LIMIT_LOGIN_VERIFY_MAX: "1000"
+      RATE_LIMIT_LOGIN_VERIFY_WINDOW: "60"
+      RATE_LIMIT_REGISTER_MAX: "1000"
+      RATE_LIMIT_REGISTER_WINDOW: "60"
+      RATE_LIMIT_FORGOT_PASSWORD_MAX: "1000"
+      RATE_LIMIT_FORGOT_PASSWORD_WINDOW: "60"
+      RATE_LIMIT_RESET_PASSWORD_MAX: "1000"
+      RATE_LIMIT_RESET_PASSWORD_WINDOW: "60"
+      RATE_LIMIT_RESEND_VERIFICATION_MAX: "1000"
+      RATE_LIMIT_RESEND_VERIFICATION_WINDOW: "60"
+      RATE_LIMIT_MESSAGES_MAX: "1000"
+      RATE_LIMIT_MESSAGES_WINDOW: "60"
 
     steps:
       - uses: actions/checkout@v4
+
+      # ---- backend ----
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo_mysql, openssl, json
+          tools: composer:v2
+
+      - name: Dependencias da API
+        working-directory: v2/backend
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Migracoes e administrador de teste
+        working-directory: v2/backend
+        run: |
+          php database/migrate.php
+          php database/seed-e2e-admin.php
+
+      - name: Subir a API
+        working-directory: v2/backend
+        run: |
+          php -S 0.0.0.0:8000 -t public > /tmp/api.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/health > /dev/null; then
+              echo "API no ar."
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::A API nao respondeu em 30s"
+          cat /tmp/api.log
+          exit 1
+
+      # ---- frontend ----
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -219,12 +332,20 @@ jobs:
           cache-dependency-path: v2/frontend/package-lock.json
 
       - run: npm ci
+        working-directory: v2/frontend
+
       - run: npx playwright install --with-deps chromium webkit firefox
+        working-directory: v2/frontend
 
       - name: Rodar E2E
+        working-directory: v2/frontend
         run: npm run test:e2e
         env:
           CI: true
+
+      - name: Log da API quando algo falha
+        if: failure()
+        run: tail -100 /tmp/api.log || true
 
       - uses: actions/upload-artifact@v4
         if: always()

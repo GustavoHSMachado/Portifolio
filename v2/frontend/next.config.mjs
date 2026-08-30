@@ -5,7 +5,16 @@ const nextConfig = {
 
   // Gera .next/standalone — a imagem de produção roda `node server.js`
   // sem precisar de node_modules completo. Ver docker/web/Dockerfile.
-  output: "standalone",
+  //
+  // Na Vercel, porém, standalone quebra a publicação: o Next passa a escrever
+  // os arquivos de rastreamento de dependências dentro de .next/standalone, e
+  // o builder da Vercel os procura na raiz de .next/. O build gera as 21
+  // páginas e só então morre com
+  //   ENOENT ... .next/next-server.js.nft.json
+  // A Vercel define VERCEL=1 no ambiente de build; lá deixamos o Next usar a
+  // saída padrão, que é o que a plataforma sabe empacotar. O Docker continua
+  // recebendo o standalone de sempre.
+  output: process.env.VERCEL ? undefined : "standalone",
 
   // Diretório de saída configurável. Com o servidor de desenvolvimento rodando,
   // um build de produção no mesmo .next mistura os runtimes dev e prod e falha

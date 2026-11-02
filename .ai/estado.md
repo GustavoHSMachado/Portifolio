@@ -46,6 +46,11 @@ O que corre hoje é manutenção, não mais construção.
 | Migrations | 16 | `database/migrations/` |
 | Páginas do frontend | 14 `page.tsx` | `src/app/` |
 | Suítes de teste do backend | 5 unitárias + 4 de integração | `tests/` |
+
+Em 02/11/2026 os três campos do caso (`problem`, `decisions`, `result`) deram
+lugar a um campo `description` — ver D-38. Na mesma passagem foi corrigido um
+defeito que impedia o envio de fotos pelo navegador: havia `<form>` dentro de
+`<form>`, e o clique recarregava a página em vez de enviar.
 | Specs E2E | 3 (`acesso`, `autenticacao`, `administracao`) | `frontend/tests/e2e/` |
 
 Verificação executada em 01/11/2026, no compose local, com a vitrine pública e
@@ -75,7 +80,8 @@ o reprovava (`expect` de 5 s, 2 workers).
   (todos, no ar, código aberto) e o caso de cada projeto recolhido. Exigiram
   sessão entre 23/08/2026 e 01/11/2026. O que segura rascunho é `published = 1`,
   filtrado em `publishedProjects()` e coberto por `tests/Integration/VitrinePublicaTest.php`.
-- **Fotos dos projetos** — até 8 por projeto, enviadas pelo painel
+- **Fotos dos projetos** — até 8 por projeto, **várias de uma vez** desde
+  02/11/2026, enviadas pelo painel
   (`POST /api/v1/admin/projects/{id}/images`). O arquivo fica em
   `public/uploads/projetos/` e o banco guarda só o caminho relativo, em
   `project_images`. A primeira foto é a capa do cartão; as demais formam a

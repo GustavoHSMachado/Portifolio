@@ -320,6 +320,44 @@ que convivem arquivos novos e antigos. Resolver exigiria deploy atômico — pas
 nova e troca de link simbólico —, o que mudaria a estrutura do servidor. Para o
 volume deste projeto não compensa.
 
+
+**D-38 · Um campo de descrição no lugar dos três do caso (02/11/2026).**
+`problem`, `decisions` e `result` deram lugar a `description`. A estrutura em
+três partes nasceu para forçar o que separa portfólio de lista de
+repositórios, e cumpriu esse papel no projeto que ela descrevia — mas obrigava
+a repartir em três um texto que nem todo projeto tem em três, e campo que a
+pessoa não sabe preencher fica vazio. Decisão do Gustavo, com a perda na mesa:
+os 1.094 caracteres do único projeto cadastrado **não** foram migrados, porque
+ele preferiu recomeçar o texto a herdar um emendado; o backup que o próprio
+deploy tirou antes da migração guarda o original. Na vitrine o bloco recolhido
+virou "Sobre o projeto", com `white-space: pre-line` para que as quebras
+digitadas no painel sobrevivam.
+
+No mesmo trabalho, o envio de fotos passou a aceitar várias de uma vez, e a
+validação saiu do componente para `lib/portfolio.ts`: `recusarFotos` é função
+pura, devolve a primeira queixa do lote ou `null`, e recusa a seleção inteira
+de propósito — aceitar os válidos e descartar os ruins em silêncio deixaria
+alguém achando que mandou cinco quando mandou três. O envio é em série, uma
+requisição por foto, e a lista recarrega mesmo quando o lote falha no meio,
+para mostrar o que de fato entrou.
+
+**E aí apareceu o defeito que nenhum teste pegava: o envio de fotos nunca
+funcionou pelo navegador.** O bloco usava dois `<form>` desenhados dentro do
+formulário do projeto. Formulário aninhado não existe em HTML; o parser
+desaninharia, mas o React constrói o DOM por JavaScript e o aninhamento
+persiste — o submit do interno subia para o externo, e clicar em "Enviar foto"
+recarregava a página com os campos na URL (`/admin?descricao=...`). Estava
+assim desde que o bloco foi criado, em 01/11/2026. Os E2E não exercitam
+upload e os testes unitários não montam DOM, então só apareceu quando a tela
+foi aberta e usada. Os dois viraram `<div>` com botões `type="button"`.
+Verificado depois: nenhum form aninhado, três fotos enviadas de uma vez
+gravaram três linhas em `project_images` nas posições 0, 1 e 2, com os três
+arquivos em disco, e a vitrine mostrou capa e galeria.
+
+A lição que fica é de verificação, não de código: "os testes passaram" não
+cobre o que teste nenhum exercita. Abrir a tela e usar encontrou em dois
+minutos o que duas suítes verdes não viam.
+
 ---
 
 ## Decisões pendentes

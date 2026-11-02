@@ -215,6 +215,18 @@ porque o projeto mais forte deveria abrir a vitrine. O campo entrou no
 formulário de projetos. **Os outros três formulários (formação, experiências,
 habilidades) seguem com o mesmo defeito** — ficaram fora por escopo.
 
+**D-34 · O `tsconfig.json` está fora do formatador do Biome (01/11/2026).**
+O Next 16 reescreve esse arquivo sozinho, e escreve arrays expandidos
+(`"lib": [` em várias linhas) onde o Biome quer uma linha só. O resultado era um
+erro de formatação permanente, que deixava `npm run lint` com saída 1 e o job de
+lint do CI vermelho desde `4999fc8` — sem nada de errado em `src/`.
+
+Formatar o arquivo não resolveria: a próxima execução do Next o reescreveria e o
+erro voltaria. Quem manda no `tsconfig.json` é o Next, então ele saiu do
+`formatter.ignore` do Biome em vez de entrar numa disputa que se repete a cada
+`next dev`. O lint do TypeScript sobre o arquivo continua valendo — o que saiu é
+só a formatação.
+
 ---
 
 ## Decisões pendentes

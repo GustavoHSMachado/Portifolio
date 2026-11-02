@@ -19,7 +19,8 @@
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 100
+    "lineWidth": 100,
+    "ignore": ["tsconfig.json"]
   },
   "organizeImports": { "enabled": true },
   "linter": {

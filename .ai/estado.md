@@ -47,9 +47,9 @@ O que corre hoje é manutenção, não mais construção.
 Verificação executada em 01/11/2026, no compose local, com a vitrine pública e
 as fotos dos projetos na árvore: php-cs-fixer 0 de 66 arquivos, PHPStan nível 8
 com 0 erros, PHPUnit 69/69 (176 asserções), Vitest 68/68, `tsc --noEmit` limpo
-e Playwright 92/92. O lint do frontend reprova por um único erro, em
-`tsconfig.json` (ver pendências) — nenhum arquivo de `src/` acusa erro, e os 4
-avisos de complexidade cognitiva são anteriores a este trabalho.
+e Playwright 92/92. O lint do frontend passa com saída 0; os 4 avisos de
+complexidade cognitiva que restam são anteriores a este trabalho e não
+reprovam.
 
 Knip e o orçamento de bundle (319 KB comprimidos contra 400 KB, medidos em
 29/08/2026) **não** foram reexecutados.
@@ -98,7 +98,7 @@ Knip e o orçamento de bundle (319 KB comprimidos contra 400 KB, medidos em
 | — | Minutas legais (`docs/legal/`) com campos `[PREENCHER]` e sem revisão jurídica | pendente desde 09/08/2026 |
 | — | Expurgo (`database/purge.php`) não roda sozinho em produção; precisa de agendamento | pendente |
 | — | Lighthouse: o job `performance` existe no CI com os limiares definidos, mas não há registro de execução bem-sucedida em nenhum documento do repositório | a confirmar |
-| — | `npm run lint` reprova por `tsconfig.json format`: o Next 16 reescreve o arquivo num formato que o Biome recusa, e o job de lint do CI roda `npm run lint` sem tolerância. Vem de `4999fc8`, não de código em `src/`. Resolve-se ignorando o `tsconfig.json` no Biome | identificado em 01/11/2026 |
+| — | ~~`npm run lint` reprova por `tsconfig.json format`~~ | **resolvido em 01/11/2026**: o arquivo saiu do `formatter.ignore` do Biome, porque quem o reescreve é o Next. Ver D-34 |
 | — | `/projetos` renderiza no cliente: está no sitemap e sem `noindex` desde 01/11/2026, mas o rastreador recebe a casca, sem os projetos. Virar renderização no servidor com revalidação, como a home | identificado em 01/11/2026 (ver D-31) |
 
 ---

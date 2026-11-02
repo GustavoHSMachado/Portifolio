@@ -9,93 +9,91 @@ executados no servidor, por `ssh ... < script.sh`.
 
 Enquanto os secrets não existirem, o job termina com um aviso e não falha o CI.
 
+## Por que envio de arquivos, e não `git pull`
+
+Verificado por SSH em 02/11/2026, no servidor real:
+
+1. **A instalação não é um clone.** O código chegou lá por envio de pacote.
+2. **A estrutura não espelha o repositório.** No servidor existe só o miolo de
+   `v2/backend/`, e `public/` chama-se **`public_html/`**. Um clone traria
+   `v1/`, o frontend inteiro e a pasta com o nome errado.
+3. **O PHP do shell é 8.2.35** e o `composer.json` exige `>= 8.3`. Um
+   `composer install` lá falharia por versão de plataforma.
+
+Daí o desenho: o Composer roda **no runner**, com PHP 8.3, e só o resultado
+viaja.
+
+```
+repositório                        servidor
+v2/backend/src/        ──────→     src/
+v2/backend/database/   ──────→     database/
+v2/backend/vendor/     ──────→     vendor/        (instalado no runner)
+v2/backend/composer.*  ──────→     composer.*
+v2/backend/public/     ──────→     public_html/   (sem uploads/)
+                                   .env           (nunca tocado)
+                                   public_html/uploads/  (nunca tocado)
+```
+
 ## O que ele faz, em ordem
 
-1. **Verifica o alvo** — a pasta existe, é um clone deste repositório, e não há
-   alteração não commitada no servidor. Qualquer desvio aborta antes de tocar
-   em nada.
-2. **Faz backup do banco** — `mysqldump` comprimido em `~/backups-deploy`,
+1. **Instala dependências** no runner, com PHP 8.3 e `--no-dev`.
+2. **Verifica o alvo** — a pasta existe, tem `composer.json`, `src` e
+   `public_html`, tem `.env`, e o binário do PHP 8.3 está disponível. Qualquer
+   desvio aborta antes de enviar nada.
+3. **Faz backup do banco** — `mysqldump` comprimido em `~/backups-deploy`,
    guardando os 10 mais recentes. Roda sempre, haja migração ou não.
-3. **Traz o código** — `git merge --ff-only` **no commit exato que o CI
-   aprovou**, não na ponta da `master`. `composer install --no-dev` apenas se o
-   `composer.lock` tiver mudado.
-4. **Aplica migrações pendentes** — o migrador é idempotente e o `--status`
-   fica no log, antes e depois.
-5. **Smoke test** — `/health` e `/api/v1/projects` precisam responder 200. A
+4. **Envia o código** — `src`, `database` e `vendor` com `--delete`, porque os
+   três são inteiramente derivados do repositório e não guardam dado.
+5. **Envia a raiz pública** — `public/` para `public_html/`, **sem `--delete`**
+   e com `uploads/` excluído.
+6. **Aplica migrações pendentes** — com `/opt/alt/php83/usr/bin/php`, e o
+   `--status` no log antes e depois.
+7. **Smoke test** — `/health` e `/api/v1/projects` precisam responder 200. A
    segunda é a rota de que a vitrine pública depende.
 
 ## O que ele não toca
 
-- **`public/uploads/`** — as fotos não são versionadas, e `git pull` não mexe em
-  arquivo que o repositório desconhece. É a razão de não usarmos FTP: sync
-  apagaria tudo.
-- **`.env` de produção** — está no `.gitignore`.
+- **`public_html/uploads/`** — as fotos dos projetos só existem ali. Não estão
+  no Git, e o banco guarda apenas o caminho. Por isso a pasta é excluída do
+  envio **e** o `--delete` fica de fora desse passo.
+- **`.env` de produção** — não está no repositório e não é enviado. O
+  `verificar-alvo.sh` recusa o deploy se ele sumir.
 - **Os outros subdomínios da conta** — o job opera apenas no caminho de
   `HOSTINGER_API_PATH`.
 
-## Secrets a configurar
+## Secrets
 
-Em *Settings → Secrets and variables → Actions → New repository secret*:
+Em *Settings → Secrets and variables → Actions → Repository secrets* — e não em
+*Environments*, que só alcança jobs declarando `environment:`.
 
-| Secret | O que é |
+| Secret | Valor |
 |---|---|
 | `HOSTINGER_SSH_KEY` | a chave **privada**, conteúdo inteiro do arquivo |
-| `HOSTINGER_SSH_HOST` | o IP do servidor |
-| `HOSTINGER_SSH_PORT` | a porta SSH |
-| `HOSTINGER_SSH_USER` | o usuário da hospedagem |
-| `HOSTINGER_API_PATH` | caminho absoluto da instalação da API no servidor |
+| `HOSTINGER_SSH_HOST` | IP do servidor |
+| `HOSTINGER_SSH_PORT` | porta SSH |
+| `HOSTINGER_SSH_USER` | usuário da hospedagem |
+| `HOSTINGER_API_PATH` | caminho absoluto da instalação |
 
-### Chave dedicada, não reaproveitada
+A chave é **dedicada a este deploy**. Se um dia precisar revogar o acesso, você
+revoga sem derrubar mais nada — a pública está no painel, em *Avançado → Acesso
+SSH*, com o nome `deploy portifolio github actions`.
 
-Gere um par só para isto:
+## Desfazer
 
-```bash
-ssh-keygen -t ed25519 -f ~/.ssh/portifolio_deploy -C "deploy-portifolio" -N ""
-```
+O envio é idempotente: reexecutar o job com o commit anterior devolve o código
+ao que era. As fotos não são afetadas em nenhum cenário.
 
-A **pública** (`.pub`) vai para a Hostinger, em *Avançado → Acesso SSH*. A
-**privada** vai para `HOSTINGER_SSH_KEY` e não precisa existir em mais lugar
-nenhum.
-
-Chave por finalidade: se um dia precisar revogar o acesso do deploy, você
-revoga sem derrubar nada mais.
-
-## Pré-requisito que ainda não foi verificado
-
-**A instalação da API no servidor precisa ser um clone deste repositório.**
-
-Se ela foi feita por envio de pacote — o que é provável, dado que o
-`.ai/estado.md` descreve o deploy assim —, não há de onde dar `git pull`, e o
-passo 1 vai abortar com mensagem explícita dizendo isso. Essa é a primeira
-execução servindo de diagnóstico.
-
-Para converter, no servidor, com o `.env` e os uploads preservados:
-
-```bash
-cd <caminho-da-api>
-git init
-git remote add origin https://github.com/GustavoHSMachado/Portifolio.git
-git fetch origin master
-git checkout -f -t origin/master
-```
-
-O `checkout -f` sobrescreve os arquivos versionados com os do repositório e
-**não remove** `.env` nem `public/uploads/`, que o Git desconhece. Ainda assim:
-backup antes.
-
-## Desfazer um deploy
-
-O passo "Atualizar o código" imprime, no log do job, o comando pronto:
-
-```bash
-git -C <caminho-da-api> reset --hard <commit-anterior>
-```
-
-Se a migração for o problema, os dumps estão em `~/backups-deploy`, e cada
+Se o problema for a migração, os dumps estão em `~/backups-deploy` e cada
 migração tem sua linha `-- ROLLBACK:`.
+
+## Limitação conhecida
+
+Durante o envio há uma janela de alguns segundos em que convivem arquivos
+novos e antigos. Resolver isso exigiria deploy atômico — enviar para uma pasta
+nova e trocar um link simbólico —, o que mudaria a estrutura do servidor. Para
+o volume deste projeto, não compensa; fica registrado caso um dia compense.
 
 ## Se quiser aprovação manual antes de publicar
 
 Crie um *Environment* chamado `producao` em *Settings → Environments*, marque
-*Required reviewers*, e acrescente `environment: producao` ao job. O deploy
-passa a esperar seu clique — útil se um dia o automático incomodar.
+*Required reviewers*, e acrescente `environment: producao` ao job.

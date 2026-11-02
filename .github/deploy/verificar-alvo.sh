@@ -2,17 +2,17 @@
 #
 # Conferência antes de tocar em qualquer coisa.
 #
-# Roda NO SERVIDOR, por stdin do ssh. Recebe o caminho da instalação e o
-# "owner/repo" esperado, e recusa o deploy se o alvo não for exatamente o
-# que se espera — pasta errada, instalação que não é clone do Git, ou clone
-# apontando para outro repositório.
+# Roda NO SERVIDOR, por stdin do ssh. Recebe o caminho da instalação e
+# recusa o deploy se o alvo não for o que se espera. A verificação existe
+# porque um deploy automático que erra de pasta é pior que um deploy que
+# não acontece.
 #
-# A verificação existe porque um deploy automático que erra de pasta é pior
-# que um deploy que não acontece.
+# A instalação NÃO é um clone do Git (verificado em 02/11/2026): o código
+# chegou ali por envio de arquivos, e é assim que continua. Por isso a
+# conferência olha a forma da pasta, e não o estado de um repositório.
 set -euo pipefail
 
 CAMINHO="${1:?caminho da instalação não informado}"
-ESPERADO="${2:?repositório esperado não informado}"
 
 if [ ! -d "$CAMINHO" ]; then
   echo "::error::A pasta $CAMINHO não existe no servidor."
@@ -21,36 +21,38 @@ fi
 
 cd "$CAMINHO"
 
-if ! git rev-parse --git-dir > /dev/null 2>&1; then
-  echo "::error::$CAMINHO não é um clone do Git."
-  echo "A instalação atual foi feita por envio de pacote, então não há de onde dar pull."
-  echo "Converta a pasta em clone antes de usar o deploy automático."
+# A marca de que estamos na instalação certa, e não numa pasta qualquer.
+for esperado in composer.json src public_html; do
+  if [ ! -e "$esperado" ]; then
+    echo "::error::Não encontrei '$esperado' em $CAMINHO."
+    echo "Esta não parece ser a instalação da API. Confira o secret HOSTINGER_API_PATH."
+    exit 1
+  fi
+done
+
+if ! grep -q '"name"' composer.json 2>/dev/null; then
+  echo "::error::$CAMINHO/composer.json não parece um composer.json válido."
   exit 1
 fi
 
-URL_REMOTA="$(git remote get-url origin)"
+if [ ! -f .env ]; then
+  echo "::error::Não há .env em $CAMINHO. A API não sobe sem ele, e o deploy não o cria:"
+  echo "configuração de produção não mora no repositório."
+  exit 1
+fi
 
-case "$URL_REMOTA" in
-  *"$ESPERADO"*) : ;;
-  *)
-    echo "::error::O clone em $CAMINHO aponta para $URL_REMOTA, e não para $ESPERADO."
-    exit 1
-    ;;
-esac
-
-# Arquivo editado à mão no servidor faria o merge --ff-only falhar mais
-# adiante, com mensagem bem menos clara que esta.
-if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
-  echo "::error::Há alterações não commitadas no servidor:"
-  git status --short --untracked-files=no
-  echo "Resolva antes de automatizar: o deploy não sobrescreve trabalho de ninguém."
+# O PHP do shell é 8.2 e o projeto exige 8.3. O binário alternativo é o que
+# as migrações vão usar; sem ele, o passo seguinte falharia de forma bem
+# menos clara.
+PHP83="/opt/alt/php83/usr/bin/php"
+if [ ! -x "$PHP83" ]; then
+  echo "::error::$PHP83 não existe ou não é executável."
+  echo "O composer.json exige PHP >= 8.3 e o shell tem $(php -v | head -1 | awk '{print $2}')."
   exit 1
 fi
 
 echo "Alvo conferido."
-echo "  pasta   : $CAMINHO"
-echo "  clone de: $URL_REMOTA"
-echo "  commit  : $(git rev-parse --short HEAD)"
-echo "  git     : $(git --version | awk '{print $3}')"
-echo "  php     : $(php -v 2>/dev/null | head -1 | awk '{print $2}')"
-echo "  composer: $(composer --version 2>/dev/null | awk '{print $3}' || echo AUSENTE)"
+echo "  pasta       : $CAMINHO"
+echo "  php (shell) : $(php -v | head -1 | awk '{print $2}')"
+echo "  php (deploy): $("$PHP83" -v | head -1 | awk '{print $2}')"
+echo "  uploads     : $(find public_html/uploads -type f 2>/dev/null | wc -l) arquivo(s) — não serão tocados"

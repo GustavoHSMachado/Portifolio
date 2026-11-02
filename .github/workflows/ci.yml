@@ -472,21 +472,27 @@ jobs:
 
           echo "Quality gate aprovado."
 
+
   # ------------------------------------------------------------------
   # Deploy da API em produção (Hostinger)
   #
   # Só roda em push na master e só depois do quality-gate verde: deploy
   # automático publica erro com a mesma velocidade que publica acerto, e a
-  # rede de proteção é justamente a esteira acima.
+  # rede de proteção é a esteira acima.
   #
-  # O site não entra aqui — a Vercel já reconstrói sozinha ao receber a
-  # master. Este job cuida apenas de api.gustavohsmachado.com.br, e de mais
-  # nada: os outros subdomínios da conta não são tocados.
+  # O site não entra aqui — a Vercel reconstrói sozinha ao receber a master.
+  # Este job cuida apenas de api.gustavohsmachado.com.br.
   #
-  # Por que `git pull` e não FTP/rsync: as fotos dos projetos vivem em
-  # public/uploads/, fora do versionamento, e o .env de produção está no
-  # .gitignore. Sincronização por FTP apagaria as duas coisas; `git pull`
-  # não encosta em arquivo que o repositório não conhece.
+  # Por que enviar arquivos em vez de `git pull` no servidor (verificado em
+  # 02/11/2026, com acesso SSH):
+  #
+  #   1. A instalação não é um clone — foi feita por envio de pacote.
+  #   2. A estrutura lá não espelha o repositório. No servidor existe só o
+  #      miolo de v2/backend/, e `public/` chama-se `public_html/`. Um clone
+  #      traria v1/, o frontend inteiro e a pasta com o nome errado.
+  #   3. O PHP do shell é 8.2.35 e o composer.json exige >= 8.3, então
+  #      `composer install` lá falharia. Aqui ele roda no runner, onde a
+  #      versão é escolhida.
   # ------------------------------------------------------------------
   deploy-api:
     name: Deploy da API
@@ -494,9 +500,9 @@ jobs:
     needs: [quality-gate]
     if: github.event_name == 'push' && github.ref == 'refs/heads/master'
 
-    # Dois deploys ao mesmo tempo na mesma pasta deixariam o servidor em
-    # estado indefinido. Aqui, diferente do CI, a execução em curso NÃO é
-    # cancelada: abortar no meio de um composer install é pior que esperar.
+    # Dois deploys na mesma pasta ao mesmo tempo deixariam o servidor em
+    # estado indefinido. Diferente do CI, aqui a execução em curso NÃO é
+    # cancelada: abortar no meio de um envio é pior que esperar.
     concurrency:
       group: deploy-api-producao
       cancel-in-progress: false
@@ -508,11 +514,28 @@ jobs:
           CHAVE: ${{ secrets.HOSTINGER_SSH_KEY }}
         run: |
           if [ -z "${CHAVE:-}" ]; then
-            echo "::notice::Deploy não configurado (falta o secret HOSTINGER_SSH_KEY). Pulando — isto não é falha."
+            echo "::notice::Deploy não configurado (falta HOSTINGER_SSH_KEY). Pulando — isto não é falha."
             echo "pronto=nao" >> "$GITHUB_OUTPUT"
           else
             echo "pronto=sim" >> "$GITHUB_OUTPUT"
           fi
+
+      - uses: actions/checkout@v4
+        if: steps.cfg.outputs.pronto == 'sim'
+
+      - name: PHP 8.3 (o servidor só tem 8.2 no shell)
+        if: steps.cfg.outputs.pronto == 'sim'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+
+      - name: Instalar dependências de produção
+        if: steps.cfg.outputs.pronto == 'sim'
+        working-directory: v2/backend
+        run: |
+          set -euo pipefail
+          composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+          echo "vendor: $(find vendor -type f | wc -l) arquivos"
 
       - name: Preparar a chave SSH
         if: steps.cfg.outputs.pronto == 'sim'
@@ -536,11 +559,10 @@ jobs:
           PORTA: ${{ secrets.HOSTINGER_SSH_PORT }}
           USUARIO: ${{ secrets.HOSTINGER_SSH_USER }}
           CAMINHO: ${{ secrets.HOSTINGER_API_PATH }}
-          ESPERADO: ${{ github.repository }}
         run: |
           set -euo pipefail
           ssh -i ~/.ssh/deploy -p "$PORTA" "$USUARIO@$HOST" \
-            "bash -s -- '$CAMINHO' '$ESPERADO'" < .github/deploy/verificar-alvo.sh
+            "bash -s -- '$CAMINHO'" < .github/deploy/verificar-alvo.sh
 
       - name: Backup do banco antes de qualquer migração
         if: steps.cfg.outputs.pronto == 'sim'
@@ -554,18 +576,52 @@ jobs:
           ssh -i ~/.ssh/deploy -p "$PORTA" "$USUARIO@$HOST" \
             "bash -s -- '$CAMINHO'" < .github/deploy/backup-banco.sh
 
-      - name: Atualizar o código e as dependências
+      - name: Enviar o código
         if: steps.cfg.outputs.pronto == 'sim'
         env:
           HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
           PORTA: ${{ secrets.HOSTINGER_SSH_PORT }}
           USUARIO: ${{ secrets.HOSTINGER_SSH_USER }}
           CAMINHO: ${{ secrets.HOSTINGER_API_PATH }}
-          COMMIT: ${{ github.sha }}
         run: |
           set -euo pipefail
-          ssh -i ~/.ssh/deploy -p "$PORTA" "$USUARIO@$HOST" \
-            "bash -s -- '$CAMINHO' '$COMMIT'" < .github/deploy/atualizar-codigo.sh
+          SSH="ssh -i ~/.ssh/deploy -p $PORTA"
+
+          # src, database e vendor são 100% derivados do repositório, então
+          # --delete pode limpar o que saiu de lá. Nenhum dos três guarda
+          # dado: o que o servidor tem a mais é sobra de envio antigo.
+          for pasta in src database vendor; do
+            echo "--- $pasta"
+            rsync -az --delete --no-perms --no-owner --no-group \
+              -e "$SSH" \
+              "v2/backend/$pasta/" "$USUARIO@$HOST:$CAMINHO/$pasta/"
+          done
+
+          echo "--- composer.json / composer.lock"
+          rsync -az --no-perms --no-owner --no-group -e "$SSH" \
+            v2/backend/composer.json v2/backend/composer.lock \
+            "$USUARIO@$HOST:$CAMINHO/"
+
+      - name: Enviar a raiz pública
+        if: steps.cfg.outputs.pronto == 'sim'
+        env:
+          HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          PORTA: ${{ secrets.HOSTINGER_SSH_PORT }}
+          USUARIO: ${{ secrets.HOSTINGER_SSH_USER }}
+          CAMINHO: ${{ secrets.HOSTINGER_API_PATH }}
+        run: |
+          set -euo pipefail
+          SSH="ssh -i ~/.ssh/deploy -p $PORTA"
+
+          # public/ do repositório vira public_html/ no servidor.
+          #
+          # SEM --delete, e com uploads/ excluído duas vezes: as fotos dos
+          # projetos só existem aqui, não estão no Git nem no banco, que
+          # guarda apenas o caminho. Um --delete distraído apagaria tudo.
+          rsync -az --no-perms --no-owner --no-group \
+            --exclude 'uploads/' --exclude 'uploads' \
+            -e "$SSH" \
+            v2/backend/public/ "$USUARIO@$HOST:$CAMINHO/public_html/"
 
       - name: Aplicar migrações pendentes
         if: steps.cfg.outputs.pronto == 'sim'
@@ -604,5 +660,7 @@ jobs:
       - name: Se algo falhou
         if: failure() && steps.cfg.outputs.pronto == 'sim'
         run: |
-          echo "::error::Deploy falhou. O backup do banco está em ~/backups-deploy no servidor,"
-          echo "e o passo 'Atualizar o código' imprimiu o comando de reset para o commit anterior."
+          echo "::error::Deploy falhou."
+          echo "O backup do banco está em ~/backups-deploy no servidor."
+          echo "O código é recuperável reexecutando este job depois de corrigir a causa:"
+          echo "o envio é idempotente e as fotos em public_html/uploads/ não são tocadas."

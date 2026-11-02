@@ -112,8 +112,16 @@ o reprovava (`expect` de 5 s, 2 workers).
 
 ## 6. Riscos e limitações conhecidos
 
-1. **Sem Composer na Hostinger.** `vendor/` é montado fora e enviado no pacote;
-   qualquer mudança de dependência exige refazer o envio manualmente.
+1. **O PHP do shell da Hostinger é 8.2.35, e o projeto exige 8.3.** Verificado
+   por SSH em 02/11/2026. Há `/opt/alt/php83/usr/bin/php` (8.3.36), e é ele que
+   o deploy usa para as migrações — o binário padrão quebraria em código que
+   usa recurso de 8.3, e só ali.
+
+   Até esta data esta linha dizia "Sem Composer na Hostinger", o que é **falso**:
+   há Composer 2.9.8 em `/usr/local/bin/composer`. A afirmação descrevia a
+   instalação de agosto e nunca foi revista — e levou a desenhar o deploy errado
+   duas vezes. Ainda assim o `composer install` roda no runner do CI, não no
+   servidor, justamente por causa da versão do PHP.
 2. **O deploy do site é acoplado ao build.** As variáveis `NEXT_PUBLIC_*` são
    congeladas no build: mudar `NEXT_PUBLIC_API_URL` sem reconstruir não tem
    efeito. Foi o defeito crítico achado na homologação de 29/08/2026.

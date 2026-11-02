@@ -227,6 +227,33 @@ erro voltaria. Quem manda no `tsconfig.json` é o Next, então ele saiu do
 `next dev`. O lint do TypeScript sobre o arquivo continua valendo — o que saiu é
 só a formatação.
 
+**D-35 · O Lighthouse não exige SEO da tela de login (02/11/2026).**
+O job `performance` nunca havia rodado — ele só dispara em `pull_request`, e o
+primeiro PR do repositório é de 02/11/2026. Quando rodou, reprovou numa única
+asserção: `categories:seo` em `/entrar`, com 0,63 contra o mínimo de 0,9, igual
+nas três medições.
+
+A nota é baixa porque a página está **corretamente** fora do índice: o layout de
+`(auth)` declara `robots: { index: false, follow: false }`, e o Lighthouse conta
+"Page is blocked from indexing" dentro da categoria SEO. A configuração exigia
+nota de busca de uma tela que o projeto decidiu, por escrito, manter fora da
+busca — a asserção não tinha como passar.
+
+`/entrar` **continua auditada**: é onde se digita senha, e regressão de
+performance ou de acessibilidade ali importa. O que saiu foi apenas o SEO. Em
+vez de `assertions`, a configuração passou a usar `assertMatrix` com dois
+grupos, e o padrão da URL foi escrito por negação (`^(?!.*/entrar$).*`) para que
+qualquer URL nova caia no grupo completo — inclusive SEO. O lado seguro é o
+padrão; a exceção é que precisa ser declarada.
+
+Verificado rodando o `lhci` no serviço `e2e`, que já traz navegador. Três
+tropeços de ambiente ficam registrados para a próxima vez: o build de produção
+falha com o `next dev` ativo (use `NEXT_DIST_DIR=.next-prod` **e** pare o
+`web`); o Git Bash do Windows reescreve `/ms-playwright/...` como
+`C:/Program Files/Git/...` quando o caminho passa por `-e`, então resolva a
+variável dentro do container; e o Chrome recusa rodar como root sem
+`--no-sandbox`, flag que o CI não precisa porque lá o job não é root.
+
 ---
 
 ## Decisões pendentes

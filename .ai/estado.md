@@ -97,7 +97,8 @@ Knip e o orçamento de bundle (319 KB comprimidos contra 400 KB, medidos em
 | — | `docs/ESTADO-ATUAL.md` ainda lista B28 (PR para a `master`) e B52 (publicar) como abertos; ambos foram concluídos | documentação desatualizada |
 | — | Minutas legais (`docs/legal/`) com campos `[PREENCHER]` e sem revisão jurídica | pendente desde 09/08/2026 |
 | — | Expurgo (`database/purge.php`) não roda sozinho em produção; precisa de agendamento | pendente |
-| — | Lighthouse: o job `performance` existe no CI com os limiares definidos, mas não há registro de execução bem-sucedida em nenhum documento do repositório | a confirmar |
+| — | ~~Lighthouse: não há registro de execução bem-sucedida~~ | **respondido em 02/11/2026**: o job só roda em `pull_request` e nunca havia disparado. Na primeira execução reprovou por exigir SEO de `/entrar`, que é `noindex` de propósito. Corrigido com `assertMatrix`; ver D-35 |
+| — | O Dependency Graph está desligado no repositório, então o passo "Revisão de dependências" (só roda em PR) falha sem ter o que comparar — `/dependency-graph/sbom` responde 404. Ligar em Settings → Security, e então "Re-run failed jobs" | identificado em 02/11/2026 |
 | — | ~~`npm run lint` reprova por `tsconfig.json format`~~ | **resolvido em 01/11/2026**: o arquivo saiu do `formatter.ignore` do Biome, porque quem o reescreve é o Next. Ver D-34 |
 | — | `/projetos` renderiza no cliente: está no sitemap e sem `noindex` desde 01/11/2026, mas o rastreador recebe a casca, sem os projetos. Virar renderização no servidor com revalidação, como a home | identificado em 01/11/2026 (ver D-31) |
 

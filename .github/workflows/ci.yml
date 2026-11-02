@@ -471,3 +471,138 @@ jobs:
           fi
 
           echo "Quality gate aprovado."
+
+  # ------------------------------------------------------------------
+  # Deploy da API em produção (Hostinger)
+  #
+  # Só roda em push na master e só depois do quality-gate verde: deploy
+  # automático publica erro com a mesma velocidade que publica acerto, e a
+  # rede de proteção é justamente a esteira acima.
+  #
+  # O site não entra aqui — a Vercel já reconstrói sozinha ao receber a
+  # master. Este job cuida apenas de api.gustavohsmachado.com.br, e de mais
+  # nada: os outros subdomínios da conta não são tocados.
+  #
+  # Por que `git pull` e não FTP/rsync: as fotos dos projetos vivem em
+  # public/uploads/, fora do versionamento, e o .env de produção está no
+  # .gitignore. Sincronização por FTP apagaria as duas coisas; `git pull`
+  # não encosta em arquivo que o repositório não conhece.
+  # ------------------------------------------------------------------
+  deploy-api:
+    name: Deploy da API
+    runs-on: ubuntu-latest
+    needs: [quality-gate]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+
+    # Dois deploys ao mesmo tempo na mesma pasta deixariam o servidor em
+    # estado indefinido. Aqui, diferente do CI, a execução em curso NÃO é
+    # cancelada: abortar no meio de um composer install é pior que esperar.
+    concurrency:
+      group: deploy-api-producao
+      cancel-in-progress: false
+
+    steps:
+      - name: Conferir se o deploy está configurado
+        id: cfg
+        env:
+          CHAVE: ${{ secrets.HOSTINGER_SSH_KEY }}
+        run: |
+          if [ -z "${CHAVE:-}" ]; then
+            echo "::notice::Deploy não configurado (falta o secret HOSTINGER_SSH_KEY). Pulando — isto não é falha."
+            echo "pronto=nao" >> "$GITHUB_OUTPUT"
+          else
+            echo "pronto=sim" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Preparar a chave SSH
+        if: steps.cfg.outputs.pronto == 'sim'
+        env:
+          CHAVE: ${{ secrets.HOSTINGER_SSH_KEY }}
+          HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          PORTA: ${{ secrets.HOSTINGER_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh && chmod 700 ~/.ssh
+          printf '%s\n' "$CHAVE" > ~/.ssh/deploy
+          chmod 600 ~/.ssh/deploy
+          # Fixar a identidade do servidor: sem isto, qualquer host que
+          # respondesse no endereço receberia a chave.
+          ssh-keyscan -p "$PORTA" -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Verificar o alvo antes de mexer
+        if: steps.cfg.outputs.pronto == 'sim'
+        env:
+          HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          PORTA: ${{ secrets.HOSTINGER_SSH_PORT }}
+          USUARIO: ${{ secrets.HOSTINGER_SSH_USER }}
+          CAMINHO: ${{ secrets.HOSTINGER_API_PATH }}
+          ESPERADO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy -p "$PORTA" "$USUARIO@$HOST" \
+            "bash -s -- '$CAMINHO' '$ESPERADO'" < .github/deploy/verificar-alvo.sh
+
+      - name: Backup do banco antes de qualquer migração
+        if: steps.cfg.outputs.pronto == 'sim'
+        env:
+          HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          PORTA: ${{ secrets.HOSTINGER_SSH_PORT }}
+          USUARIO: ${{ secrets.HOSTINGER_SSH_USER }}
+          CAMINHO: ${{ secrets.HOSTINGER_API_PATH }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy -p "$PORTA" "$USUARIO@$HOST" \
+            "bash -s -- '$CAMINHO'" < .github/deploy/backup-banco.sh
+
+      - name: Atualizar o código e as dependências
+        if: steps.cfg.outputs.pronto == 'sim'
+        env:
+          HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          PORTA: ${{ secrets.HOSTINGER_SSH_PORT }}
+          USUARIO: ${{ secrets.HOSTINGER_SSH_USER }}
+          CAMINHO: ${{ secrets.HOSTINGER_API_PATH }}
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy -p "$PORTA" "$USUARIO@$HOST" \
+            "bash -s -- '$CAMINHO' '$COMMIT'" < .github/deploy/atualizar-codigo.sh
+
+      - name: Aplicar migrações pendentes
+        if: steps.cfg.outputs.pronto == 'sim'
+        env:
+          HOST: ${{ secrets.HOSTINGER_SSH_HOST }}
+          PORTA: ${{ secrets.HOSTINGER_SSH_PORT }}
+          USUARIO: ${{ secrets.HOSTINGER_SSH_USER }}
+          CAMINHO: ${{ secrets.HOSTINGER_API_PATH }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy -p "$PORTA" "$USUARIO@$HOST" \
+            "bash -s -- '$CAMINHO'" < .github/deploy/migrar.sh
+
+      - name: Smoke test
+        if: steps.cfg.outputs.pronto == 'sim'
+        run: |
+          set -euo pipefail
+          base="https://api.gustavohsmachado.com.br"
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$base/health")
+          echo "GET /health -> $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::A API não respondeu 200 em /health depois do deploy."
+            exit 1
+          fi
+
+          code=$(curl -s -o /dev/null -w '%{http_code}' "$base/api/v1/projects")
+          echo "GET /api/v1/projects -> $code"
+          if [ "$code" != "200" ]; then
+            echo "::error::/api/v1/projects respondeu $code. A vitrine pública depende desta rota."
+            exit 1
+          fi
+
+          echo "API no ar e servindo os projetos."
+
+      - name: Se algo falhou
+        if: failure() && steps.cfg.outputs.pronto == 'sim'
+        run: |
+          echo "::error::Deploy falhou. O backup do banco está em ~/backups-deploy no servidor,"
+          echo "e o passo 'Atualizar o código' imprimiu o comando de reset para o commit anterior."

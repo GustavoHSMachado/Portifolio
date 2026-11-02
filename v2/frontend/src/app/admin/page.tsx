@@ -874,9 +874,7 @@ function ProjectSection({
           slug: String(form.get("slug") ?? "").trim(),
           title: String(form.get("title") ?? "").trim(),
           summary: String(form.get("summary") ?? "").trim(),
-          problem: String(form.get("problem") ?? "").trim(),
-          decisions: String(form.get("decisions") ?? "").trim(),
-          result: String(form.get("result") ?? "").trim(),
+          description: String(form.get("description") ?? "").trim(),
           stack,
           repositoryUrl: String(form.get("repositoryUrl") ?? "").trim(),
           demoUrl: String(form.get("demoUrl") ?? "").trim(),
@@ -895,7 +893,7 @@ function ProjectSection({
   return (
     <Section
       title="Projetos"
-      description="Problema, decisões e resultado — é o que separa portfólio de lista de repositórios. Rascunhos não aparecem no site."
+      description="A descrição é o que separa portfólio de lista de repositórios: conte o que o projeto resolve. Rascunhos não aparecem no site."
     >
       <ul className={styles.list}>
         {items.map((item) => (
@@ -995,31 +993,17 @@ function ProjectSection({
           />
 
           <label className={styles.textareaField}>
-            <span className={styles.textareaLabel}>Problema</span>
+            <span className={styles.textareaLabel}>Descrição</span>
             <textarea
-              name="problem"
+              name="description"
               className={styles.textarea}
-              rows={4}
-              defaultValue={editing?.problem ?? ""}
+              rows={10}
+              defaultValue={editing?.description ?? ""}
             />
-          </label>
-          <label className={styles.textareaField}>
-            <span className={styles.textareaLabel}>Decisões técnicas</span>
-            <textarea
-              name="decisions"
-              className={styles.textarea}
-              rows={4}
-              defaultValue={editing?.decisions ?? ""}
-            />
-          </label>
-          <label className={styles.textareaField}>
-            <span className={styles.textareaLabel}>Resultado</span>
-            <textarea
-              name="result"
-              className={styles.textarea}
-              rows={4}
-              defaultValue={editing?.result ?? ""}
-            />
+            <span className={styles.itemMeta}>
+              O texto que fica atrás de “Sobre o projeto” no cartão. Quebras de linha são
+              preservadas.
+            </span>
           </label>
 
           <label className={styles.checkboxRow}>

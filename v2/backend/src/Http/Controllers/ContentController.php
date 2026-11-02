@@ -260,9 +260,7 @@ final class ContentController
             'slug'      => $data['slug'],
             'title'     => $data['title'],
             'summary'   => $data['summary'],
-            'problem'   => $request->body['problem'] ?? null,
-            'decisions' => $request->body['decisions'] ?? null,
-            'result'    => $request->body['result'] ?? null,
+            'description' => $request->body['description'] ?? null,
             'stack'     => is_array($stack) && $stack !== []
                 ? json_encode(array_values($stack), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)
                 : null,
@@ -437,9 +435,7 @@ final class ContentController
             'slug'          => $row['slug'],
             'title'         => $row['title'],
             'summary'       => $row['summary'],
-            'problem'       => $row['problem'],
-            'decisions'     => $row['decisions'],
-            'result'        => $row['result'],
+            'description'   => $row['description'],
             'stack'         => is_string($stack) ? json_decode($stack, true) : [],
             'repositoryUrl' => $row['repository_url'],
             'demoUrl'       => $row['demo_url'],

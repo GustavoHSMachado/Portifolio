@@ -83,9 +83,7 @@ export interface Project {
   slug: string;
   title: string;
   summary: string;
-  problem: string | null;
-  decisions: string | null;
-  result: string | null;
+  description: string | null;
   stack: string[];
   repositoryUrl: string | null;
   demoUrl: string | null;
@@ -311,6 +309,46 @@ export async function fetchProjects(): Promise<Project[]> {
 /* ------------------------------------------------------------------ */
 /* Fotos dos projetos — só para o administrador                        */
 /* ------------------------------------------------------------------ */
+
+/**
+ * Limites do envio de fotos.
+ *
+ * Repetem o que o servidor já exige — `ImageStorage` e
+ * `ProjectImage::MAXIMO_POR_PROJETO` são quem recusa de fato. Aqui existem
+ * só para avisar antes de gastar a subida de um arquivo que seria negado.
+ */
+export const FOTO_TAMANHO_MAXIMO = 2 * 1024 * 1024;
+export const FOTO_TIPOS_ACEITOS = ["image/jpeg", "image/png", "image/webp"];
+export const FOTOS_POR_PROJETO = 8;
+
+/**
+ * Primeira queixa contra uma seleção de fotos, ou null se estiver tudo certo.
+ *
+ * Recusa o lote inteiro em vez de aceitar os válidos e descartar os ruins em
+ * silêncio: quem escolheu cinco e recebeu três só descobre depois, e sem
+ * saber qual ficou de fora.
+ */
+export function recusarFotos(escolhidos: File[], vagas: number): string | null {
+  if (escolhidos.length > vagas) {
+    return vagas === 0
+      ? `Este projeto já tem ${FOTOS_POR_PROJETO} fotos. Remova uma para enviar outra.`
+      : `Você escolheu ${escolhidos.length} e cabem ${vagas}. O limite é ${FOTOS_POR_PROJETO} por projeto.`;
+  }
+
+  const formatoRuim = escolhidos.find((item) => !FOTO_TIPOS_ACEITOS.includes(item.type));
+
+  if (formatoRuim !== undefined) {
+    return `"${formatoRuim.name}" não é JPEG, PNG nem WebP.`;
+  }
+
+  const grandeDemais = escolhidos.find((item) => item.size > FOTO_TAMANHO_MAXIMO);
+
+  if (grandeDemais !== undefined) {
+    return `"${grandeDemais.name}" passa de 2 MB. Reduza antes de enviar.`;
+  }
+
+  return null;
+}
 
 /**
  * Envia uma foto para o projeto.

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { AJUSTES_PADRAO, EDUCATION_LEVELS, formatMonth, formatPeriod } from "./portfolio";
+import {
+  AJUSTES_PADRAO,
+  EDUCATION_LEVELS,
+  FOTOS_POR_PROJETO,
+  FOTO_TAMANHO_MAXIMO,
+  formatMonth,
+  formatPeriod,
+  recusarFotos,
+} from "./portfolio";
 
 /**
  * As conversões que vão direto para a tela.
@@ -81,5 +89,72 @@ describe("EDUCATION_LEVELS", () => {
       "doutorado",
       "curso",
     ]);
+  });
+});
+
+/**
+ * A recusa do envio de fotos.
+ *
+ * O servidor é quem decide de verdade, mas esta função é o que impede a
+ * pessoa de esperar uma subida de 2 MB para receber um "não". Ela recusa o
+ * lote inteiro de propósito: aceitar os válidos e descartar os ruins em
+ * silêncio deixaria alguém achando que mandou cinco quando mandou três.
+ */
+describe("recusarFotos", () => {
+  function arquivo(nome: string, tipo: string, tamanho: number): File {
+    const falso = new File(["x"], nome, { type: tipo });
+
+    // File() define size pelo conteúdo, e escrever 2 MB em memória só para
+    // testar o limite seria desperdício.
+    Object.defineProperty(falso, "size", { value: tamanho });
+
+    return falso;
+  }
+
+  const bom = () => arquivo("tela.png", "image/png", 1024);
+
+  it("aceita uma seleção dentro dos limites", () => {
+    expect(recusarFotos([bom(), bom()], 8)).toBeNull();
+  });
+
+  it("aceita exatamente o número de vagas", () => {
+    expect(recusarFotos([bom(), bom(), bom()], 3)).toBeNull();
+  });
+
+  it("recusa quando não há vaga nenhuma, dizendo o limite", () => {
+    expect(recusarFotos([bom()], 0)).toContain(String(FOTOS_POR_PROJETO));
+  });
+
+  it("recusa o excesso dizendo quantas cabem", () => {
+    const queixa = recusarFotos([bom(), bom(), bom()], 2);
+
+    expect(queixa).toContain("escolheu 3");
+    expect(queixa).toContain("cabem 2");
+  });
+
+  /** O nome no erro é o que permite achar o arquivo errado entre vários. */
+  it("nomeia o arquivo de formato recusado", () => {
+    const queixa = recusarFotos([bom(), arquivo("curriculo.pdf", "application/pdf", 1024)], 8);
+
+    expect(queixa).toContain("curriculo.pdf");
+  });
+
+  it("recusa SVG, que é o formato que carrega script", () => {
+    expect(recusarFotos([arquivo("logo.svg", "image/svg+xml", 1024)], 8)).toContain("logo.svg");
+  });
+
+  it("nomeia o arquivo grande demais", () => {
+    const queixa = recusarFotos([arquivo("foto.jpg", "image/jpeg", FOTO_TAMANHO_MAXIMO + 1)], 8);
+
+    expect(queixa).toContain("foto.jpg");
+    expect(queixa).toContain("2 MB");
+  });
+
+  it("aceita o arquivo no limite exato", () => {
+    expect(recusarFotos([arquivo("foto.jpg", "image/jpeg", FOTO_TAMANHO_MAXIMO)], 8)).toBeNull();
+  });
+
+  it("não reclama de seleção vazia — quem trata isso é a tela", () => {
+    expect(recusarFotos([], 8)).toBeNull();
   });
 });

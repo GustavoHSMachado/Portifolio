@@ -90,8 +90,8 @@ export default function ProjetosPage() {
           <p className={styles.eyebrow}>Projetos</p>
           <h1 className={styles.title}>O que eu construí</h1>
           <p className={styles.subtitle}>
-            Cada projeto traz o problema que apareceu, as decisões que tomei e o resultado. Onde
-            houver versão no ar, o link abre o projeto funcionando.
+            Cada projeto traz o que ele resolve e como foi construído. Onde houver versão no ar, o
+            link abre o projeto funcionando.
           </p>
         </header>
 
@@ -286,7 +286,7 @@ function MolduraDoProjeto({ projeto }: { projeto: Project }) {
 
 /** Cartão com a moldura, o resumo, as telas e o estudo de caso. */
 function CartaoProjeto({ projeto }: { projeto: Project }) {
-  const temCaso = projeto.problem !== null || projeto.decisions !== null || projeto.result !== null;
+  const temCaso = projeto.description !== null && projeto.description.trim() !== "";
 
   return (
     <article className={styles.projeto}>
@@ -358,28 +358,15 @@ function CartaoProjeto({ projeto }: { projeto: Project }) {
         */}
         {temCaso ? (
           <details className={styles.caso}>
-            <summary className={styles.casoResumo}>Problema, decisões e resultado</summary>
+            <summary className={styles.casoResumo}>Sobre o projeto</summary>
 
-            <dl className={styles.casoLista}>
-              {projeto.problem ? (
-                <div>
-                  <dt>Problema</dt>
-                  <dd>{projeto.problem}</dd>
-                </div>
-              ) : null}
-              {projeto.decisions ? (
-                <div>
-                  <dt>Decisões</dt>
-                  <dd>{projeto.decisions}</dd>
-                </div>
-              ) : null}
-              {projeto.result ? (
-                <div>
-                  <dt>Resultado</dt>
-                  <dd>{projeto.result}</dd>
-                </div>
-              ) : null}
-            </dl>
+            <div className={styles.casoLista}>
+              {/*
+                whiteSpace preserva as quebras de linha que você digitou no
+                painel: sem isso, parágrafos separados viram um bloco só.
+              */}
+              <p style={{ whiteSpace: "pre-line" }}>{projeto.description}</p>
+            </div>
           </details>
         ) : null}
 

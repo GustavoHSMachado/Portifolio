@@ -5,19 +5,18 @@ import { Input } from "@/components/ui/Input";
 import { useToast } from "@/components/ui/Toast";
 import { ApiError } from "@/lib/api";
 import {
+  FOTOS_POR_PROJETO,
+  FOTO_TIPOS_ACEITOS,
   type ProjectImage,
   enviarFotoDoProjeto,
   excluirFotoDoProjeto,
+  recusarFotos,
   salvarFotoDoProjeto,
 } from "@/lib/portfolio";
 import Image from "next/image";
 import { useRef, useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent } from "react";
 import styles from "./FotosDoProjeto.module.css";
-
-/** Mesmos limites do servidor, repetidos aqui só para avisar antes de enviar. */
-const TAMANHO_MAXIMO = 2 * 1024 * 1024;
-const TIPOS_ACEITOS = ["image/jpeg", "image/png", "image/webp"];
 
 interface Props {
   projectId: number;
@@ -41,44 +40,40 @@ export function FotosDoProjeto({ projectId, fotos, onChanged }: Props) {
   const toast = useToast();
   const campoArquivo = useRef<HTMLInputElement>(null);
 
-  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [arquivos, setArquivos] = useState<File[]>([]);
   const [descricao, setDescricao] = useState("");
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
+  const [progresso, setProgresso] = useState<string | null>(null);
   const [ocupada, setOcupada] = useState<number | null>(null);
 
+  const vagas = FOTOS_POR_PROJETO - fotos.length;
+
   function escolher(event: ChangeEvent<HTMLInputElement>) {
-    const escolhido = event.target.files?.[0] ?? null;
+    const escolhidos = Array.from(event.target.files ?? []);
     setErro(null);
 
-    if (escolhido === null) {
-      setArquivo(null);
+    if (escolhidos.length === 0) {
+      setArquivos([]);
 
       return;
     }
 
-    if (!TIPOS_ACEITOS.includes(escolhido.type)) {
-      setErro("Formato não aceito. Envie JPEG, PNG ou WebP.");
-      setArquivo(null);
+    const queixa = recusarFotos(escolhidos, vagas);
+
+    if (queixa !== null) {
+      setErro(queixa);
+      setArquivos([]);
 
       return;
     }
 
-    if (escolhido.size > TAMANHO_MAXIMO) {
-      setErro("A imagem passa de 2 MB. Reduza antes de enviar.");
-      setArquivo(null);
-
-      return;
-    }
-
-    setArquivo(escolhido);
+    setArquivos(escolhidos);
   }
 
-  async function enviar(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
-    if (arquivo === null) {
-      setErro("Escolha uma imagem.");
+  async function enviar() {
+    if (arquivos.length === 0) {
+      setErro("Escolha ao menos uma imagem.");
 
       return;
     }
@@ -93,11 +88,21 @@ export function FotosDoProjeto({ projectId, fotos, onChanged }: Props) {
     setErro(null);
 
     try {
-      await enviarFotoDoProjeto(projectId, arquivo, descricao.trim());
-      toast.success("Foto adicionada.");
+      // Uma requisição por foto: a API recebe um arquivo por vez, e em série
+      // para não disputar o limite de 8 com ela mesma — duas chamadas
+      // simultâneas poderiam passar pela contagem antes de qualquer gravação.
+      for (const [indice, item] of arquivos.entries()) {
+        setProgresso(arquivos.length > 1 ? `Enviando ${indice + 1} de ${arquivos.length}…` : null);
+        await enviarFotoDoProjeto(projectId, item, descricao.trim());
+      }
 
-      setArquivo(null);
+      toast.success(
+        arquivos.length > 1 ? `${arquivos.length} fotos adicionadas.` : "Foto adicionada.",
+      );
+
+      setArquivos([]);
       setDescricao("");
+      setProgresso(null);
 
       // O input de arquivo é controlado pelo navegador: sem isto, o nome do
       // arquivo enviado continua na tela como se ele ainda estivesse escolhido.
@@ -113,8 +118,14 @@ export function FotosDoProjeto({ projectId, fotos, onChanged }: Props) {
           : "Não foi possível enviar a foto.";
 
       setErro(mensagem);
+
+      // Num lote, a falha pode vir depois de algumas terem entrado. Recarregar
+      // mesmo no erro é o que mostra na lista o que de fato foi gravado, em
+      // vez de deixar a tela mentindo que nada aconteceu.
+      onChanged();
     } finally {
       setEnviando(false);
+      setProgresso(null);
     }
   }
 
@@ -151,7 +162,8 @@ export function FotosDoProjeto({ projectId, fotos, onChanged }: Props) {
       <h4 className={styles.titulo}>Fotos</h4>
       <p className={styles.ajuda}>
         Capturas de tela do projeto. A primeira é a que aparece no cartão da vitrine; as demais
-        entram na galeria. Até 8 fotos, de até 2 MB cada.
+        entram na galeria. Até {FOTOS_POR_PROJETO} fotos, de até 2 MB cada — dá para escolher várias
+        de uma vez.
       </p>
 
       {fotos.length > 0 ? (
@@ -167,18 +179,14 @@ export function FotosDoProjeto({ projectId, fotos, onChanged }: Props) {
                 unoptimized
               />
 
-              <form
-                className={styles.itemCampos}
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  const dados = new FormData(event.currentTarget);
-                  void salvar(
-                    foto,
-                    String(dados.get("alt") ?? ""),
-                    Number(dados.get("position") ?? indice),
-                  );
-                }}
-              >
+              {/*
+                <div>, e não <form>: este bloco é desenhado dentro do
+                formulário do projeto, e formulário aninhado não existe em
+                HTML. O React mantém o aninhamento no DOM, e o submit do
+                interno acabava recarregando a página com os campos na URL em
+                vez de enviar a foto.
+              */}
+              <div className={styles.itemCampos}>
                 <Input
                   label="Descrição"
                   name="alt"
@@ -194,7 +202,19 @@ export function FotosDoProjeto({ projectId, fotos, onChanged }: Props) {
                   defaultValue={String(foto.position)}
                 />
                 <div className={styles.itemAcoes}>
-                  <Button type="submit" size="sm" variant="ghost" loading={ocupada === foto.id}>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    loading={ocupada === foto.id}
+                    onClick={(event) => {
+                      const bloco = event.currentTarget.closest(`.${styles.itemCampos}`);
+                      const alt = bloco?.querySelector<HTMLInputElement>('input[name="alt"]');
+                      const posicao =
+                        bloco?.querySelector<HTMLInputElement>('input[name="position"]');
+                      void salvar(foto, alt?.value ?? "", Number(posicao?.value ?? indice));
+                    }}
+                  >
                     Salvar
                   </Button>
                   <Button
@@ -207,7 +227,7 @@ export function FotosDoProjeto({ projectId, fotos, onChanged }: Props) {
                     Remover
                   </Button>
                 </div>
-              </form>
+              </div>
             </li>
           ))}
         </ul>
@@ -215,25 +235,38 @@ export function FotosDoProjeto({ projectId, fotos, onChanged }: Props) {
         <p className={styles.vazio}>Nenhuma foto ainda.</p>
       )}
 
-      {fotos.length < 8 ? (
-        <form onSubmit={enviar} className={styles.envio}>
+      {vagas > 0 ? (
+        <div className={styles.envio}>
           <label className={styles.campoArquivo}>
-            <span className={styles.campoArquivoLabel}>Nova foto</span>
+            <span className={styles.campoArquivoLabel}>
+              {vagas === FOTOS_POR_PROJETO ? "Novas fotos" : `Novas fotos (cabem mais ${vagas})`}
+            </span>
             <input
               ref={campoArquivo}
               type="file"
-              accept={TIPOS_ACEITOS.join(",")}
+              multiple
+              accept={FOTO_TIPOS_ACEITOS.join(",")}
               onChange={escolher}
               className={styles.arquivo}
             />
           </label>
+
+          {arquivos.length > 1 ? (
+            <p className={styles.ajuda}>
+              {arquivos.length} imagens escolhidas. Elas entram na ordem em que aparecem acima.
+            </p>
+          ) : null}
 
           <Input
             label="Descrição da imagem"
             name="descricao"
             value={descricao}
             onChange={(event) => setDescricao(event.target.value)}
-            hint="O que se vê na tela, em poucas palavras."
+            hint={
+              arquivos.length > 1
+                ? "Vale para todas as imagens deste envio. Ajuste uma a uma na lista depois."
+                : "O que se vê na tela, em poucas palavras."
+            }
           />
 
           {erro !== null ? (
@@ -242,12 +275,27 @@ export function FotosDoProjeto({ projectId, fotos, onChanged }: Props) {
             </p>
           ) : null}
 
-          <Button type="submit" size="sm" loading={enviando} disabled={arquivo === null}>
-            {enviando ? "Enviando" : "Enviar foto"}
+          {/* <output> já anuncia: role="status" e aria-live="polite" são implícitos. */}
+          {progresso !== null ? <output className={styles.ajuda}>{progresso}</output> : null}
+
+          <Button
+            type="button"
+            size="sm"
+            loading={enviando}
+            disabled={arquivos.length === 0}
+            onClick={() => void enviar()}
+          >
+            {enviando
+              ? "Enviando"
+              : arquivos.length > 1
+                ? `Enviar ${arquivos.length} fotos`
+                : "Enviar foto"}
           </Button>
-        </form>
+        </div>
       ) : (
-        <p className={styles.vazio}>Limite de 8 fotos alcançado. Remova uma para enviar outra.</p>
+        <p className={styles.vazio}>
+          Limite de {FOTOS_POR_PROJETO} fotos alcançado. Remova uma para enviar outra.
+        </p>
       )}
     </section>
   );

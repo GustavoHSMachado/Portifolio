@@ -72,7 +72,7 @@ final class Content
     public function publishedProjects(): array
     {
         return $this->db->all(
-            'SELECT id, slug, title, summary, problem, decisions, result,
+            'SELECT id, slug, title, summary, description,
                     stack, repository_url, demo_url
                FROM projects WHERE published = 1 ORDER BY position, id'
         );
@@ -86,7 +86,7 @@ final class Content
     public function allProjects(): array
     {
         return $this->db->all(
-            'SELECT id, slug, title, summary, problem, decisions, result,
+            'SELECT id, slug, title, summary, description,
                     stack, repository_url, demo_url, published, position
                FROM projects ORDER BY position, id'
         );
@@ -96,7 +96,7 @@ final class Content
     public function projectBySlug(string $slug): ?array
     {
         return $this->db->first(
-            'SELECT id, slug, title, summary, problem, decisions, result,
+            'SELECT id, slug, title, summary, description,
                     stack, repository_url, demo_url, published
                FROM projects WHERE slug = ?',
             [$slug]

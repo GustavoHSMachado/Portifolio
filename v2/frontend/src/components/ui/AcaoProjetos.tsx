@@ -4,13 +4,15 @@ import { useAuth } from "@/hooks/useAuth";
 import Link from "next/link";
 
 /**
- * O caminho para os projetos, escrito conforme quem está olhando.
+ * O caminho para os projetos.
  *
- * Quem não entrou precisa saber que a porta é o login; quem já entrou não
- * precisa ver "Entrar" de novo — precisa do atalho para os projetos.
+ * Até 01/11/2026 a porta era o login, e o botão mudava conforme a sessão.
+ * Agora a vitrine é pública e o destino é sempre o mesmo; o convite para criar
+ * conta continua, como apoio, para quem ainda não tem — a conta serve ao
+ * painel e às mensagens, não aos projetos.
  *
- * Mesmo motivo do LinkDeAcesso para ser cliente: a home é renderizada no
- * servidor e a sessão só existe no navegador.
+ * Segue cliente por causa desse convite: a home é renderizada no servidor e a
+ * sessão só existe no navegador.
  */
 export function AcaoProjetos({
   className,
@@ -22,30 +24,12 @@ export function AcaoProjetos({
 }) {
   const { user, loading } = useAuth();
 
-  // Espaço reservado com o texto mais longo, para o bloco não pular de tamanho
-  // quando a sessão terminar de resolver.
-  if (loading) {
-    return (
-      <span className={className} aria-hidden="true" style={{ visibility: "hidden" }}>
-        Entrar para ver os projetos
-      </span>
-    );
-  }
-
-  if (user) {
-    return (
+  return (
+    <>
       <Link href="/projetos" className={className}>
         Ver os projetos
       </Link>
-    );
-  }
-
-  return (
-    <>
-      <Link href="/entrar" className={className}>
-        Entrar para ver os projetos
-      </Link>
-      {classNameSecundaria ? (
+      {classNameSecundaria && !loading && !user ? (
         <Link href="/criar-conta" className={classNameSecundaria}>
           Criar conta
         </Link>
@@ -55,24 +39,16 @@ export function AcaoProjetos({
 }
 
 /**
- * A explicação que acompanha o botão, pelo mesmo motivo dele.
+ * A explicação que acompanha o botão.
  *
- * Deixar o texto fixo no servidor produzia a incoerência de convidar a entrar
- * logo acima de um botão escrito "Ver os projetos" — para alguém que já tinha
- * entrado.
+ * O texto deixou de depender da sessão junto com o botão: não há mais nada a
+ * destravar, então não há mais dois recados a dar.
  */
 export function TextoProjetos({ className }: { className?: string }) {
-  const { user, loading } = useAuth();
-
-  const comum =
-    "Cada um traz o problema que apareceu, as decisões que tomei e o resultado, com link para ver o projeto no ar.";
-
   return (
-    <p className={className} style={loading ? { visibility: "hidden" } : undefined}>
-      {comum}{" "}
-      {user
-        ? "Você já está na sua conta — é só abrir."
-        : "Para abrir, entre com sua conta — leva menos de um minuto criar uma."}
+    <p className={className}>
+      Cada um traz o problema que apareceu, as decisões que tomei e o resultado, com link para ver o
+      projeto no ar.
     </p>
   );
 }

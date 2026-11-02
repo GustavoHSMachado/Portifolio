@@ -25,6 +25,28 @@ const nextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
+
+    /*
+     * As fotos dos projetos vêm da API, em outro host.
+     *
+     * Hoje elas são servidas com `unoptimized` (ver o comentário na vitrine),
+     * e nesse modo o next/image nem consulta esta lista. O padrão fica porque
+     * é ele que permite voltar a otimizar sem descobrir na produção que o host
+     * não estava declarado — e é derivado de NEXT_PUBLIC_API_URL para não
+     * existir uma segunda lista de endereços para manter.
+     */
+    remotePatterns: [
+      (() => {
+        const api = new URL(process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000");
+
+        return {
+          protocol: api.protocol.replace(":", ""),
+          hostname: api.hostname,
+          ...(api.port ? { port: api.port } : {}),
+          pathname: "/uploads/**",
+        };
+      })(),
+    ],
   },
 
   experimental: {
@@ -56,7 +78,14 @@ const nextConfig = {
       "default-src 'self'",
       `script-src 'self' 'unsafe-inline'${producao ? "" : " 'unsafe-eval'"}`,
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob:",
+      /*
+       * As fotos dos projetos são servidas pela API, que é outro host.
+       *
+       * Sem o apiOrigin aqui, a CSP bloqueia cada <img> da vitrine e a tela sai
+       * com molduras vazias — sem erro de rede, sem 404, só a imagem que não
+       * aparece e uma linha no console que ninguém está olhando.
+       */
+      `img-src 'self' data: blob: ${apiOrigin}`,
       "font-src 'self' data:",
       `connect-src 'self' ${apiOrigin}`,
       "frame-ancestors 'self'",

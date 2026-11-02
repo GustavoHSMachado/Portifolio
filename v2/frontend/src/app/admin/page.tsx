@@ -1,6 +1,7 @@
 "use client";
 
 import { AparenciaSection } from "@/components/admin/AparenciaSection";
+import { FotosDoProjeto } from "@/components/admin/FotosDoProjeto";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { LoadingRegion, Skeleton } from "@/components/ui/Skeleton";
@@ -832,6 +833,24 @@ function SkillSection({ items, onChanged }: { items: Skill[]; onChanged: () => P
   );
 }
 
+/**
+ * As fotos, dentro do formulário de projeto.
+ *
+ * Só aparecem para projeto que já existe: o upload precisa de um id para
+ * associar a imagem, e um projeto em criação ainda não tem. Avisar é melhor do
+ * que mostrar um campo que falharia ao enviar.
+ */
+function BlocoDeFotos({
+  projeto,
+  onChanged,
+}: { projeto: Project | null; onChanged: () => Promise<void> }) {
+  if (projeto === null) {
+    return <p className={styles.itemMeta}>Salve o projeto para poder enviar fotos.</p>;
+  }
+
+  return <FotosDoProjeto projectId={projeto.id} fotos={projeto.images} onChanged={onChanged} />;
+}
+
 function ProjectSection({
   items,
   onChanged,
@@ -944,6 +963,21 @@ function ProjectSection({
               defaultValue={editing?.demoUrl ?? ""}
               error={fieldErrors.demoUrl?.[0]}
             />
+            {/*
+              Sem este campo, o formulário mandava position: 0 em todo salvamento
+              — o `form.get("position")` não encontrava nada e o `?? 0` assumia
+              zero. A coluna existia, a consulta ordenava por ela, e a ordem na
+              vitrine caía sempre no id: a ordem de cadastro. Agora o número
+              menor vem primeiro.
+            */}
+            <Input
+              label="Ordem na vitrine"
+              name="position"
+              type="number"
+              min={0}
+              defaultValue={String(editing?.position ?? 0)}
+              hint="Menor aparece primeiro."
+            />
           </div>
 
           <Input
@@ -992,6 +1026,8 @@ function ProjectSection({
             <input type="checkbox" name="published" defaultChecked={editing?.published ?? false} />
             <span>Publicar no site</span>
           </label>
+
+          <BlocoDeFotos projeto={editing} onChanged={onChanged} />
 
           <div className={styles.actions}>
             <Button type="submit" loading={saving}>

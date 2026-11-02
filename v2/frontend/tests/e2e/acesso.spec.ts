@@ -59,6 +59,9 @@ test.describe("páginas públicas", () => {
     ["/entrar", /Entrar/i],
     ["/criar-conta", /Criar conta/i],
     ["/recuperar-senha", /Esqueci minha senha/i],
+    // Pública desde 01/11/2026. O título vem da casca, que é o que esta
+    // suíte afere; se a listagem voltar a exigir sessão, cai aqui.
+    ["/projetos", /O que eu construí/i],
     ["/legal/termos-de-uso", /Termos/i],
     ["/legal/politica-de-privacidade", /Privacidade/i],
   ] as const) {

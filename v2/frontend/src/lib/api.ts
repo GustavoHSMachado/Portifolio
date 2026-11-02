@@ -74,15 +74,41 @@ interface RequestOptions extends Omit<RequestInit, "body"> {
   timeoutMs?: number;
 }
 
+/**
+ * FormData é o único corpo que não vira JSON.
+ *
+ * Upload precisa de multipart/form-data com um boundary, e o boundary é
+ * sorteado pelo próprio navegador ao serializar o FormData. Declarar o
+ * Content-Type nesse caso sobrescreveria o cabeçalho sem o boundary, e o
+ * servidor receberia um corpo que não sabe separar — $_FILES chegaria vazio.
+ *
+ * `typeof FormData` é conferido porque este módulo também roda no servidor,
+ * durante a renderização, onde a classe pode não existir.
+ */
+function ehFormData(body: unknown): body is FormData {
+  return typeof FormData !== "undefined" && body instanceof FormData;
+}
+
+/** O corpo como o fetch o espera: FormData cru, JSON serializado, ou nada. */
+function montarCorpo(body: unknown): BodyInit | undefined {
+  if (ehFormData(body)) {
+    return body;
+  }
+
+  return body === undefined ? undefined : JSON.stringify(body);
+}
+
 async function rawRequest<T>(path: string, options: RequestOptions = {}): Promise<ApiSuccess<T>> {
   const { body, skipAuth = false, timeoutMs = 15_000, headers, ...rest } = options;
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
 
+  const declaraJson = body !== undefined && !ehFormData(body);
+
   const finalHeaders: Record<string, string> = {
     Accept: "application/json",
-    ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    ...(declaraJson ? { "Content-Type": "application/json" } : {}),
     ...((headers as Record<string, string>) ?? {}),
   };
 
@@ -96,7 +122,7 @@ async function rawRequest<T>(path: string, options: RequestOptions = {}): Promis
     response = await fetch(`${BASE_URL}${path}`, {
       ...rest,
       headers: finalHeaders,
-      body: body !== undefined ? JSON.stringify(body) : undefined,
+      body: montarCorpo(body),
       // Necessário para o cookie httpOnly de refresh trafegar.
       credentials: "include",
       signal: controller.signal,

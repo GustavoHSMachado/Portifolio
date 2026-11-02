@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 /**
- * Fora do índice: a página exige sessão, e o que um rastreador veria é a tela
- * de carregamento. A rota é a mesma que a home anuncia para quem chega.
+ * No índice desde 01/11/2026, quando a listagem deixou de exigir sessão. O
+ * rastreador vê a mesma tela que o visitante: os projetos publicados.
  */
 export const metadata: Metadata = {
   title: "Projetos",
-  robots: { index: false, follow: false },
+  description:
+    "Projetos que construí, com o problema que apareceu, as decisões que tomei e o resultado.",
 };
 
 export default function ProjetosLayout({ children }: { children: ReactNode }) {

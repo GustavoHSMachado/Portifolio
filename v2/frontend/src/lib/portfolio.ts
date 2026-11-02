@@ -61,6 +61,23 @@ export interface Skill {
   evidence: string | null;
 }
 
+/**
+ * Uma foto do projeto.
+ *
+ * `path` é o caminho relativo guardado no banco e `url` é o endereço completo
+ * montado pela API. Os dois vêm juntos de propósito: a tela usa a `url`, e o
+ * painel mostra o `path` para quem precisa saber o que está em disco. Montar a
+ * URL aqui a partir de NEXT_PUBLIC_API_URL seria pior — essa variável é
+ * congelada no build, então o caminho quebraria sem reconstruir o site.
+ */
+export interface ProjectImage {
+  id: number;
+  path: string;
+  url: string;
+  alt: string;
+  position: number;
+}
+
 export interface Project {
   id: number;
   slug: string;
@@ -74,6 +91,8 @@ export interface Project {
   demoUrl: string | null;
   published: boolean;
   position: number;
+  /** Já ordenadas pela API. Vazio é o caso comum, não erro. */
+  images: ProjectImage[];
 }
 
 export interface PortfolioContent {
@@ -277,16 +296,48 @@ export const EDUCATION_LEVELS: Record<EducationLevel, string> = {
 };
 
 /**
- * Projetos completos, para quem tem sessão.
+ * Projetos publicados, para qualquer visitante.
  *
- * Roda no cliente, e não na renderização do servidor: o token de acesso vive na
- * memória do navegador — nunca em cookie legível nem em armazenamento local —,
- * e o servidor que monta a página não tem como alcançá-lo.
+ * skipAuth porque a rota é pública desde 01/11/2026: sem ele, um 401 vindo de
+ * outro lugar faria o cliente gastar uma rotação de refresh para buscar algo
+ * que não depende de sessão nenhuma.
  */
 export async function fetchProjects(): Promise<Project[]> {
-  const result = await api.get<{ projects: Project[] }>("/api/v1/projects");
+  const result = await api.get<{ projects: Project[] }>("/api/v1/projects", { skipAuth: true });
 
   return result.data.projects;
+}
+
+/* ------------------------------------------------------------------ */
+/* Fotos dos projetos — só para o administrador                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Envia uma foto para o projeto.
+ *
+ * FormData, e não JSON: o arquivo é binário e não tem representação em JSON
+ * que não seja base64 — que infla o corpo em um terço e obriga o servidor a
+ * decodificar antes de validar.
+ */
+export function enviarFotoDoProjeto(projectId: number, arquivo: File, alt: string) {
+  const dados = new FormData();
+  dados.append("foto", arquivo);
+  dados.append("alt", alt);
+
+  return api.post<ProjectImage>(`/api/v1/admin/projects/${projectId}/images`, dados);
+}
+
+/** Só a descrição e a ordem; o arquivo em disco não muda. */
+export function salvarFotoDoProjeto(
+  projectId: number,
+  imageId: number,
+  dados: { alt: string; position: number },
+) {
+  return api.put<ProjectImage>(`/api/v1/admin/projects/${projectId}/images/${imageId}`, dados);
+}
+
+export function excluirFotoDoProjeto(projectId: number, imageId: number) {
+  return api.delete<null>(`/api/v1/admin/projects/${projectId}/images/${imageId}`);
 }
 
 /* ------------------------------------------------------------------ */

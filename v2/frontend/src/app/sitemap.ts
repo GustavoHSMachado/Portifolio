@@ -4,15 +4,21 @@ import type { MetadataRoute } from "next";
 /**
  * Sitemap das páginas públicas.
  *
- * São só três — a home e os dois documentos legais. Listar as telas de acesso
- * seria pedir a indexação de formulário de login, que não tem o que ranquear e
- * ainda concorre com a home pela mesma consulta de marca.
+ * A home, a vitrine de projetos e os dois documentos legais. Listar as telas de
+ * acesso seria pedir a indexação de formulário de login, que não tem o que
+ * ranquear e ainda concorre com a home pela mesma consulta de marca.
  */
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
 
   return [
     { url: SITE_URL, lastModified: now, changeFrequency: "monthly", priority: 1 },
+    {
+      url: `${SITE_URL}/projetos`,
+      lastModified: now,
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
     {
       url: `${SITE_URL}/legal/termos-de-uso`,
       lastModified: now,

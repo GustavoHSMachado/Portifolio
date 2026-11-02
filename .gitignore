@@ -34,6 +34,19 @@ docker-compose.override.yml
 /v2/frontend/playwright-report/
 /v2/frontend/test-results/
 
+# Fotos enviadas pelo painel: conteúdo, não código.
+#
+# Versionar as imagens faria cada envio virar commit e o repositório crescer
+# para sempre. Em troca, elas só existem no servidor onde foram enviadas — e é
+# por isso que a pasta de uploads precisa entrar no backup e NUNCA ser
+# sobrescrita pelo pacote de deploy. O .htaccess, que é o que protege a pasta,
+# fica versionado de propósito.
+/v2/backend/public/uploads/**
+!/v2/backend/public/uploads/.htaccess
+!/v2/backend/public/uploads/projetos/
+/v2/backend/public/uploads/projetos/*
+!/v2/backend/public/uploads/projetos/.gitkeep
+
 # Logs e cache
 /v2/backend/storage/logs/*
 !/v2/backend/storage/logs/.gitkeep

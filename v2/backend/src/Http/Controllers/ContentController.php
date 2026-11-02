@@ -9,7 +9,9 @@ use App\Core\Request;
 use App\Core\Response;
 use App\Models\AuditLog;
 use App\Models\Content;
+use App\Models\ProjectImage;
 use App\Models\SiteSettings;
+use App\Services\ImageStorage;
 use App\Support\Validator;
 
 /**
@@ -25,6 +27,8 @@ final class ContentController
         private readonly Content $content,
         private readonly SiteSettings $settings,
         private readonly AuditLog $audit,
+        private readonly ProjectImage $images,
+        private readonly ImageStorage $storage,
     ) {
     }
 
@@ -69,7 +73,7 @@ final class ContentController
     public function projects(Request $request): Response
     {
         return Response::ok([
-            'projects' => array_map($this->presentProject(...), $this->content->publishedProjects()),
+            'projects' => $this->presentProjectsWithImages($this->content->publishedProjects()),
         ]);
     }
 
@@ -82,7 +86,9 @@ final class ContentController
             throw HttpException::notFound('Projeto não encontrado.');
         }
 
-        return Response::ok($this->presentProject($project));
+        return Response::ok(
+            $this->presentProject($project, $this->images->forProject((int) $project['id']))
+        );
     }
 
     /* ------------------------------------------------------------------ */
@@ -99,7 +105,7 @@ final class ContentController
             'experiences' => array_map($this->presentExperience(...), $this->content->experiences()),
             'skills'      => array_map($this->presentSkill(...), $this->content->skills()),
             // Inclui rascunhos: o painel precisa enxergar o que ainda não foi publicado.
-            'projects' => array_map($this->presentProject(...), $this->content->allProjects()),
+            'projects' => $this->presentProjectsWithImages($this->content->allProjects()),
         ]);
     }
 
@@ -286,6 +292,21 @@ final class ContentController
             throw HttpException::notFound('Coleção desconhecida.');
         }
 
+        /*
+         * As fotos do projeto saem do disco antes do DELETE.
+         *
+         * A foreign key tem ON DELETE CASCADE, então as linhas de
+         * project_images desaparecem junto com o projeto — mas o banco não
+         * alcança o sistema de arquivos. Sem este laço, cada projeto excluído
+         * deixaria suas imagens em disco para sempre, sem nenhum registro
+         * apontando para elas.
+         */
+        if ($collection === 'projects') {
+            foreach ($this->images->forProject($id) as $foto) {
+                $this->storage->delete((string) $foto['path']);
+            }
+        }
+
         if (!$this->content->delete($collection, $id)) {
             throw HttpException::notFound('Registro não encontrado.');
         }
@@ -377,10 +398,37 @@ final class ContentController
     }
 
     /**
-     * @param array<string, mixed> $row
      * @return array<string, mixed>
      */
-    private function presentProject(array $row): array
+    /**
+     * Lista de projetos com as fotos de todos buscadas numa consulta só.
+     *
+     * Chamar forProject() dentro do array_map daria uma consulta por projeto —
+     * o N+1 que não incomoda com quatro projetos e passa a incomodar com
+     * quarenta. Aqui o custo é fixo: uma consulta para os projetos, uma para as
+     * fotos.
+     *
+     * @param list<array<string, mixed>> $rows
+     * @return list<array<string, mixed>>
+     */
+    private function presentProjectsWithImages(array $rows): array
+    {
+        $fotos = $this->images->groupedByProject(
+            array_map(static fn (array $row): int => (int) $row['id'], $rows)
+        );
+
+        return array_map(
+            fn (array $row): array => $this->presentProject($row, $fotos[(int) $row['id']] ?? []),
+            $rows
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @param list<array<string, mixed>> $images
+     * @return array<string, mixed>
+     */
+    private function presentProject(array $row, array $images = []): array
     {
         $stack = $row['stack'] ?? null;
 
@@ -397,6 +445,24 @@ final class ContentController
             'demoUrl'       => $row['demo_url'],
             'published'     => isset($row['published']) ? (int) $row['published'] === 1 : true,
             'position'      => isset($row['position']) ? (int) $row['position'] : 0,
+            'images'        => array_map($this->presentProjectImage(...), $images),
+        ];
+    }
+
+    /**
+     * @param array<string, mixed> $row
+     * @return array<string, mixed>
+     */
+    private function presentProjectImage(array $row): array
+    {
+        return [
+            'id' => (int) $row['id'],
+            // O caminho relativo sai junto da URL: é o que o painel usa para
+            // conferir o que está em disco sem depender do domínio de agora.
+            'path'     => (string) $row['path'],
+            'url'      => $this->storage->publicUrl((string) $row['path']),
+            'alt'      => (string) $row['alt'],
+            'position' => (int) $row['position'],
         ];
     }
 

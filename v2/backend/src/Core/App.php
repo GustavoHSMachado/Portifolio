@@ -9,6 +9,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ContentController;
 use App\Http\Controllers\HealthController;
 use App\Http\Controllers\MessageController;
+use App\Http\Controllers\ProjectImageController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\UserController;
 use App\Http\Middleware\Authenticate;
@@ -19,6 +20,7 @@ use App\Http\Middleware\RequestId;
 use App\Http\Middleware\RequireAdmin;
 use App\Http\Middleware\RequireVerifiedEmail;
 use App\Http\Middleware\SecurityHeaders;
+use App\Services\ImageStorage;
 
 /**
  * Kernel da aplicação: monta o container, registra as rotas e despacha.
@@ -35,6 +37,17 @@ final class App
         $this->container = new Container();
         $this->router = new Router($this->container);
         $this->container->instance(Container::class, $this->container);
+
+        /*
+         * O autowiring monta dependências por reflexão do tipo, e a raiz
+         * pública é uma string: não há tipo que a descreva. Daí o registro
+         * explícito — é a única dependência da aplicação que depende de onde o
+         * projeto está instalado, e não do que ele faz.
+         */
+        $this->container->singleton(
+            ImageStorage::class,
+            fn (): ImageStorage => new ImageStorage($this->basePath . '/public'),
+        );
 
         $this->bootObservability();
         $this->registerRoutes();
@@ -102,15 +115,18 @@ final class App
         $this->router->put('/api/v1/me', [UserController::class, 'updateProfile'], $verified);
 
         // Conteúdo do portfólio — leitura pública, sem autenticação.
-        // Público: perfil, formação, experiência, habilidades e a contagem de
-        // projetos. Os projetos em si exigem sessão desde 23/08/2026.
+        // Público: perfil, formação, experiência, habilidades e os projetos
+        // publicados. A sessão que estas duas rotas exigiam desde 23/08/2026
+        // saiu em 01/11/2026: a vitrine existe para quem ainda não tem conta.
+        // O que segura rascunho é published = 1, filtrado em publishedProjects()
+        // e em project(); o painel continua vendo tudo por allProjects().
         $this->router->get('/api/v1/content', [ContentController::class, 'index']);
-        $this->router->get('/api/v1/projects', [ContentController::class, 'projects'], $auth);
+        $this->router->get('/api/v1/projects', [ContentController::class, 'projects']);
+        $this->router->get('/api/v1/projects/{slug}', [ContentController::class, 'project']);
 
         // Envio de sugestões e dúvidas. A leitura fica com as demais rotas
         // administrativas, abaixo, onde $admin já existe.
         $this->router->post('/api/v1/messages', [MessageController::class, 'store']);
-        $this->router->get('/api/v1/projects/{slug}', [ContentController::class, 'project'], $auth);
 
         // Painel de conteúdo. RequireAdmin e não apenas Authenticate: qualquer
         // conta confirmada poderia reescrever o portfólio inteiro de outra forma.
@@ -148,6 +164,14 @@ final class App
 
         $this->router->post('/api/v1/admin/projects', [ContentController::class, 'saveProject'], $admin);
         $this->router->put('/api/v1/admin/projects/{id}', [ContentController::class, 'saveProject'], $admin);
+
+        // Fotos do projeto. Vêm antes do delete genérico de conteúdo porque a
+        // intenção é específica: aqui o id do meio é o projeto, e o do fim é a
+        // foto. O genérico abaixo casa dois segmentos e não alcançaria estas,
+        // mas a ordem deixa a leitura na mesma sequência do roteamento.
+        $this->router->post('/api/v1/admin/projects/{id}/images', [ProjectImageController::class, 'store'], $admin);
+        $this->router->put('/api/v1/admin/projects/{id}/images/{imageId}', [ProjectImageController::class, 'update'], $admin);
+        $this->router->delete('/api/v1/admin/projects/{id}/images/{imageId}', [ProjectImageController::class, 'destroy'], $admin);
 
         $this->router->delete('/api/v1/admin/{collection}/{id}', [ContentController::class, 'destroy'], $admin);
     }

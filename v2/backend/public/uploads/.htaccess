@@ -1,0 +1,21 @@
+# Pasta de uploads: arquivo enviado nunca é código.
+#
+# Mesmo com nome sorteado pelo servidor e tipo conferido nos bytes, esta pasta
+# recusa execução por princípio — é a camada que continua valendo se a
+# validação do upload falhar um dia. Sem isto, um arquivo que passasse pelos
+# filtros e terminasse com extensão executável rodaria no servidor.
+<FilesMatch "\.(?i:ph(p[0-9]?|tml|ar)|cgi|pl|py|sh|htaccess)$">
+    Require all denied
+</FilesMatch>
+
+# O PHP da Hostinger roda por handler; desligá-lo aqui não depende do FilesMatch.
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+
+# Nada de interpretar o que o cliente diz ser: o tipo vem do servidor.
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
+
+Options -ExecCGI -Indexes

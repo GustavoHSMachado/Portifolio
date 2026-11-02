@@ -18,6 +18,7 @@ final class Request
      * @param array<string, mixed> $body
      * @param array<string, string> $headers
      * @param array<string, string> $cookies
+     * @param array<string, UploadedFile> $files
      */
     private function __construct(
         public readonly string $method,
@@ -27,6 +28,7 @@ final class Request
         public readonly array $headers,
         public readonly array $cookies,
         public readonly string $ip,
+        public readonly array $files = [],
     ) {
     }
 
@@ -55,6 +57,23 @@ final class Request
             $body = is_array($decoded) ? $decoded : [];
         }
 
+        /*
+         * multipart/form-data é a única forma de receber arquivo, e nesse
+         * formato o PHP preenche $_POST com os campos de texto e $_FILES com os
+         * binários. Traduzir aqui é o que mantém a promessa do topo da classe:
+         * controller nenhum precisa conhecer $_FILES.
+         */
+        $files = [];
+        foreach ($_FILES as $field => $entry) {
+            if (is_array($entry)) {
+                $file = UploadedFile::fromGlobalsEntry($entry);
+
+                if ($file !== null) {
+                    $files[(string) $field] = $file;
+                }
+            }
+        }
+
         return new self(
             method:  $method,
             path:    $path,
@@ -63,6 +82,7 @@ final class Request
             headers: $headers,
             cookies: $_COOKIE,
             ip:      self::resolveIp(),
+            files:   $files,
         );
     }
 
@@ -93,6 +113,11 @@ final class Request
         $value = $this->input($key, $default);
 
         return is_scalar($value) ? trim((string) $value) : $default;
+    }
+
+    public function file(string $key): ?UploadedFile
+    {
+        return $this->files[$key] ?? null;
     }
 
     public function header(string $name, ?string $default = null): ?string

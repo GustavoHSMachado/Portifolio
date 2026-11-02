@@ -254,6 +254,35 @@ falha com o `next dev` ativo (use `NEXT_DIST_DIR=.next-prod` **e** pare o
 variável dentro do container; e o Chrome recusa rodar como root sem
 `--no-sandbox`, flag que o CI não precisa porque lá o job não é root.
 
+**D-36 · O `php -S` do CI atende uma requisição por vez (02/11/2026).**
+A suíte E2E reprovou no PR #1 em 1 cenário de 92 — "consome o token uma única
+vez", só no Firefox, nas três tentativas. O mesmo commit havia passado no push
+para a `dev` minutos antes: código idêntico, resultados diferentes. Não era
+defeito do produto. O snapshot de acessibilidade capturado na falha mostra a
+página em `status: Confirmando seu e-mail`, o estado `verifying` da tela — que
+só existe depois de o React hidratar e disparar o
+`POST /api/v1/auth/verify-email`. A tela fazia o que deve fazer: esperar a
+resposta. Quem demorava era a API, que no CI sobe com `php -S` e sem
+`PHP_CLI_SERVER_WORKERS`; nessa configuração o servidor embutido do PHP **não
+faz fork** e atende uma requisição por vez, enquanto a suíte bate nele com
+5 projetos de navegador × 2 workers. Medido no container local (mesmo `php -S`,
+PHP 8.3), 10 requisições paralelas de 1 s levaram 10010 ms sem a variável,
+5004 ms com 2 workers, 5008 ms com 4 e 3005 ms com 8 — amostra única, e a
+escala não é linear porque os filhos competem no `accept`. O que importa é que
+a serialização absoluta desaparece, e era ela que estourava os 5 s. A
+reprodução mediu as quatro condições: com o `expect` de 20 s do ambiente local
+o cenário passou 10 de 10; com o `expect` de 5 s do CI falhou 2 de 10; com 5 s
+e um único worker do Playwright passou 10 de 10; e com 5 s, dois workers e a
+API em 4 processos passou 20 de 20. Por isso a correção foi
+`PHP_CLI_SERVER_WORKERS=4` no workflow, e não subir o `expect`: o limite de 5 s
+é vigilância legítima, e afrouxá-lo para a suíte inteira pagaria com cegueira
+generalizada o preço de um gargalo de um lugar só. Em produção a API roda sob
+PHP-FPM, com vários processos — o funil não existe lá, e medi-lo era medir o
+ambiente de teste, não o produto. O compose local **não** ganhou a variável:
+ali o `expect` é de 20 s e o sintoma nunca apareceu; quem precisar reproduzir
+sobe a API com a variável por um arquivo extra passado com `-f`, sem tocar no
+`docker-compose.override.yml`.
+
 ---
 
 ## Decisões pendentes

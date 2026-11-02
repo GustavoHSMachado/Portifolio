@@ -325,7 +325,18 @@ jobs:
       - name: Subir a API
         working-directory: v2/backend
         run: |
-          php -S 0.0.0.0:8000 -t public > /tmp/api.log 2>&1 &
+          # Sem esta variável o servidor embutido do PHP não faz fork e atende
+          # uma requisição por vez — e a suíte E2E bate nele com 5 projetos de
+          # navegador × 2 workers. A fila resultante estourava o expect de 5s
+          # da tela de confirmação, que ficava legitimamente em "Confirmando
+          # seu e-mail" esperando a vez: falha do ambiente de teste, não do
+          # produto, e sempre em quem chegava por último.
+          #
+          # Reproduzido em 02/11/2026 — com 2 workers, 2 de 10 execuções
+          # falhavam; com 1 worker, 10 de 10 passavam. Em produção a API roda
+          # sob PHP-FPM, com vários processos: medir um funil que a produção
+          # não tem é medir o ambiente, não o produto.
+          PHP_CLI_SERVER_WORKERS=4 php -S 0.0.0.0:8000 -t public > /tmp/api.log 2>&1 &
           for i in $(seq 1 30); do
             if curl -sf http://localhost:8000/health > /dev/null; then
               echo "API no ar."

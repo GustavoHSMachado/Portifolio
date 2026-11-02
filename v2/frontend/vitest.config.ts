@@ -46,12 +46,22 @@ export default defineConfig({
         // Baixar um limite é o tipo de coisa que costuma ser maquiagem, então
         // vale ser explícito: aqui ele passa a valer de verdade. Antes era um
         // número que reprovava sempre, e catraca que trava em todo commit não
-        // é catraca — é ruído que se aprende a ignorar. Functions e branches
-        // ficam como estavam porque passam com folga (68% e 81%).
-        lines: 29,
-        functions: 55,
-        branches: 70,
-        statements: 29,
+        // é catraca — é ruído que se aprende a ignorar.
+        //
+        // Subiram em 01/11/2026, com os testes de `lib/portfolio.ts`: 29 → 33
+        // em linhas e statements, 55 → 59 em functions, 70 → 83 em branches.
+        // Os valores medidos naquela rodada foram 33,31 / 59,25 / 83,62 — a
+        // catraca fica no inteiro abaixo para não reprovar por variação de
+        // arredondamento do provider.
+        //
+        // Essa subida veio de uma lição: a vitrine e as fotos passaram no
+        // `npm run test` local e reprovaram aqui, porque o CI roda
+        // `test:coverage` e código novo sem teste derruba a cobertura mesmo com
+        // todos os testes verdes. Rode o comando do CI, não o parecido.
+        lines: 33,
+        functions: 59,
+        branches: 83,
+        statements: 33,
       },
     },
   },

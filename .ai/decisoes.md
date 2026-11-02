@@ -1,0 +1,227 @@
+# Decisões técnicas — Portifolio v2
+
+> Decisões já tomadas, com o motivo. Consolidado em 10/09/2026 a partir dos
+> comentários do código, de `docs/ESTADO-ATUAL.md`, `CONTEXTO-DO-PROJETO.md` e
+> do relatório de homologação. Mudar qualquer uma delas exige entender antes por
+> que ela está aqui.
+
+---
+
+## Arquitetura
+
+**D-01 · Backend e frontend separados, conversando só por JSON.**
+A v1 misturava PHP e HTML no mesmo arquivo. A separação permite publicar o site
+e a API em provedores diferentes — que é exatamente o que acontece hoje.
+
+**D-02 · MVC próprio, sem framework.**
+O container de DI é minimalista, com autowiring por reflexão, porque é o que o
+projeto precisa. Não se troca por Symfony DI "para o futuro": complexidade entra
+quando o benefício for demonstrável hoje.
+
+**D-03 · `Cors` antes do `ErrorHandler` no pipeline.**
+Um middleware só enxerga a resposta que o seguinte devolve. Com o `Cors` abaixo,
+toda resposta de erro saía sem `Access-Control-Allow-Origin` e o navegador a
+transformava em "não conseguimos falar com o servidor". **Não reordenar.**
+
+**D-04 · Conteúdo do portfólio no banco, não no código.**
+O painel precisa editar sem deploy. Dado no código + tela de edição dariam duas
+fontes para a mesma informação, que um dia divergem.
+
+**D-05 · `site_settings` como chave/valor com padrões no código.**
+Cada novo ajuste de aparência viraria uma coluna e uma migration. Os padrões
+vivem em `SiteSettings::PADROES`; limpar o campo volta ao padrão.
+
+---
+
+## Autenticação e segurança
+
+**D-06 · Segundo fator por e-mail no login (22/08/2026).**
+Senha correta não abre sessão. Isso é o que sustenta uma política de senha de
+mínimo 7 caracteres: quem adivinhar a senha ainda precisa da caixa de entrada.
+
+**D-07 · Access token em memória, refresh em cookie `httpOnly`.**
+`localStorage` entregaria a sessão a qualquer XSS. O refresh é opaco, rotativo e
+por família; reuso derruba a família inteira.
+
+**D-08 · Janela de tolerância na rotação (`REFRESH_ROTATION_GRACE`, 29/08/2026).**
+Duas abas renovando ao mesmo tempo eram lidas como token roubado. A janela fica
+ancorada na primeira rotação e não pode ser esticada indefinidamente.
+
+**D-09 · Argon2id, e não MD5.**
+Medição de 22/08/2026 no próprio container: 3,5 milhões de hashes MD5 por
+segundo contra 5 do Argon2id — e MD5 não tem sal.
+
+**D-10 · `ADMIN_EMAIL` além do papel no banco.**
+Checar só `users.role` confia inteiramente numa coluna. A allowlist vive no
+`.env` do servidor, fora do alcance de quem escreva nessa coluna. Aceita mais de
+um endereço (vírgula) porque o E2E precisa de um endereço em domínio reservado.
+O e-mail é lido do banco, não das claims do token.
+
+**D-11 · Exclusão de conta anonimiza.**
+Só marcar `deleted_at` prenderia o e-mail na constraint única para sempre, e
+apagar a linha deixaria a auditoria órfã. Ver `User::softDelete`.
+
+**D-12 · Senha já usada não volta.**
+`password_history` guarda as últimas senhas da conta — cinco por padrão
+(`PASSWORD_HISTORY_SIZE`), a em vigor inclusive; a recusa acontece antes de
+qualquer escrita.
+
+**D-13 · Cadastro responde igual para e-mail novo e existente.**
+O 201/202 anterior entregava a existência da conta a um único `curl`. Corrigido
+em 29/08/2026 — os dois casos devolvem 201 com o mesmo corpo.
+
+**D-14 · Rate limit persistido em banco, por IP + rota.**
+Na v1 o limite morria ao trocar de sessão. Os padrões de `STRICT_RULES` são os
+valores de produção: ambiente que não configura nada continua protegido. O
+compose local afrouxa esses limites de propósito, para a suíte E2E rodar duas
+vezes na mesma hora — **não replicar em produção**.
+
+**D-15 · CSP no site (23/08/2026).**
+Veio junto do XSS armazenado real encontrado no JSON-LD, cujo escape estava
+escrito com uma única barra invertida no `<` — que em JavaScript **é** o
+próprio caractere `<`, então a troca não fazia nada. Corrigido com barra dupla e
+coberto por testes, porque um comentário mente e um teste não.
+
+**D-16 · O e-mail de cadastro sai depois do commit.**
+Dentro da transação, o SMTP a segurava aberta pelo tempo da entrega e o link
+podia chegar antes de o token existir no banco.
+
+---
+
+## Frontend
+
+**D-17 · Todo acesso a dados passa por `lib/api.ts`.**
+Componente não faz `fetch`. É ali que vivem a dedução de 401, o refresh único
+compartilhado e o tratamento de erro por campo.
+
+**D-18 · A fonte é servida do repositório.**
+`next/font/google` baixa no build, e um timeout publica a página com a fonte de
+sistema sem avisar. Junto disso apareceu o `--font-sans` com a string literal
+`"Open Sans"`, que só casava com a fonte instalada na máquina de quem visita.
+
+**D-19 · Home com `revalidate: 60` mais rota de revalidação sob demanda.**
+Um minuto de home antiga parece defeito para quem acabou de trocar a cor. Quem
+autoriza a revalidação é a API, não o Next: o token é repassado a uma rota
+administrativa e só um 200 libera.
+
+**D-20 · `prefers-reduced-motion` com exceção para carregamento.**
+O reset global matava spinner e shimmer, e quem ativa "reduzir movimento" ficava
+sem nenhum sinal de que algo estava acontecendo.
+
+---
+
+## Infraestrutura e processo
+
+**D-21 · A imagem web é Debian, não Alpine.**
+O `package-lock.json` foi gerado fora do Alpine e não traz o campo `libc`; o npm
+instalava só a variante glibc do SWC, que falha no Alpine e derrubava o build.
+
+**D-22 · `output: "standalone"` desligado na Vercel (30/08/2026).**
+Com standalone, o Next escreve os arquivos de rastreamento dentro de
+`.next/standalone` e o builder da Vercel os procura na raiz: o build gera as
+páginas e morre em `ENOENT .next/next-server.js.nft.json`. O Docker continua
+recebendo o standalone.
+
+**D-23 · A API é um site próprio na Hostinger, não um subdomínio.**
+Pelo menu Subdomínios a pasta nasce dentro do `public_html` do domínio
+principal, e o `.env` fica exposto na web. Como site próprio,
+`public_html/` guarda só `index.php` e `.htaccess`, e `src/ vendor/ database/
+storage/ .env` ficam fora dele — que é o que `public/index.php` já espera.
+
+**D-24 · Site e API sob o mesmo domínio registrável.**
+O cookie de refresh usa `SameSite=Strict`; domínios diferentes fariam o
+navegador nunca enviá-lo, e a sessão cairia a cada 15 minutos.
+
+**D-25 · A `v1/` fica no repositório, congelada (22/08/2026).**
+Ela é a evidência do projeto que o portfólio destaca — a reconstrução a partir
+de uma auditoria com 22 falhas. Nenhum container a serve e o `v1/README.md`
+recusa código novo. Ressalva: publicar o repositório inteiro num servidor com
+PHP faria os arquivos da raiz dela voltarem a responder.
+
+**D-26 · Branches `master` e `dev`, não `main`/`develop`.**
+O repositório nasceu assim; renomear quebraria clones existentes por ganho
+nenhum. A `master` é produção e o Gustavo a trata como tal: merge só com
+autorização explícita dele.
+
+**D-27 · O E2E roda no serviço `e2e`, com a imagem oficial do Playwright.**
+A tag da imagem no compose precisa acompanhar a versão de `@playwright/test` no
+`package.json`; desalinhadas, o navegador não abre.
+
+**D-28 · O E2E faz o login final numa aba nova.**
+A tela de login chega por navegação do lado do cliente, e digitar durante a
+transição não funciona — a montagem limpa os campos. `goto` e `reload` disputam
+com a navegação em curso.
+
+**D-29 · Observabilidade opcional, ligada por `.env`.**
+O Sentry só é inicializado quando há `SENTRY_DSN` — não se cria dependência de
+conta de terceiro para rodar o projeto. O OpenTelemetry ficou no meio do
+caminho: o pacote está no `composer.json` e as variáveis `OTEL_*` no
+`.env.example`, mas **nenhum código o usa**. Preenchê-las hoje não produz
+telemetria nenhuma.
+
+**D-30 · Toda habilidade declara onde foi usada.**
+As entradas da seção de tecnologias trazem evidência ancorada em fonte
+verificável (experiências cadastradas ou este repositório). A do Java declara o
+alcance real e o que fica de fora.
+
+**D-31 · A vitrine de projetos voltou a ser pública (01/11/2026).**
+Exigir sessão para ver os projetos invertia o propósito do portfólio: quem
+decide sobre o trabalho — recrutador, cliente — é justamente quem não tem conta.
+A troca é de critério, não de rigor: a pergunta deixou de ser "quem está
+autenticado" e passou a ser "o que está publicado". `published = 1` já existia e
+já era filtrado em `publishedProjects()`; virou a única trava, então ganhou
+teste de integração próprio. Projeto em construção não aparece porque fica como
+rascunho no painel — não se criou campo de situação para isso.
+Em aberto: `/projetos` é renderizada no cliente, então o rastreador indexa a
+casca. Se a vitrine passar a valer por busca, ela precisa virar renderização no
+servidor com revalidação, como a home já faz em `fetchContentSafe()`.
+
+**D-32 · Foto de projeto em disco, com o caminho no banco (01/11/2026).**
+Imagem em `BLOB` entraria em todo `mysqldump`, obrigaria o PHP a carregar o
+arquivo na memória a cada exibição e tiraria a foto do alcance do cache do
+navegador — uma captura passaria a custar uma consulta por visita. O caminho é
+relativo (`uploads/projetos/xxx.png`) e nunca absoluto: trocar de domínio não
+deve exigir `UPDATE` em cima dos dados, e quem monta a URL é o presenter, a
+partir de `APP_URL`. Tabela própria, e não coluna em `projects`, porque um
+projeto mostra mais de uma tela.
+
+A validação do upload não confia em nada que o cliente escolhe: o tipo é lido
+dos bytes com `finfo`, a extensão vem do tipo detectado e o nome em disco é
+sorteado — é assim que `../../index.php` deixa de ser um problema, em vez de ser
+tratado com sanitização. `getimagesize()` derruba o PHP renomeado para `.jpg`, e
+SVG fica fora da allowlist por ser XML com `<script>` dentro.
+
+O que **não** é feito: reconstruir a imagem para descartar metadados. Exigiria a
+extensão GD, que não está no container e não é verificável no PHP da Hostinger.
+O risco que sobra — payload no EXIF — é contido pelo `.htaccess` que nega
+execução na pasta e pelo `nosniff` que a API já envia. Habilitar GD é um rebuild
+das imagens dev e prod, e fica como opção.
+
+O limite de 2 MB está amarrado ao `upload_max_filesize` do PHP: elevar só a
+constante não serve de nada, porque o PHP descarta o arquivo antes de o código
+rodar e a requisição chega com `UPLOAD_ERR_INI_SIZE`.
+
+Risco de operação registrado: a pasta de uploads **não** é versionada, e o
+deploy da API é envio manual de pacote. Um envio que sobrescreva
+`public_html/uploads/` apaga as fotos. Ela precisa entrar no backup e ficar fora
+do pacote.
+
+**D-33 · A ordem dos projetos passou a ser editável (01/11/2026).**
+A coluna `position` existia desde o início, a consulta ordenava por ela e o
+backend a persistia — mas nenhum formulário do painel tinha o campo. O
+`form.get("position")` não encontrava nada, o `?? 0` assumia zero, e a ordem na
+vitrine caía sempre no `id`: a ordem de cadastro. Num portfólio isso importa,
+porque o projeto mais forte deveria abrir a vitrine. O campo entrou no
+formulário de projetos. **Os outros três formulários (formação, experiências,
+habilidades) seguem com o mesmo defeito** — ficaram fora por escopo.
+
+---
+
+## Decisões pendentes
+
+- **Credencial no histórico do Git (B50).** A senha foi revogada em 23/08/2026;
+  o risco acabou ali. Falta decidir entre reescrever o histórico com
+  `limpar-senha-do-historico.sh` ou aceitar e registrar em `.gitleaksignore`.
+- **Procedimento de deploy da infraestrutura real.** `docs/DEPLOY.md` documenta
+  VPS/Docker; a produção é Vercel + Hostinger.
+- **Agendamento do expurgo em produção.**

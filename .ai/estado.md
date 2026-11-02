@@ -18,6 +18,10 @@ merge da `dev` na `master` já aconteceu e o sistema está no ar desde
 | API (PHP 8.3) | Hostinger, site próprio | `api.gustavohsmachado.com.br` |
 | Banco | Hostinger | `u388588792_portifolio` |
 
+Desde 02/11/2026 **os dois sobem sozinhos a cada push na `master`**: o site pela
+Vercel e a API pelo job `deploy-api` do CI, por SSH. Ver D-37 e
+`.github/deploy/README.md`.
+
 O que corre hoje é manutenção, não mais construção.
 
 ---
@@ -98,7 +102,7 @@ o reprovava (`expect` de 5 s, 2 workers).
 | ID | Item | Situação |
 |---|---|---|
 | B50 | Credencial (senha de aplicativo já revogada) ainda presente no histórico público do Git. Falta decidir entre reescrever o histórico com `limpar-senha-do-historico.sh` ou registrar em `.gitleaksignore` | risco aceito em 29/08/2026, decisão pendente com o Gustavo |
-| — | `docs/DEPLOY.md` e `docker-compose.prod.yml` descrevem publicação por VPS/Docker, que **não** é a infraestrutura em uso (Vercel + Hostinger). Não há procedimento de deploy escrito para a infraestrutura real | identificado em 10/09/2026 |
+| — | ~~Não há procedimento de deploy escrito para a infraestrutura real~~ | **resolvido em 02/11/2026**: o deploy virou automático (`deploy-api` no `ci.yml`), documentado em `.github/deploy/README.md`. `docs/DEPLOY.md` e `docker-compose.prod.yml` seguem descrevendo VPS/Docker, que **não** é a infraestrutura em uso — ficam de reserva |
 | — | `docs/ESTADO-ATUAL.md` ainda lista B28 (PR para a `master`) e B52 (publicar) como abertos; ambos foram concluídos | documentação desatualizada |
 | — | Minutas legais (`docs/legal/`) com campos `[PREENCHER]` e sem revisão jurídica | pendente desde 09/08/2026 |
 | — | Expurgo (`database/purge.php`) não roda sozinho em produção; precisa de agendamento | pendente |
@@ -136,7 +140,9 @@ o reprovava (`expect` de 5 s, 2 workers).
 7. **O banco de produção é MariaDB 11.8**, enquanto o ambiente local e o CI usam
    MySQL 8. Diferenças de comportamento não estão cobertas por teste.
 8. **Alterar o schema pelo Workbench** faz o banco divergir das migrations.
-9. **As fotos dos projetos só existem no servidor onde foram enviadas.** A pasta
+9. **As fotos dos projetos só existem no servidor onde foram enviadas.** O
+   deploy automático as protege com exclusão explícita e sem `--delete`, mas
+   isso vale só para o envio: elas continuam fora do Git e dependem do backup. A pasta
    `public/uploads/` não é versionada e o deploy da API é envio manual de
    pacote: um envio que sobrescreva `public_html/uploads/` apaga tudo. Ela
    precisa entrar no backup e ficar fora do pacote. Ver D-32.

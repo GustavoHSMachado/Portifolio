@@ -283,6 +283,43 @@ ali o `expect` é de 20 s e o sintoma nunca apareceu; quem precisar reproduzir
 sobe a API com a variável por um arquivo extra passado com `-f`, sem tocar no
 `docker-compose.override.yml`.
 
+
+**D-37 · O deploy da API é automático a cada push na master (02/11/2026).**
+O site já subia sozinho pela Vercel; a API dependia de envio manual de pacote,
+e foi isso que deixou `/projetos` mostrando "Não foi possível carregar os
+projetos agora" ao público por horas depois do merge. Agora o job `deploy-api`,
+no fim do `ci.yml`, publica a API por SSH assim que o `quality-gate` fecha
+verde — e só em push na `master`. O deploy **envia arquivos**, e não faz
+`git pull` no servidor, por três razões verificadas com acesso SSH neste mesmo
+dia: a instalação não é um clone; a estrutura de lá não espelha o repositório
+(existe só o miolo de `v2/backend/`, e `public/` chama-se `public_html/`); e o
+PHP do shell é 8.2.35 enquanto o `composer.json` exige >= 8.3. O `composer
+install` passou a rodar no runner, onde a versão é escolhida, e as migrações
+usam `/opt/alt/php83/usr/bin/php` explicitamente — com o binário padrão, código
+que usa recurso de 8.3 quebraria em produção e em lugar nenhum mais. O backup
+do banco roda sempre antes da migração, haja pendência ou não: a regra do
+projeto exige backup **e** autorização, e como automático não pede autorização,
+o que substitui a autorização é a rede embaixo. As fotos têm proteção dupla —
+`public_html/uploads/` é excluída do envio **e** fica fora do `--delete`, que só
+se aplica a `src`, `database` e `vendor`, inteiramente derivados do repositório.
+O `.env` nunca é enviado, e o deploy recusa seguir se ele sumir.
+
+Três tentativas falharam antes da que funcionou, e nenhuma tocou no servidor,
+porque a verificação vem antes do envio: a primeira e a segunda por erro no
+secret `HOSTINGER_API_PATH` (apontava para `public_html` e usava `~`, que não
+expande vindo de variável), e a terceira no backup, com `exit 127` e
+`./.env: line 56: PT: command not found`. Essa terceira ensinou o que fica
+registrado aqui: **`source` num `.env` faz o shell interpretar o arquivo como
+script**, e o formato que o phpdotenv aceita não é script de shell — o bash
+tentou executar parte de um valor. As chaves passaram a ser lidas com `sed`,
+sem executar nada. O `.env` de produção também usa `DB_NAME`, `DB_USER` e
+`DB_PASS`, não os nomes que o script presumia.
+
+Fica em aberto uma limitação conhecida: durante o envio há alguns segundos em
+que convivem arquivos novos e antigos. Resolver exigiria deploy atômico — pasta
+nova e troca de link simbólico —, o que mudaria a estrutura do servidor. Para o
+volume deste projeto não compensa.
+
 ---
 
 ## Decisões pendentes

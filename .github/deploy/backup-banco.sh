@@ -9,6 +9,11 @@
 #
 # As credenciais saem do .env que já está no servidor. Duplicá-las nos
 # secrets do GitHub seria mais um lugar de onde vazar, para nenhum ganho.
+#
+# O .env é LIDO, nunca carregado com `source`. O formato que o phpdotenv
+# aceita não é script de shell: em 02/11/2026 um `. ./.env` aqui morreu com
+# "line 56: command not found", porque o shell tentou executar parte de um
+# valor. Ler linha a linha nunca executa nada.
 set -euo pipefail
 
 CAMINHO="${1:?caminho da instalação não informado}"
@@ -19,14 +24,25 @@ if [ ! -f .env ]; then
   exit 1
 fi
 
-set -a
-# shellcheck disable=SC1091  # o .env só existe no servidor, não há o que seguir aqui
-. ./.env
-set +a
+# Primeira ocorrência da chave, sem a chave, sem \r de arquivo salvo no
+# Windows e sem as aspas das pontas quando existirem.
+ler_env() {
+  sed -n "s/^$1=//p" .env \
+    | head -1 \
+    | sed -e 's/\r$//' -e 's/^"\(.*\)"$/\1/' -e "s/^'\(.*\)'\$/\1/"
+}
 
-: "${DB_DATABASE:?DB_DATABASE ausente no .env}"
-: "${DB_USERNAME:?DB_USERNAME ausente no .env}"
-: "${DB_PASSWORD:?DB_PASSWORD ausente no .env}"
+DB_NAME="$(ler_env DB_NAME)"
+DB_USER="$(ler_env DB_USER)"
+DB_PASS="$(ler_env DB_PASS)"
+DB_HOST="$(ler_env DB_HOST)"
+
+for obrigatoria in DB_NAME DB_USER DB_PASS; do
+  if [ -z "${!obrigatoria}" ]; then
+    echo "::error::$obrigatoria não encontrada no .env de $CAMINHO."
+    exit 1
+  fi
+done
 
 DESTINO="$HOME/backups-deploy"
 mkdir -p "$DESTINO"
@@ -34,12 +50,20 @@ ARQUIVO="$DESTINO/antes-do-deploy-$(date +%Y%m%d-%H%M%S).sql"
 
 # --no-tablespaces porque usuário de hospedagem compartilhada não costuma
 # ter o privilégio PROCESS, e sem a flag o mysqldump falha por isso.
-mysqldump --no-tablespaces \
-  -h "${DB_HOST:-localhost}" \
-  -u "$DB_USERNAME" \
-  -p"$DB_PASSWORD" \
-  "$DB_DATABASE" > "$ARQUIVO"
+#
+# A senha vai por --defaults-extra-file, e não na linha de comando: em
+# servidor compartilhado, qualquer processo enxerga a lista de argumentos.
+CONF="$(mktemp)"
+trap 'rm -f "$CONF"' EXIT
+chmod 600 "$CONF"
+{
+  echo "[client]"
+  echo "user=$DB_USER"
+  echo "password=$DB_PASS"
+  echo "host=${DB_HOST:-localhost}"
+} > "$CONF"
 
+mysqldump --defaults-extra-file="$CONF" --no-tablespaces "$DB_NAME" > "$ARQUIVO"
 gzip -f "$ARQUIVO"
 
 echo "Backup gravado: ${ARQUIVO}.gz ($(du -h "${ARQUIVO}.gz" | cut -f1))"

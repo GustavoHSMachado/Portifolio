@@ -257,11 +257,11 @@ final class ContentController
 
         $colecaoAuditada = 'projects';
         $id = $this->content->save('projects', [
-            'slug'      => $data['slug'],
-            'title'     => $data['title'],
-            'summary'   => $data['summary'],
+            'slug'        => $data['slug'],
+            'title'       => $data['title'],
+            'summary'     => $data['summary'],
             'description' => $request->body['description'] ?? null,
-            'stack'     => is_array($stack) && $stack !== []
+            'stack'       => is_array($stack) && $stack !== []
                 ? json_encode(array_values($stack), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)
                 : null,
             'repository_url' => $data['repositoryUrl'] ?? null,

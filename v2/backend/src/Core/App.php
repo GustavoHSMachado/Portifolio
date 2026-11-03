@@ -43,10 +43,20 @@ final class App
          * pública é uma string: não há tipo que a descreva. Daí o registro
          * explícito — é a única dependência da aplicação que depende de onde o
          * projeto está instalado, e não do que ele faz.
+         *
+         * E o nome da pasta muda com a instalação. No repositório ela é
+         * `public`; na Hostinger, que é hospedagem compartilhada, o servidor
+         * serve `public_html` e ignora qualquer outra. Com o caminho fixo em
+         * `/public`, as fotos enviadas pelo painel iam parar numa pasta fora
+         * do alcance da web: gravavam sem erro, o banco guardava o caminho, e
+         * toda imagem respondia 404 — foi o que aconteceu em produção em
+         * 02/11/2026, com oito fotos.
          */
         $this->container->singleton(
             ImageStorage::class,
-            fn (): ImageStorage => new ImageStorage($this->basePath . '/public'),
+            fn (): ImageStorage => new ImageStorage(
+                $this->basePath . '/' . (Config::get('PUBLIC_DIR') ?? 'public'),
+            ),
         );
 
         $this->bootObservability();

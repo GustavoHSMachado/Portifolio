@@ -615,11 +615,21 @@ jobs:
 
           # public/ do repositório vira public_html/ no servidor.
           #
-          # SEM --delete, e com uploads/ excluído duas vezes: as fotos dos
-          # projetos só existem aqui, não estão no Git nem no banco, que
-          # guarda apenas o caminho. Um --delete distraído apagaria tudo.
+          # SEM --delete: as fotos dos projetos só existem aqui, não estão no
+          # Git nem no banco, que guarda apenas o caminho. Um --delete
+          # distraído apagaria tudo.
+          #
+          # As três regras abaixo, nesta ordem, dizem: entre na pasta uploads,
+          # leve o .htaccess dela, e não leve mais nada de dentro. Excluir
+          # `uploads/` inteira — como era até 03/11/2026 — protegia as fotos
+          # mas deixava a pasta SEM o .htaccess que nega execução de PHP ali,
+          # que é justamente a defesa que vale se a validação do upload
+          # falhar. O rsync avalia include antes de exclude, e é isso que faz
+          # a exceção funcionar.
           rsync -az --no-perms --no-owner --no-group \
-            --exclude 'uploads/' --exclude 'uploads' \
+            --include 'uploads/' \
+            --include 'uploads/.htaccess' \
+            --exclude 'uploads/*' \
             -e "$SSH" \
             v2/backend/public/ "$USUARIO@$HOST:$CAMINHO/public_html/"
 

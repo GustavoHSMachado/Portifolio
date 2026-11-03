@@ -358,6 +358,37 @@ A lição que fica é de verificação, não de código: "os testes passaram" n�
 cobre o que teste nenhum exercita. Abrir a tela e usar encontrou em dois
 minutos o que duas suítes verdes não viam.
 
+
+**D-39 · O nome da pasta pública é configuração, não constante (03/11/2026).**
+As oito primeiras fotos enviadas pelo painel em produção responderam 404. Elas
+foram gravadas sem erro, o banco guardou o caminho e o painel mostrou as
+miniaturas — mas o arquivo foi parar em `public/uploads/projetos/`, e a
+Hostinger serve `public_html`. O `ImageStorage` era registrado com o caminho
+fixo `basePath . "/public"`.
+
+O constrangedor é que essa diferença já tinha sido descoberta no mesmo dia, ao
+montar o deploy, que mapeia `v2/backend/public/` para `public_html/`. A
+correção foi aplicada no envio de arquivos e **não propagada para o código que
+grava em tempo de execução** — metade do problema resolvida, e a outra metade
+invisível até alguém olhar a vitrine.
+
+Agora o caminho vem de `PUBLIC_DIR`, com `public` como padrão: Docker, testes e
+desenvolvimento seguem iguais, e o `.env` de produção declara `public_html`.
+
+Na mesma investigação apareceu um segundo buraco, este de segurança: o deploy
+excluía `uploads/` inteira do envio para não apagar as fotos, e com isso o
+`.htaccess` que nega execução de PHP na pasta **nunca chegava ao servidor**. A
+defesa que existe para o dia em que a validação do upload falhar não estava lá.
+O envio passou a usar `--include 'uploads/' --include 'uploads/.htaccess'`
+antes de `--exclude 'uploads/*'`, porque o rsync avalia include antes de
+exclude; comprovado num container, com uma foto no destino que sobreviveu ao
+envio.
+
+A lição é sobre alcance de correção: ao descobrir que duas instalações diferem,
+vale procurar **todos** os lugares que dependem dessa diferença, e não só o que
+estava na frente. Aqui eram dois, e o segundo só apareceu porque o primeiro foi
+testado com dados reais.
+
 ---
 
 ## Decisões pendentes

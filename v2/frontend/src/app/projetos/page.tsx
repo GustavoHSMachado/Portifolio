@@ -202,7 +202,9 @@ function PontosDaBarra() {
  * duas, mais o estudo de caso, mais os selos.
  */
 function MolduraDoProjeto({ projeto }: { projeto: Project }) {
-  const capa = projeto.images[0] ?? null;
+  // A capa dedicada manda; sem ela, a primeira tela da galeria serve de
+  // capa, para o cartão não nascer vazio em projeto que só subiu telas.
+  const capa = projeto.cover ?? projeto.images[0] ?? null;
   const host = projeto.demoUrl ? new URL(projeto.demoUrl).host : null;
 
   /*
@@ -292,12 +294,21 @@ function CartaoProjeto({ projeto }: { projeto: Project }) {
   // null mantém a galeria fechada; o número diz em que foto ela abre.
   const [fotoAberta, setFotoAberta] = useState<number | null>(null);
 
+  /*
+   * A galeria mostra tudo, a capa à frente: ela é uma tela do projeto como as
+   * outras, e quem clica em "Ver fotos" espera encontrar a imagem que viu no
+   * cartão. A tira de miniaturas, essa sim, pula a capa — ali repetir seria
+   * mostrar a mesma coisa a dois centímetros de distância.
+   */
+  const todas = projeto.cover ? [projeto.cover, ...projeto.images] : projeto.images;
+  const telas = projeto.cover ? projeto.images : projeto.images.slice(1);
+
   return (
     <article className={styles.projeto}>
       <MolduraDoProjeto projeto={projeto} />
 
       <GaleriaDeFotos
-        fotos={projeto.images}
+        fotos={todas}
         projeto={projeto.title}
         inicial={fotoAberta}
         onClose={() => setFotoAberta(null)}
@@ -338,23 +349,18 @@ function CartaoProjeto({ projeto }: { projeto: Project }) {
         ) : null}
 
         {/*
-          Da segunda foto em diante. A primeira já está na moldura acima, e
-          repeti-la aqui faria o cartão mostrar a mesma tela duas vezes.
-          Cada miniatura carrega a descrição escrita no painel — aqui ela é
-          conteúdo, não decoração, porque não há link que a explique.
+          As telas que não estão na moldura acima, para o cartão não mostrar a
+          mesma imagem duas vezes. Com capa dedicada, isso é a galeria inteira;
+          sem ela, a primeira tela virou capa e sai desta tira.
         */}
-        {projeto.images.length > 1 ? (
+        {telas.length > 0 ? (
           <ul className={styles.galeria} aria-label={`Telas de ${projeto.title}`}>
-            {projeto.images.slice(1).map((foto, indice) => (
+            {telas.map((foto) => (
               <li key={foto.id} className={styles.galeriaItem}>
-                {/*
-                  O índice soma 1 porque esta lista começa na segunda foto: a
-                  primeira já é a capa da moldura, acima.
-                */}
                 <button
                   type="button"
                   className={styles.galeriaBotao}
-                  onClick={() => setFotoAberta(indice + 1)}
+                  onClick={() => setFotoAberta(todas.indexOf(foto))}
                   aria-label={`Ver ${foto.alt} em tamanho maior`}
                 >
                   <Image
@@ -398,11 +404,11 @@ function CartaoProjeto({ projeto }: { projeto: Project }) {
             logo acima ("Ver no ar ↗"), este botão abre as telas em tamanho
             grande — que antes só existiam como miniaturas de 132px.
           */}
-          {projeto.images.length > 0 ? (
+          {todas.length > 0 ? (
             <button type="button" className={styles.linkBotao} onClick={() => setFotoAberta(0)}>
               Ver fotos
-              {projeto.images.length > 1 ? (
-                <span className={styles.linkContagem}> ({projeto.images.length})</span>
+              {todas.length > 1 ? (
+                <span className={styles.linkContagem}> ({todas.length})</span>
               ) : null}
             </button>
           ) : null}

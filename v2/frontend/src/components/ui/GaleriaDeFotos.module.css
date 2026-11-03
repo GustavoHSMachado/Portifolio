@@ -9,6 +9,35 @@
   overflow: hidden;
 }
 
+/* O botão que envolve a foto: sem aparência de botão, mas alcançável pelo
+   teclado. Quando ampliada, ele vira a janela por onde se rola a imagem. */
+.areaFoto {
+  display: block;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: zoom-in;
+  /* Como filho do palco, que é flex, o botão não esticaria sozinho: a base
+     de um flex item vem do conteúdo, e aqui o conteúdo é uma imagem que
+     depende da largura do pai para se dimensionar. Sem isto os dois
+     colapsam juntos, e a foto renderiza com uns 160px. */
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.areaFoto:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.areaFotoAmpliada {
+  overflow: auto;
+  cursor: zoom-out;
+  /* O dedo arrasta a imagem ampliada em vez de rolar a página atrás. */
+  touch-action: pan-x pan-y;
+  max-height: 70vh;
+}
+
 .foto {
   display: block;
   width: 100%;
@@ -17,6 +46,15 @@
      outros: o teto em vh impede que a foto empurre as miniaturas para fora. */
   max-height: 60vh;
   object-fit: contain;
+}
+
+/* Ampliada, a imagem assume a largura real e deixa de caber: é o overflow
+   do contêiner que permite percorrê-la. */
+.fotoAmpliada {
+  max-height: none;
+  width: auto;
+  max-width: none;
+  object-fit: none;
 }
 
 .seta {

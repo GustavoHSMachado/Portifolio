@@ -23,12 +23,14 @@ interface Props {
  */
 export function GaleriaDeFotos({ fotos, projeto, inicial, onClose }: Props) {
   const [atual, setAtual] = useState(0);
+  const [ampliada, setAmpliada] = useState(false);
 
   // Abrir pela terceira miniatura precisa começar na terceira foto, e não na
   // primeira — por isso o índice vem de fora e é sincronizado aqui.
   useEffect(() => {
     if (inicial !== null) {
       setAtual(inicial);
+      setAmpliada(false);
     }
   }, [inicial]);
 
@@ -39,6 +41,9 @@ export function GaleriaDeFotos({ fotos, projeto, inicial, onClose }: Props) {
       // O resto negativo em JS é negativo; somar o total antes resolve o
       // caso de voltar da primeira para a última.
       setAtual((indice) => (indice + passo + total) % total);
+      // Trocar de foto com a anterior ampliada deixaria a próxima cortada num
+      // canto qualquer, sem relação com o que ela mostra.
+      setAmpliada(false);
     },
     [total],
   );
@@ -53,6 +58,12 @@ export function GaleriaDeFotos({ fotos, projeto, inicial, onClose }: Props) {
 
       if (evento.key === "ArrowLeft") {
         ir(-1);
+      }
+
+      // Espaço e Enter já são tratados pelo botão quando ele tem o foco; esta
+      // é a tecla que funciona de qualquer lugar do diálogo.
+      if (evento.key.toLowerCase() === "z") {
+        setAmpliada((estava) => !estava);
       }
     }
 
@@ -83,17 +94,30 @@ export function GaleriaDeFotos({ fotos, projeto, inicial, onClose }: Props) {
           </button>
         ) : null}
 
-        <Image
-          key={foto.id}
-          src={foto.url}
-          alt={foto.alt}
-          width={1200}
-          height={750}
-          className={styles.foto}
-          sizes="(max-width: 48rem) 92vw, 60rem"
-          priority
-          unoptimized
-        />
+        {/*
+          A foto é um botão: ampliar é ação, e quem navega por teclado precisa
+          alcançá-la. O contêiner rola quando ampliada, então dá para arrastar
+          a imagem grande com o dedo ou com a barra.
+        */}
+        <button
+          type="button"
+          className={`${styles.areaFoto} ${ampliada ? styles.areaFotoAmpliada : ""}`}
+          onClick={() => setAmpliada((estava) => !estava)}
+          aria-label={ampliada ? "Reduzir a foto" : "Ampliar a foto"}
+          aria-pressed={ampliada}
+        >
+          <Image
+            key={foto.id}
+            src={foto.url}
+            alt={foto.alt}
+            width={1200}
+            height={750}
+            className={`${styles.foto} ${ampliada ? styles.fotoAmpliada : ""}`}
+            sizes="(max-width: 48rem) 92vw, 60rem"
+            priority
+            unoptimized
+          />
+        </button>
 
         {total > 1 ? (
           <button

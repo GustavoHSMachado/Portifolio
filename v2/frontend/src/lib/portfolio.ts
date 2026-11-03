@@ -76,6 +76,8 @@ export interface ProjectImage {
   url: string;
   alt: string;
   position: number;
+  /** A capa sai separada da galeria no campo `cover` do projeto. */
+  isCover: boolean;
 }
 
 export interface Project {
@@ -89,6 +91,8 @@ export interface Project {
   demoUrl: string | null;
   published: boolean;
   position: number;
+  /** A imagem do cartão. Fica fora de `images` para não repetir no carrossel. */
+  cover: ProjectImage | null;
   /** Já ordenadas pela API. Vazio é o caso comum, não erro. */
   images: ProjectImage[];
 }
@@ -357,10 +361,16 @@ export function recusarFotos(escolhidos: File[], vagas: number): string | null {
  * que não seja base64 — que infla o corpo em um terço e obriga o servidor a
  * decodificar antes de validar.
  */
-export function enviarFotoDoProjeto(projectId: number, arquivo: File, alt: string) {
+export function enviarFotoDoProjeto(projectId: number, arquivo: File, alt: string, capa = false) {
   const dados = new FormData();
   dados.append("foto", arquivo);
   dados.append("alt", alt);
+
+  // Só vai quando é capa: FormData não tem booleano, e mandar "0" obrigaria
+  // o servidor a distinguir ausência de negação.
+  if (capa) {
+    dados.append("capa", "1");
+  }
 
   return api.post<ProjectImage>(`/api/v1/admin/projects/${projectId}/images`, dados);
 }

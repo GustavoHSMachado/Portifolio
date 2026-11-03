@@ -29,8 +29,8 @@ final class ProjectImage
     public function forProject(int $projectId): array
     {
         return $this->db->all(
-            'SELECT id, project_id, path, alt, position
-               FROM project_images WHERE project_id = ? ORDER BY position, id',
+            'SELECT id, project_id, path, alt, position, is_cover
+               FROM project_images WHERE project_id = ? ORDER BY is_cover DESC, position, id',
             [$projectId]
         );
     }
@@ -59,8 +59,8 @@ final class ProjectImage
 
         $linhas = $this->db->all(
             sprintf(
-                'SELECT id, project_id, path, alt, position
-                   FROM project_images WHERE project_id IN (%s) ORDER BY position, id',
+                'SELECT id, project_id, path, alt, position, is_cover
+                   FROM project_images WHERE project_id IN (%s) ORDER BY is_cover DESC, position, id',
                 $marcadores
             ),
             array_map(static fn (int $id): int => $id, $projectIds)
@@ -78,15 +78,21 @@ final class ProjectImage
     public function find(int $id): ?array
     {
         return $this->db->first(
-            'SELECT id, project_id, path, alt, position FROM project_images WHERE id = ?',
+            'SELECT id, project_id, path, alt, position, is_cover FROM project_images WHERE id = ?',
             [$id]
         );
     }
 
+    /**
+     * Quantas fotos da GALERIA o projeto tem.
+     *
+     * A capa fica de fora: ela não disputa as 8 vagas, porque não é uma tela
+     * a mais no carrossel — é a imagem que representa o projeto no cartão.
+     */
     public function countForProject(int $projectId): int
     {
         $linha = $this->db->first(
-            'SELECT COUNT(*) AS total FROM project_images WHERE project_id = ?',
+            'SELECT COUNT(*) AS total FROM project_images WHERE project_id = ? AND is_cover = 0',
             [$projectId]
         );
 
@@ -101,7 +107,7 @@ final class ProjectImage
      * escrevendo. Duas fotos enviadas no mesmo instante podem receber a mesma
      * posição — e isso é inofensivo, porque o desempate do ORDER BY é o id.
      */
-    public function create(int $projectId, string $path, string $alt): int
+    public function create(int $projectId, string $path, string $alt, bool $capa = false): int
     {
         $linha = $this->db->first(
             'SELECT MAX(position) AS ultima FROM project_images WHERE project_id = ?',
@@ -111,11 +117,56 @@ final class ProjectImage
         $proxima = $linha === null || $linha['ultima'] === null ? 0 : ((int) $linha['ultima']) + 1;
 
         $this->db->run(
-            'INSERT INTO project_images (project_id, path, alt, position) VALUES (?, ?, ?, ?)',
-            [$projectId, $path, $alt, $proxima]
+            'INSERT INTO project_images (project_id, path, alt, position, is_cover) VALUES (?, ?, ?, ?, ?)',
+            [$projectId, $path, $alt, $proxima, $capa ? 1 : 0]
         );
 
-        return $this->db->lastInsertId();
+        $id = $this->db->lastInsertId();
+
+        if ($capa) {
+            $this->desmarcarOutrasCapas($projectId, $id);
+        }
+
+        return $id;
+    }
+
+    /**
+     * A capa atual do projeto, ou null se ele ainda não tem uma.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function capaDoProjeto(int $projectId): ?array
+    {
+        return $this->db->first(
+            'SELECT id, project_id, path, alt, position, is_cover
+               FROM project_images WHERE project_id = ? AND is_cover = 1 LIMIT 1',
+            [$projectId]
+        );
+    }
+
+    /**
+     * Promove uma foto a capa e rebaixa a anterior.
+     *
+     * Não há índice único garantindo uma capa só por projeto — o MySQL não
+     * tem índice parcial, e um UNIQUE sobre (project_id, is_cover) proibiria
+     * duas fotos comuns no mesmo projeto. A unicidade é mantida aqui.
+     */
+    public function marcarComoCapa(int $id, int $projectId): void
+    {
+        $this->db->run(
+            'UPDATE project_images SET is_cover = 1 WHERE id = ? AND project_id = ?',
+            [$id, $projectId]
+        );
+
+        $this->desmarcarOutrasCapas($projectId, $id);
+    }
+
+    private function desmarcarOutrasCapas(int $projectId, int $manter): void
+    {
+        $this->db->run(
+            'UPDATE project_images SET is_cover = 0 WHERE project_id = ? AND id <> ?',
+            [$projectId, $manter]
+        );
     }
 
     public function updateMeta(int $id, string $alt, int $position): void

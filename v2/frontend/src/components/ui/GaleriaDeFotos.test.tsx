@@ -11,9 +11,30 @@ import { GaleriaDeFotos } from "./GaleriaDeFotos";
  * teclado, que é como alguém sem mouse percorre a galeria.
  */
 const FOTOS: ProjectImage[] = [
-  { id: 1, path: "uploads/projetos/a.png", url: "/a.png", alt: "Tela da vitrine", position: 0 },
-  { id: 2, path: "uploads/projetos/b.png", url: "/b.png", alt: "Tela do painel", position: 1 },
-  { id: 3, path: "uploads/projetos/c.png", url: "/c.png", alt: "Tela do envio", position: 2 },
+  {
+    id: 1,
+    path: "uploads/projetos/a.png",
+    url: "/a.png",
+    alt: "Tela da vitrine",
+    position: 0,
+    isCover: false,
+  },
+  {
+    id: 2,
+    path: "uploads/projetos/b.png",
+    url: "/b.png",
+    alt: "Tela do painel",
+    position: 1,
+    isCover: false,
+  },
+  {
+    id: 3,
+    path: "uploads/projetos/c.png",
+    url: "/c.png",
+    alt: "Tela do envio",
+    position: 2,
+    isCover: false,
+  },
 ];
 
 function abrir(inicial: number | null = 0, fotos: ProjectImage[] = FOTOS) {
@@ -122,5 +143,48 @@ describe("GaleriaDeFotos", () => {
 
     expect(screen.queryByRole("button", { name: "Próxima foto" })).toBeNull();
     expect(screen.queryByText("1 de 1")).toBeNull();
+  });
+});
+
+/**
+ * Ampliar é o que torna a galeria útil para tela de sistema: numa captura de
+ * painel, o texto some quando a imagem cabe inteira na janela.
+ */
+describe("GaleriaDeFotos — ampliar", () => {
+  it("começa reduzida, oferecendo ampliar", () => {
+    abrir();
+
+    expect(screen.getByRole("button", { name: "Ampliar a foto" })).toBeTruthy();
+  });
+
+  it("amplia ao clicar na foto e oferece reduzir", async () => {
+    const usuario = userEvent.setup();
+    abrir();
+
+    await usuario.click(screen.getByRole("button", { name: "Ampliar a foto" }));
+
+    expect(screen.getByRole("button", { name: "Reduzir a foto" })).toBeTruthy();
+  });
+
+  it("alterna pela tecla Z, que funciona sem o foco estar na imagem", async () => {
+    const usuario = userEvent.setup();
+    abrir();
+
+    await usuario.keyboard("z");
+    expect(screen.getByRole("button", { name: "Reduzir a foto" })).toBeTruthy();
+
+    await usuario.keyboard("z");
+    expect(screen.getByRole("button", { name: "Ampliar a foto" })).toBeTruthy();
+  });
+
+  /** Trocar de foto ampliada deixaria a próxima cortada num canto qualquer. */
+  it("volta ao tamanho ajustado ao mudar de foto", async () => {
+    const usuario = userEvent.setup();
+    abrir();
+
+    await usuario.click(screen.getByRole("button", { name: "Ampliar a foto" }));
+    await usuario.click(screen.getByRole("button", { name: "Próxima foto" }));
+
+    expect(screen.getByRole("button", { name: "Ampliar a foto" })).toBeTruthy();
   });
 });

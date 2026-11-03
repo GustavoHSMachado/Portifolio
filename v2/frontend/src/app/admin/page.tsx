@@ -1,6 +1,7 @@
 "use client";
 
 import { AparenciaSection } from "@/components/admin/AparenciaSection";
+import { CapaDoProjeto } from "@/components/admin/CapaDoProjeto";
 import { FotosDoProjeto } from "@/components/admin/FotosDoProjeto";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -848,7 +849,12 @@ function BlocoDeFotos({
     return <p className={styles.itemMeta}>Salve o projeto para poder enviar fotos.</p>;
   }
 
-  return <FotosDoProjeto projectId={projeto.id} fotos={projeto.images} onChanged={onChanged} />;
+  return (
+    <>
+      <CapaDoProjeto projectId={projeto.id} capa={projeto.cover} onChanged={onChanged} />
+      <FotosDoProjeto projectId={projeto.id} fotos={projeto.images} onChanged={onChanged} />
+    </>
+  );
 }
 
 function ProjectSection({

@@ -51,6 +51,10 @@ final class ProjectImageController
             throw HttpException::validation(['foto' => ['Escolha uma imagem para enviar.']]);
         }
 
+        // A capa não ocupa vaga na galeria: é a imagem do cartão, não mais uma
+        // tela do carrossel. Por isso ela escapa da contagem logo abaixo.
+        $capa = ($request->body['capa'] ?? null) === '1';
+
         /*
          * O limite é conferido antes de gravar o arquivo.
          *
@@ -58,7 +62,7 @@ final class ProjectImageController
          * a linha no banco — um arquivo que ninguém exibe e ninguém apaga,
          * porque o painel só conhece o que está no banco.
          */
-        if ($this->images->countForProject($projectId) >= ProjectImage::MAXIMO_POR_PROJETO) {
+        if (!$capa && $this->images->countForProject($projectId) >= ProjectImage::MAXIMO_POR_PROJETO) {
             throw HttpException::validation([
                 'foto' => [sprintf(
                     'Este projeto já tem %d fotos. Remova uma antes de enviar outra.',
@@ -74,12 +78,28 @@ final class ProjectImageController
          * o que evita o órfão. Não há transação possível entre o banco e o
          * sistema de arquivos — o que existe é limpar o lado que já foi feito.
          */
+        // Lida antes do INSERT, porque depois dele a capa antiga já terá sido
+        // desmarcada e não haveria como saber qual apagar.
+        $anterior = $capa ? $this->images->capaDoProjeto($projectId) : null;
+
         try {
-            $id = $this->images->create($projectId, $caminho, $data['alt']);
+            $id = $this->images->create($projectId, $caminho, $data['alt'], $capa);
         } catch (\Throwable $erro) {
             $this->storage->delete($caminho);
 
             throw $erro;
+        }
+
+        /*
+         * Trocar a capa apaga a anterior, arquivo e linha.
+         *
+         * Guardar a antiga encheria o disco de imagens que nenhuma tela mostra
+         * — ela não está na galeria nem no cartão. Isto roda depois do INSERT
+         * da nova: se a gravação falhar, a capa velha continua valendo.
+         */
+        if ($capa && $anterior !== null) {
+            $this->storage->delete((string) $anterior['path']);
+            $this->images->delete((int) $anterior['id']);
         }
 
         $this->audit->record(
@@ -87,7 +107,7 @@ final class ProjectImageController
             $request->userId(),
             $request->ip,
             $request->header('user-agent'),
-            ['colecao' => 'project_images', 'id' => $id, 'projeto' => $projectId],
+            ['colecao' => 'project_images', 'id' => $id, 'projeto' => $projectId, 'capa' => $capa],
         );
 
         return Response::created($this->present([
@@ -96,7 +116,8 @@ final class ProjectImageController
             'path'       => $caminho,
             'alt'        => $data['alt'],
             'position'   => $this->images->countForProject($projectId) - 1,
-        ]), 'Foto adicionada.');
+            'is_cover'   => $capa ? 1 : 0,
+        ]), $capa ? 'Capa definida.' : 'Foto adicionada.');
     }
 
     /** Altera a descrição e a ordem. O arquivo em disco não muda. */
@@ -193,6 +214,7 @@ final class ProjectImageController
             'url'      => $this->storage->publicUrl((string) $row['path']),
             'alt'      => (string) $row['alt'],
             'position' => (int) $row['position'],
+            'isCover'  => (int) ($row['is_cover'] ?? 0) === 1,
         ];
     }
 }

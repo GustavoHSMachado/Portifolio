@@ -2,8 +2,9 @@
 
 import { modalContent, overlay } from "@/lib/motion";
 import { AnimatePresence, motion } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { createPortal } from "react-dom";
 import styles from "./Modal.module.css";
 
 interface ModalProps {
@@ -29,9 +30,29 @@ const FOCUSABLE_SELECTOR =
  */
 export function Modal({ open, onClose, title, children, footer }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
+
   const triggerRef = useRef<HTMLElement | null>(null);
 
+  /*
+   * O diálogo é levado para o <body> por um portal.
+   *
+   * "position: fixed" se posiciona em relação à viewport — exceto quando um
+   * ancestral tem "transform", que cria um novo containing block e vira a
+   * referência. Na vitrine o cartão do projeto é animado pelo framer-motion,
+   * e a galeria aberta de dentro dele renderizava com 219px de largura,
+   * espremida no lugar do cartão. O portal tira o diálogo dessa árvore.
+   *
+   * Pior que o tamanho era a intermitência: o transform só existe durante a
+   * animação, então o mesmo código acertava ou errava conforme o momento.
+   *
+   * O estado existe porque "document" não existe no servidor.
+   */
+  const [montado, setMontado] = useState(false);
+
+  useEffect(() => setMontado(true), []);
+
   // Trava o scroll e devolve o foco a quem abriu.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `montado` não é lido aqui dentro — está nas dependências de propósito. O portal só existe depois do primeiro render, e sem essa dependência o efeito roda uma vez com dialogRef ainda nulo e o foco nunca chega ao diálogo.
   useEffect(() => {
     if (!open) return;
 
@@ -54,7 +75,10 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
       document.body.style.paddingRight = previousPadding;
       triggerRef.current?.focus();
     };
-  }, [open]);
+    // 'montado' entra aqui porque o portal só existe depois do primeiro
+    // render: sem ele, este efeito roda quando dialogRef ainda é null e o
+    // foco nunca chega ao diálogo.
+  }, [open, montado]);
 
   // Escape fecha; Tab circula dentro do diálogo.
   useEffect(() => {
@@ -95,7 +119,11 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [open, onClose]);
 
-  return (
+  if (!montado) {
+    return null;
+  }
+
+  return createPortal(
     <AnimatePresence>
       {open ? (
         <motion.div
@@ -132,6 +160,7 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
           </motion.div>
         </motion.div>
       ) : null}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

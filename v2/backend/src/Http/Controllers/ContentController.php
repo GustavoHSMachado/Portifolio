@@ -441,8 +441,34 @@ final class ContentController
             'demoUrl'       => $row['demo_url'],
             'published'     => isset($row['published']) ? (int) $row['published'] === 1 : true,
             'position'      => isset($row['position']) ? (int) $row['position'] : 0,
-            'images'        => array_map($this->presentProjectImage(...), $images),
+            // A capa sai separada da galeria: ela é a imagem do cartão, e
+            // repeti-la no carrossel faria a primeira tela aparecer duas vezes.
+            'cover'  => $this->separarCapa($images),
+            'images' => array_map(
+                $this->presentProjectImage(...),
+                array_values(array_filter(
+                    $images,
+                    static fn (array $foto): bool => (int) ($foto['is_cover'] ?? 0) !== 1,
+                )),
+            ),
         ];
+    }
+
+    /**
+     * A capa do projeto, ou null quando ele não tem uma.
+     *
+     * @param list<array<string, mixed>> $images
+     * @return array<string, mixed>|null
+     */
+    private function separarCapa(array $images): ?array
+    {
+        foreach ($images as $foto) {
+            if ((int) ($foto['is_cover'] ?? 0) === 1) {
+                return $this->presentProjectImage($foto);
+            }
+        }
+
+        return null;
     }
 
     /**

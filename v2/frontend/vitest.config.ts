@@ -54,14 +54,18 @@ export default defineConfig({
         // catraca fica no inteiro abaixo para não reprovar por variação de
         // arredondamento do provider.
         //
+        // Subiram de novo em 02/11/2026, com os 11 testes da GaleriaDeFotos e os
+        // 9 de recusarFotos: 33 → 36 em linhas e statements, 59 → 61 em
+        // functions, 83 → 86 em branches. Medidos: 36,76 / 62,06 / 86,66.
+        //
         // Essa subida veio de uma lição: a vitrine e as fotos passaram no
         // `npm run test` local e reprovaram aqui, porque o CI roda
         // `test:coverage` e código novo sem teste derruba a cobertura mesmo com
         // todos os testes verdes. Rode o comando do CI, não o parecido.
-        lines: 33,
-        functions: 59,
-        branches: 83,
-        statements: 33,
+        lines: 36,
+        functions: 61,
+        branches: 86,
+        statements: 36,
       },
     },
   },

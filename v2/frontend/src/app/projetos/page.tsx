@@ -1,6 +1,7 @@
 "use client";
 
 import { Reveal, RevealItem, RevealList } from "@/components/motion/Reveal";
+import { GaleriaDeFotos } from "@/components/ui/GaleriaDeFotos";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useToast } from "@/components/ui/Toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -288,9 +289,19 @@ function MolduraDoProjeto({ projeto }: { projeto: Project }) {
 function CartaoProjeto({ projeto }: { projeto: Project }) {
   const temCaso = projeto.description !== null && projeto.description.trim() !== "";
 
+  // null mantém a galeria fechada; o número diz em que foto ela abre.
+  const [fotoAberta, setFotoAberta] = useState<number | null>(null);
+
   return (
     <article className={styles.projeto}>
       <MolduraDoProjeto projeto={projeto} />
+
+      <GaleriaDeFotos
+        fotos={projeto.images}
+        projeto={projeto.title}
+        inicial={fotoAberta}
+        onClose={() => setFotoAberta(null)}
+      />
 
       <div className={styles.projetoTexto}>
         <div className={styles.cabeca}>
@@ -334,18 +345,29 @@ function CartaoProjeto({ projeto }: { projeto: Project }) {
         */}
         {projeto.images.length > 1 ? (
           <ul className={styles.galeria} aria-label={`Telas de ${projeto.title}`}>
-            {projeto.images.slice(1).map((foto) => (
+            {projeto.images.slice(1).map((foto, indice) => (
               <li key={foto.id} className={styles.galeriaItem}>
-                <Image
-                  src={foto.url}
-                  alt={foto.alt}
-                  width={132}
-                  height={84}
-                  className={styles.galeriaFoto}
-                  sizes="132px"
-                  loading="lazy"
-                  unoptimized
-                />
+                {/*
+                  O índice soma 1 porque esta lista começa na segunda foto: a
+                  primeira já é a capa da moldura, acima.
+                */}
+                <button
+                  type="button"
+                  className={styles.galeriaBotao}
+                  onClick={() => setFotoAberta(indice + 1)}
+                  aria-label={`Ver ${foto.alt} em tamanho maior`}
+                >
+                  <Image
+                    src={foto.url}
+                    alt=""
+                    width={132}
+                    height={84}
+                    className={styles.galeriaFoto}
+                    sizes="132px"
+                    loading="lazy"
+                    unoptimized
+                  />
+                </button>
               </li>
             ))}
           </ul>
@@ -371,11 +393,18 @@ function CartaoProjeto({ projeto }: { projeto: Project }) {
         ) : null}
 
         <div className={styles.links}>
-          {projeto.demoUrl ? (
-            <a href={projeto.demoUrl} target="_blank" rel="noopener noreferrer">
-              Acessar o projeto
-              <span className="sr-only"> (abre em nova aba)</span>
-            </a>
+          {/*
+            No lugar de "Acessar o projeto", que repetia a moldura clicável
+            logo acima ("Ver no ar ↗"), este botão abre as telas em tamanho
+            grande — que antes só existiam como miniaturas de 132px.
+          */}
+          {projeto.images.length > 0 ? (
+            <button type="button" className={styles.linkBotao} onClick={() => setFotoAberta(0)}>
+              Ver fotos
+              {projeto.images.length > 1 ? (
+                <span className={styles.linkContagem}> ({projeto.images.length})</span>
+              ) : null}
+            </button>
           ) : null}
           {projeto.repositoryUrl ? (
             <a href={projeto.repositoryUrl} target="_blank" rel="noopener noreferrer">

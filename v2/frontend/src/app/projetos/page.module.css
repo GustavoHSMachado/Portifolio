@@ -472,3 +472,54 @@
   flex-wrap: wrap;
   gap: var(--space-5);
 }
+
+/* O "Ver fotos" é botão, não link — abre a galeria na própria página em vez
+   de navegar. Herda a aparência dos links vizinhos para a linha não ficar
+   com dois estilos de ação. */
+.linkBotao {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0;
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.linkBotao:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.linkBotao:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+  border-radius: var(--radius-sm);
+}
+
+.linkContagem {
+  color: var(--text-tertiary);
+}
+
+/* A miniatura virou botão: zera a aparência de botão e mantém a foto. */
+.galeriaBotao {
+  display: block;
+  padding: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+
+.galeriaBotao:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.galeriaBotao:hover .galeriaFoto {
+  border-color: var(--accent);
+}

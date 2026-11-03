@@ -1,0 +1,145 @@
+.palco {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--surface-sunken);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.foto {
+  display: block;
+  width: 100%;
+  height: auto;
+  /* Tela de sistema é mais alta que larga em alguns casos e mais larga em
+     outros: o teto em vh impede que a foto empurre as miniaturas para fora. */
+  max-height: 60vh;
+  object-fit: contain;
+}
+
+.seta {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: var(--text-xl);
+  color: var(--text-primary);
+  background-color: var(--surface-overlay);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.seta:hover {
+  background-color: var(--surface-raised);
+}
+
+.seta:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.setaAnterior {
+  left: var(--space-3);
+}
+
+.setaProxima {
+  right: var(--space-3);
+}
+
+.legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.contador {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}
+
+.miniaturas {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0;
+  margin: var(--space-4) 0 0;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  list-style: none;
+  scrollbar-width: thin;
+}
+
+.miniaturas > li {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.miniatura {
+  display: block;
+  padding: 0;
+  background: none;
+  border: 2px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  /* A opacidade separa a foto aberta das outras sem depender só da borda,
+     que some para quem não distingue a cor de destaque. */
+  opacity: 0.55;
+  transition: opacity var(--duration-fast) var(--ease-out), border-color var(--duration-fast)
+    var(--ease-out);
+}
+
+.miniatura:hover {
+  opacity: 1;
+}
+
+.miniatura:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
+}
+
+.miniatura[aria-current="true"] {
+  border-color: var(--accent);
+  opacity: 1;
+}
+
+.miniaturaFoto {
+  display: block;
+  width: 96px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: calc(var(--radius-sm) - 2px);
+  background-color: var(--surface-sunken);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .seta,
+  .miniatura {
+    transition: none;
+  }
+}
+
+@media (max-width: 36rem) {
+  .foto {
+    max-height: 50vh;
+  }
+
+  .seta {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}

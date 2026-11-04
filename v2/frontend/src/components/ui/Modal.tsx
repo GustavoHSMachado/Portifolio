@@ -13,6 +13,11 @@ interface ModalProps {
   title: string;
   children: ReactNode;
   footer?: ReactNode;
+  /**
+   * "larga" ocupa quase a tela inteira. Serve à galeria de fotos: captura de
+   * sistema é larga, e numa caixa de 520px o texto dela fica ilegível.
+   */
+  largura?: "padrao" | "larga";
 }
 
 const FOCUSABLE_SELECTOR =
@@ -28,7 +33,7 @@ const FOCUSABLE_SELECTOR =
  * - Tab fica preso dentro do diálogo (focus trap);
  * - o scroll do body trava sem a página "pular" pela largura da barra.
  */
-export function Modal({ open, onClose, title, children, footer }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, largura = "padrao" }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
 
   const triggerRef = useRef<HTMLElement | null>(null);
@@ -136,7 +141,9 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
         >
           <motion.div
             ref={dialogRef}
-            className={styles.dialog}
+            className={
+              largura === "larga" ? `${styles.dialog} ${styles.dialogLarga}` : styles.dialog
+            }
             variants={modalContent}
             // biome-ignore lint/a11y/useSemanticElements: o <dialog> nativo só abre por showModal() e fecha por close(), o que conflita com a animação de saída do AnimatePresence — o elemento sumiria antes de animar. role="dialog" com aria-modal, focus trap e Escape entrega o mesmo contrato de acessibilidade.
             role="dialog"
@@ -154,7 +161,11 @@ export function Modal({ open, onClose, title, children, footer }: ModalProps) {
               </button>
             </header>
 
-            <div className={styles.body}>{children}</div>
+            <div
+              className={largura === "larga" ? `${styles.body} ${styles.bodyLarga}` : styles.body}
+            >
+              {children}
+            </div>
 
             {footer ? <footer className={styles.footer}>{footer}</footer> : null}
           </motion.div>

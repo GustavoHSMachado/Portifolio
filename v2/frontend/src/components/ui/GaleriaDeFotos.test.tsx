@@ -1,8 +1,26 @@
 import type { ProjectImage } from "@/lib/portfolio";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { GaleriaDeFotos } from "./GaleriaDeFotos";
+
+/*
+ * O jsdom não implementa PointerEvent: sem isto, fireEvent.pointerDown cria um
+ * Event genérico, as coordenadas chegam como undefined e o arraste vira NaN.
+ * No navegador clientX sempre existe — o polyfill só aproxima o teste dele.
+ */
+if (typeof window.PointerEvent === "undefined") {
+  class PointerEventDeTeste extends MouseEvent {
+    pointerId: number;
+
+    constructor(tipo: string, inicio: PointerEventInit = {}) {
+      super(tipo, inicio);
+      this.pointerId = inicio.pointerId ?? 0;
+    }
+  }
+
+  window.PointerEvent = PointerEventDeTeste as unknown as typeof PointerEvent;
+}
 
 /**
  * A galeria é o único lugar onde as telas de um projeto aparecem em tamanho
@@ -186,5 +204,69 @@ describe("GaleriaDeFotos — ampliar", () => {
     await usuario.click(screen.getByRole("button", { name: "Próxima foto" }));
 
     expect(screen.getByRole("button", { name: "Ampliar a foto" })).toBeTruthy();
+  });
+});
+
+/**
+ * O arraste é o que torna a ampliação utilizável numa captura grande: sem
+ * ele, só se vê o pedaço em volta do ponto clicado. O risco é confundir
+ * arrastar com clicar — e cada clique reduz a foto.
+ */
+describe("GaleriaDeFotos — arrastar a foto ampliada", () => {
+  function foto(): HTMLElement {
+    return screen.getAllByRole("img")[0] as HTMLElement;
+  }
+
+  async function ampliar() {
+    const usuario = userEvent.setup();
+    abrir();
+    await usuario.click(screen.getByRole("button", { name: "Ampliar a foto" }));
+
+    return screen.getByRole("button", { name: "Reduzir a foto" });
+  }
+
+  it("move a foto sem reduzi-la", async () => {
+    const area = await ampliar();
+
+    fireEvent.pointerDown(area, { clientX: 100, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(area, { clientX: 160, clientY: 130, pointerId: 1 });
+    fireEvent.pointerUp(area, { clientX: 160, clientY: 130, pointerId: 1 });
+    fireEvent.click(area, { clientX: 160, clientY: 130, detail: 1 });
+
+    expect(screen.getByRole("button", { name: "Reduzir a foto" })).toBeTruthy();
+    expect(foto().style.transform).toContain("translate(60px, 30px)");
+  });
+
+  /** Tremida de dedo não é arraste: abaixo de 4px, o gesto é um clique. */
+  it("trata movimento mínimo como clique, e reduz", async () => {
+    const area = await ampliar();
+
+    fireEvent.pointerDown(area, { clientX: 100, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(area, { clientX: 102, clientY: 101, pointerId: 1 });
+    fireEvent.pointerUp(area, { clientX: 102, clientY: 101, pointerId: 1 });
+    fireEvent.click(area, { clientX: 102, clientY: 101, detail: 1 });
+
+    expect(screen.getByRole("button", { name: "Ampliar a foto" })).toBeTruthy();
+    expect(foto().style.transform).toBe("none");
+  });
+
+  it("ignora arrastar quando a foto não está ampliada", () => {
+    abrir();
+    const area = screen.getByRole("button", { name: "Ampliar a foto" });
+
+    fireEvent.pointerDown(area, { clientX: 100, clientY: 100, pointerId: 1 });
+    fireEvent.pointerMove(area, { clientX: 200, clientY: 200, pointerId: 1 });
+    fireEvent.pointerCancel(area, { pointerId: 1 });
+
+    expect(foto().style.transform).toBe("none");
+  });
+
+  it("volta ao tamanho ajustado ao escolher outra miniatura", async () => {
+    await ampliar();
+
+    fireEvent.click(screen.getByRole("button", { name: "Ver Tela do painel" }));
+
+    expect(screen.getByRole("button", { name: "Ampliar a foto" })).toBeTruthy();
+    expect(foto().getAttribute("alt")).toBe("Tela do painel");
   });
 });

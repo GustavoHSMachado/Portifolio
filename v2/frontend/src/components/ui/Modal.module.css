@@ -104,3 +104,36 @@
     flex-direction: column-reverse;
   }
 }
+
+/* Variante larga: a galeria de fotos. Ocupa quase a tela inteira, porque a
+   imagem é o conteúdo — e captura de sistema é larga. */
+.dialogLarga {
+  width: min(1200px, 100%);
+  height: calc(100vh - var(--space-8));
+  max-height: none;
+}
+
+/* Sem rolagem própria: quem decide o que rola é a galeria, que precisa de
+   todo o espaço vertical para a foto. */
+.bodyLarga {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: var(--space-4) var(--space-5) var(--space-5);
+}
+
+/* No celular cada pixel de largura vai para a foto: captura de tela é
+   horizontal, e numa tela em pé a largura é o que limita o tamanho dela. */
+@media (max-width: 40rem) {
+  .overlay:has(.dialogLarga) {
+    padding: var(--space-2);
+  }
+
+  .dialogLarga {
+    height: calc(100vh - var(--space-4));
+  }
+
+  .bodyLarga {
+    padding: var(--space-3) var(--space-2) var(--space-3);
+  }
+}

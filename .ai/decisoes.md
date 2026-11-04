@@ -389,6 +389,63 @@ vale procurar **todos** os lugares que dependem dessa diferença, e não só o q
 estava na frente. Aqui eram dois, e o segundo só apareceu porque o primeiro foi
 testado com dados reais.
 
+
+**D-40 · A capa é uma foto própria, fora das 8 da galeria (03/11/2026).**
+A capa era a primeira foto da galeria, o que amarrava duas decisões
+diferentes: qual imagem representa o projeto na vitrine e qual é a primeira
+das telas. A capa quer a imagem mais vendedora; a galeria quer ordem de
+leitura. Com um campo só, escolher uma estragava a outra.
+
+A flag `is_cover` vive em `project_images`, e não como coluna em `projects`,
+para a capa reaproveitar o que a foto já tem: o mesmo upload validado, o nome
+sorteado, o `alt` obrigatório e a remoção que apaga o arquivo do disco. Um
+`cover_path` em `projects` duplicaria esse caminho inteiro. Ela não ocupa
+vaga — o limite de 8 vale para a galeria, e a capa é a nona —, e trocar apaga
+a anterior, arquivo e linha, porque guardá-la encheria o disco de imagens que
+nenhuma tela mostra.
+
+Não há índice único garantindo uma capa por projeto: o MySQL não tem índice
+parcial, e um `UNIQUE (project_id, is_cover)` proibiria duas fotos comuns no
+mesmo projeto. Quem garante é `marcarComoCapa()`, que desmarca as demais.
+
+Na vitrine, a galeria mostra a capa à frente das telas, porque quem clica em
+"Ver fotos" espera encontrar a imagem que viu no cartão; a tira de miniaturas
+do cartão, essa sim, pula a capa — repetir ali seria mostrar a mesma coisa a
+dois centímetros de distância.
+
+**D-41 · A foto da galeria amplia, e o Modal passou a usar portal
+(03/11/2026).**
+Clicar na foto alterna entre ajustada e tamanho real, com a tecla `Z` como
+atalho que funciona sem o foco estar na imagem; ampliada, o contêiner rola.
+O motivo é prático: numa captura de painel o texto some quando a imagem cabe
+inteira na janela, e é justamente o texto que a pessoa quer ler. Trocar de
+foto volta ao tamanho ajustado, senão a próxima apareceria cortada num canto
+qualquer.
+
+O `Modal` ganhou `createPortal` para o `<body>`, e o caminho até essa mudança
+merece ficar escrito porque foi um erro de método. A galeria renderizava com
+161px e o diálogo com 219px; construí um diagnóstico inteiro em cima disso —
+mexi no flex, depois no portal — até medir a janela e encontrar
+`window.innerWidth: 0`. **A janela do navegador de teste estava com 0×0, e
+toda medida era artefato disso.** Com a viewport corrigida para 1280×900,
+estava certo desde o começo.
+
+A mudança ficou por outro motivo, esse real: `position: fixed` se posiciona
+pela viewport exceto sob um ancestral com `transform`, e o cartão da vitrine
+é animado pelo framer-motion. A janela é estreita — só durante a animação de
+entrada —, mas existe, e diálogo presa dentro de um cartão é defeito que
+aparece uma vez em dez e ninguém reproduz.
+
+O portal quebrou o foco inicial: o efeito rodava antes de o diálogo existir no
+DOM. **O teste do `Modal` pegou na mesma rodada**, e sem ele quem navega por
+teclado ficaria fora do diálogo sem ninguém notar. Corrigido com `montado` nas
+dependências, com `biome-ignore` explicando por que uma variável não lida
+dentro do efeito está ali.
+
+A lição é sobre medir antes de concluir: três mudanças de CSS saíram de um
+número que o ambiente de teste inventou. Conferir a viewport custava uma
+linha.
+
 ---
 
 ## Decisões pendentes

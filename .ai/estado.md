@@ -47,6 +47,9 @@ O que corre hoje é manutenção, não mais construção.
 | Páginas do frontend | 14 `page.tsx` | `src/app/` |
 | Suítes de teste do backend | 5 unitárias + 4 de integração | `tests/` |
 
+Em 03/11/2026 o frontend tinha 127 testes e a catraca de cobertura subiu para
+36% de linhas e 86% de ramos, medidos 41,55% e 86,31%.
+
 Em 02/11/2026 os três campos do caso (`problem`, `decisions`, `result`) deram
 lugar a um campo `description` — ver D-38. Na mesma passagem foi corrigido um
 defeito que impedia o envio de fotos pelo navegador: havia `<form>` dentro de
@@ -80,6 +83,12 @@ o reprovava (`expect` de 5 s, 2 workers).
   (todos, no ar, código aberto) e o caso de cada projeto recolhido. Exigiram
   sessão entre 23/08/2026 e 01/11/2026. O que segura rascunho é `published = 1`,
   filtrado em `publishedProjects()` e coberto por `tests/Integration/VitrinePublicaTest.php`.
+- **Capa do projeto** — desde 03/11/2026 é uma foto própria (`is_cover` em
+  `project_images`), fora do limite de 8 e com seção separada no painel. Sem
+  capa, o cartão usa a primeira tela. Ver D-40.
+- **Galeria** — "Ver fotos" abre as telas em tamanho grande, com navegação
+  circular por mouse e teclado, miniaturas e contador. A foto amplia ao clique
+  ou pela tecla `Z`. Ver D-41.
 - **Fotos dos projetos** — até 8 por projeto, **várias de uma vez** desde
   02/11/2026, enviadas pelo painel
   (`POST /api/v1/admin/projects/{id}/images`). O arquivo fica em
